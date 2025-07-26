@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3 uid="uid://b126xgapswkpq"]
+
+[ext_resource type="Material" uid="uid://jpgjvia5t5ga" path="res://materials/TileMaterial.tres" id="1_2sjy5"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_2sjy5"]
+size = Vector2(1, 1)
+
+[node name="Tile" type="Node3D"]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+material_override = ExtResource("1_2sjy5")
+mesh = SubResource("PlaneMesh_2sjy5")
