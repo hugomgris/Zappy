@@ -1,0 +1,49 @@
+[gd_scene load_steps=10 format=3 uid="uid://bohcw6ef7e55a"]
+
+[ext_resource type="Script" uid="uid://b2yc51sdfhp5r" path="res://scripts/Main.gd" id="1_0xm2m"]
+[ext_resource type="Script" uid="uid://b6v2xwkcmn1yx" path="res://NetworkManager.gd" id="1_ig7tw"]
+[ext_resource type="Texture2D" uid="uid://gs8wipi04gnu" path="res://hdris/bambanani_sunset_4k.exr" id="2_lquwl"]
+[ext_resource type="PackedScene" uid="uid://d01wcqvgamr8t" path="res://scenes/UI.tscn" id="2_ui123"]
+[ext_resource type="Script" uid="uid://2yx4asihvwhu" path="res://scripts/CameraController.gd" id="3_camera"]
+[ext_resource type="Script" uid="uid://d0h3fme314g4g" path="res://scripts/WorldEnvironmentController.gd" id="4_world_env"]
+
+[sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_7mycd"]
+panorama = ExtResource("2_lquwl")
+
+[sub_resource type="Sky" id="Sky_lquwl"]
+sky_material = SubResource("PanoramaSkyMaterial_7mycd")
+
+[sub_resource type="Environment" id="Environment_7mycd"]
+background_mode = 3
+sky = SubResource("Sky_lquwl")
+tonemap_mode = 2
+glow_enabled = true
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_0xm2m")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_7mycd")
+script = ExtResource("4_world_env")
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(0.707107, -0.5, 0.5, 0, 0.707107, 0.707107, -0.707107, -0.5, 0.5, 10, 10, 10)
+current = true
+script = ExtResource("3_camera")
+
+[node name="SunLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.00933087, -0.00788474, 0.000301838)
+visible = false
+light_color = Color(0.969217, 0.973131, 0.889827, 1)
+shadow_enabled = true
+
+[node name="MapRoot" type="Node3D" parent="."]
+
+[node name="PlayerRoot" type="Node3D" parent="."]
+
+[node name="NetworkManager" type="Node" parent="."]
+script = ExtResource("1_ig7tw")
+
+[node name="UI" parent="." instance=ExtResource("2_ui123")]
+grow_horizontal = 2
+grow_vertical = 2
