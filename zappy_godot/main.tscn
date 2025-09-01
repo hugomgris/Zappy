@@ -1,11 +1,14 @@
-[gd_scene load_steps=10 format=3 uid="uid://bohcw6ef7e55a"]
+[gd_scene load_steps=13 format=3 uid="uid://bohcw6ef7e55a"]
 
 [ext_resource type="Script" uid="uid://b2yc51sdfhp5r" path="res://scripts/Main.gd" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://b6v2xwkcmn1yx" path="res://NetworkManager.gd" id="1_ig7tw"]
-[ext_resource type="Texture2D" uid="uid://gs8wipi04gnu" path="res://hdris/bambanani_sunset_4k.exr" id="2_lquwl"]
+[ext_resource type="Texture2D" uid="uid://crs1ky0jyr0og" path="res://hdris/bambanani_sunset_4k.exr" id="2_lquwl"]
 [ext_resource type="PackedScene" uid="uid://d01wcqvgamr8t" path="res://scenes/UI.tscn" id="2_ui123"]
 [ext_resource type="Script" uid="uid://2yx4asihvwhu" path="res://scripts/CameraController.gd" id="3_camera"]
 [ext_resource type="Script" uid="uid://d0h3fme314g4g" path="res://scripts/WorldEnvironmentController.gd" id="4_world_env"]
+[ext_resource type="Script" uid="uid://beysdlclkayq6" path="res://scripts/DataManager.gd" id="6_272bh"]
+[ext_resource type="Script" uid="uid://dfd525mqeflrb" path="res://scripts/GameWorldManager.gd" id="7_5vw27"]
+[ext_resource type="Script" uid="uid://cqlc6khfoxqod" path="res://scripts/PlayerManager.gd" id="8_kek77"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_7mycd"]
 panorama = ExtResource("2_lquwl")
@@ -43,6 +46,15 @@ shadow_enabled = true
 
 [node name="NetworkManager" type="Node" parent="."]
 script = ExtResource("1_ig7tw")
+
+[node name="DataManager" type="Node" parent="."]
+script = ExtResource("6_272bh")
+
+[node name="WorldManager" type="Node3D" parent="."]
+script = ExtResource("7_5vw27")
+
+[node name="PlayerManager" type="Node3D" parent="."]
+script = ExtResource("8_kek77")
 
 [node name="UI" parent="." instance=ExtResource("2_ui123")]
 grow_horizontal = 2
