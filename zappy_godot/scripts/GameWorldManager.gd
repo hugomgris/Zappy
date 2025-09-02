@@ -2,9 +2,10 @@
 extends Node3D
 
 @onready var map_root: Node3D
+@export var tile_size = 1.0
+@export var gap = 0.1
 var tiles = {}
-var tile_size = 1.0
-var gap = 0.1
+
 
 signal world_ready
 

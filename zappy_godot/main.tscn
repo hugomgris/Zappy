@@ -1,11 +1,10 @@
-[gd_scene load_steps=13 format=3 uid="uid://bohcw6ef7e55a"]
+[gd_scene load_steps=12 format=3 uid="uid://bohcw6ef7e55a"]
 
 [ext_resource type="Script" uid="uid://b2yc51sdfhp5r" path="res://scripts/Main.gd" id="1_0xm2m"]
 [ext_resource type="Script" uid="uid://b6v2xwkcmn1yx" path="res://NetworkManager.gd" id="1_ig7tw"]
 [ext_resource type="Texture2D" uid="uid://crs1ky0jyr0og" path="res://hdris/bambanani_sunset_4k.exr" id="2_lquwl"]
 [ext_resource type="PackedScene" uid="uid://d01wcqvgamr8t" path="res://scenes/UI.tscn" id="2_ui123"]
 [ext_resource type="Script" uid="uid://2yx4asihvwhu" path="res://scripts/CameraController.gd" id="3_camera"]
-[ext_resource type="Script" uid="uid://d0h3fme314g4g" path="res://scripts/WorldEnvironmentController.gd" id="4_world_env"]
 [ext_resource type="Script" uid="uid://beysdlclkayq6" path="res://scripts/DataManager.gd" id="6_272bh"]
 [ext_resource type="Script" uid="uid://dfd525mqeflrb" path="res://scripts/GameWorldManager.gd" id="7_5vw27"]
 [ext_resource type="Script" uid="uid://cqlc6khfoxqod" path="res://scripts/PlayerManager.gd" id="8_kek77"]
@@ -17,28 +16,30 @@ panorama = ExtResource("2_lquwl")
 sky_material = SubResource("PanoramaSkyMaterial_7mycd")
 
 [sub_resource type="Environment" id="Environment_7mycd"]
-background_mode = 3
+background_mode = 1
+background_color = Color(0.300578, 0.6227, 0.791385, 1)
 sky = SubResource("Sky_lquwl")
+ambient_light_source = 2
+ambient_light_color = Color(0.681267, 0.609039, 0.507643, 1)
 tonemap_mode = 2
-glow_enabled = true
+fog_enabled = true
+fog_light_color = Color(0.182303, 0.602202, 0.742243, 1)
+fog_density = 0.0268
+fog_height_density = 0.6193
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_0xm2m")
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_7mycd")
-script = ExtResource("4_world_env")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.504302, 0.863528, 0, -0.863528, 0.504302, 0, 1.21489, 0)
 
 [node name="Camera" type="Camera3D" parent="."]
 transform = Transform3D(0.707107, -0.5, 0.5, 0, 0.707107, 0.707107, -0.707107, -0.5, 0.5, 10, 10, 10)
 current = true
 script = ExtResource("3_camera")
-
-[node name="SunLight" type="DirectionalLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.00933087, -0.00788474, 0.000301838)
-visible = false
-light_color = Color(0.969217, 0.973131, 0.889827, 1)
-shadow_enabled = true
 
 [node name="MapRoot" type="Node3D" parent="."]
 
@@ -52,6 +53,8 @@ script = ExtResource("6_272bh")
 
 [node name="WorldManager" type="Node3D" parent="."]
 script = ExtResource("7_5vw27")
+tile_size = 10.0
+gap = 1.0
 
 [node name="PlayerManager" type="Node3D" parent="."]
 script = ExtResource("8_kek77")
