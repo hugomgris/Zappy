@@ -6,6 +6,7 @@ extends Node3D
 @onready var player_root = $PlayerRoot
 @onready var ui = $UI
 @onready var camera = $Camera
+@onready var camera_controller = $CameraPosition
 
 # Manager components
 @onready var world_manager = $WorldManager
@@ -28,15 +29,22 @@ func _setup_managers():
 	
 	# Initialize player manager
 	player_manager.initialize(player_root, world_manager)
+
+	GameData.connect("game_state_updated", _on_game_state_loaded)
 	
 	print("Zappy GUI initialized successfully")
+
+func _on_game_state_loaded():
+	"""Called when game state is loaded - initialize camera position"""
+	if GameData.map_size.x > 0 and GameData.map_size.y > 0:
+		camera_controller.initialize_camera_for_map(GameData.map_size)
 
 func _load_test_data():
 	"""Load test data for demonstration (remove when connecting to real server)"""
 	await get_tree().create_timer(1.0).timeout
 	
 	# Load the sample JSON data
-	var file = FileAccess.open("res://json_examples/server2observer/game_10x10.json", FileAccess.READ)
+	var file = FileAccess.open("res://json_examples/server2observer/game_10x10qq.json", FileAccess.READ)
 	if file:
 		var json_string = file.get_as_text()
 		file.close()

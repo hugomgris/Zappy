@@ -24,7 +24,6 @@ ambient_light_color = Color(0.681267, 0.609039, 0.507643, 1)
 tonemap_mode = 2
 fog_enabled = true
 fog_light_color = Color(0.182303, 0.602202, 0.742243, 1)
-fog_density = 0.0268
 fog_height_density = 0.6193
 
 [node name="Main" type="Node3D"]
@@ -35,11 +34,6 @@ environment = SubResource("Environment_7mycd")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.504302, 0.863528, 0, -0.863528, 0.504302, 0, 1.21489, 0)
-
-[node name="Camera" type="Camera3D" parent="."]
-transform = Transform3D(0.707107, -0.5, 0.5, 0, 0.707107, 0.707107, -0.707107, -0.5, 0.5, 10, 10, 10)
-current = true
-script = ExtResource("3_camera")
 
 [node name="MapRoot" type="Node3D" parent="."]
 
@@ -52,9 +46,9 @@ script = ExtResource("1_ig7tw")
 script = ExtResource("6_272bh")
 
 [node name="WorldManager" type="Node3D" parent="."]
+unique_name_in_owner = true
 script = ExtResource("7_5vw27")
-tile_size = 10.0
-gap = 1.0
+gap = 0.0
 
 [node name="PlayerManager" type="Node3D" parent="."]
 script = ExtResource("8_kek77")
@@ -62,3 +56,19 @@ script = ExtResource("8_kek77")
 [node name="UI" parent="." instance=ExtResource("2_ui123")]
 grow_horizontal = 2
 grow_vertical = 2
+
+[node name="CameraPosition" type="Node3D" parent="."]
+transform = Transform3D(-0.652826, 0.535639, -0.535639, 0, 0.707107, 0.707107, 0.757508, 0.461618, -0.461618, -0.515, 2.49332, -1)
+script = ExtResource("3_camera")
+move_speed = 0.3
+lerp_speed = 0.1
+
+[node name="CameraRotationX" type="Node3D" parent="CameraPosition"]
+unique_name_in_owner = true
+
+[node name="CameraZoomPivot" type="Node3D" parent="CameraPosition/CameraRotationX"]
+unique_name_in_owner = true
+
+[node name="Camera" type="Camera3D" parent="CameraPosition/CameraRotationX/CameraZoomPivot"]
+unique_name_in_owner = true
+current = true
