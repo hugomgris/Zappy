@@ -9,47 +9,60 @@ extends Node3D
 @export var zoom_speed = 12.0
 @export var rotation_speed = 2.0
 @export var lerp_speed = 0.05
-@export var viewport_margin_ratio = 0.1  # 10% margin around the map
-@export var isometric_angle = -5.0      # X rotation for isometric view
-@export var default_y_rotation = 45.0 
+@export var viewport_margin_ratio = 0.1
+@export var isometric_angle = -5.0
+@export var default_y_rotation = 45.0
+@export var use_orthogonal = true  # Toggle between ortho and perspective
 
-# Movement limits (optional)
-var movement_bounds = Rect2()
+# Orthogonal specific settings
+@export var ortho_size_base = 10.0
 
 var move_target: Vector3
 var zoom_target: float
 var rotation_target: float
 var is_initialized = false
+var movement_bounds = Rect2()
+var initial_ortho_size: float
+
+var q_pressed_last_frame = false
+var e_pressed_last_frame = false
 
 func _ready() -> void:
 	rotation_target = rotation.y
+	
+	if use_orthogonal:
+		camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+		camera.size = ortho_size_base
+		camera.near = 0.05
+		camera.far = 200.0
+	else:
+		camera.projection = Camera3D.PROJECTION_PERSPECTIVE
 
 func initialize_camera_for_map(map_size: Vector2i):
-	"""Initialize camera position and zoom based on map dimensions"""
-	print("Initializing camera for map size: ", map_size)
-	
-	# Calculate map center in world coordinates
 	var map_center = Vector3(
-		(map_size.x - 1) * 0.5,  # Tiles are 1x1 without gaps
+		(map_size.x - 1) * 0.5,
 		0,
 		(map_size.y - 1) * 0.5
 	)
 	
-	# Set camera orientation for isometric view
 	camera_rotation_x.rotation.x = deg_to_rad(isometric_angle)
 	rotation.y = deg_to_rad(default_y_rotation)
 	rotation_target = rotation.y
 	
-	# Position camera above map center
 	position = map_center
 	move_target = position
 	
-	# Calculate optimal zoom distance
-	var optimal_zoom = _calculate_optimal_zoom(map_size)
-	camera_zoom_pivot.position.z = optimal_zoom
-	zoom_target = optimal_zoom
+	if use_orthogonal:
+		var optimal_size = _calculate_optimal_ortho_size(map_size)
+		camera.size = optimal_size
+		zoom_target = optimal_size
+		initial_ortho_size = optimal_size
+		camera_zoom_pivot.position.z = 25.0
+	else:
+		var optimal_zoom = _calculate_optimal_ortho_size(map_size)
+		camera_zoom_pivot.position.z = optimal_zoom
+		zoom_target = optimal_zoom
 	
-	# Set movement bounds based on map size (with some padding)
 	var padding = max(map_size.x, map_size.y) * 0.5
 	movement_bounds = Rect2(
 		-padding, -padding,
@@ -57,48 +70,38 @@ func initialize_camera_for_map(map_size: Vector2i):
 	)
 	
 	is_initialized = true
-	print("Camera initialized - Position: ", position, " Zoom: ", optimal_zoom)
-	print("=== Camera Debug ===")
-	print("Map size: ", map_size)
-	print("Camera FOV: ", camera.fov)
-	print("Viewport size: ", get_viewport().get_visible_rect().size)
-	print("Calculated zoom: ", optimal_zoom)
-	print("Camera angle: ", isometric_angle)
-	print("===================")
 
-func _calculate_optimal_zoom(map_size: Vector2i) -> float:
-	"""Calculate optimal zoom distance using empirical values"""
-	
+func _calculate_optimal_ortho_size(map_size: Vector2i) -> float:
 	var max_dimension = max(map_size.x, map_size.y)
-	var base_distance: float
-	
-	# Empirical values that work well
-	if max_dimension <= 3:
-		base_distance = 4.0
-	elif max_dimension <= 5:
-		base_distance = 8.0
-	elif max_dimension <= 10:
-		base_distance = 12.0
-	elif max_dimension <= 20:
-		base_distance = 26.0
+	var base_size = max_dimension * 2.5
+	var final_size = base_size * (1.0 + viewport_margin_ratio * 5.0)
+	return final_size
+
+func _handle_zoom(_delta: float) -> void:
+	if use_orthogonal:
+		var min_size = 2.0
+		var max_size = initial_ortho_size if initial_ortho_size > 0 else 50.0
+		zoom_target = clamp(zoom_target, min_size, max_size)
+		camera.size = lerp(camera.size, zoom_target, lerp_speed)
 	else:
-		base_distance = max_dimension * 1.8
-	
-	# Add margin
-	var final_distance = base_distance * (1.0 + viewport_margin_ratio)
-	
-	print("Max dimension: ", max_dimension, " Base: ", base_distance, " Final: ", final_distance)
-	
-	return final_distance
+		var min_zoom = 2.0
+		var max_zoom = max(20.0, zoom_target * 2.0)
+		zoom_target = clamp(zoom_target, min_zoom, max_zoom)
+		camera_zoom_pivot.position.z = lerp(camera_zoom_pivot.position.z, zoom_target, lerp_speed)
 
 func _input(event):
 	if event is InputEventMouseButton:
 		match event.button_index:
 			MOUSE_BUTTON_WHEEL_UP:
-				zoom_target -= zoom_speed * 0.1
+				if use_orthogonal:
+					zoom_target -= zoom_speed * 0.2
+				else:
+					zoom_target -= zoom_speed * 0.1
 			MOUSE_BUTTON_WHEEL_DOWN:
-				zoom_target += zoom_speed * 0.1
-
+				if use_orthogonal:
+					zoom_target += zoom_speed * 0.2
+				else:
+					zoom_target += zoom_speed * 0.1
 
 func _process(delta: float) -> void:
 	if not is_initialized:
@@ -108,46 +111,57 @@ func _process(delta: float) -> void:
 	_handle_zoom(delta)
 	_handle_rotation(delta)
 
-func _handle_movement(delta: float) -> void:
-	var input_direction = Input.get_vector("left", "right", "up", "down")
+func _handle_movement(_delta: float) -> void:
+	var input_direction = Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 	
-	# Calculate movement relative to camera's Y rotation
+	if Input.is_action_pressed("ui_left") or Input.is_key_pressed(KEY_A):
+		input_direction.x -= 1.0
+	if Input.is_action_pressed("ui_right") or Input.is_key_pressed(KEY_D):
+		input_direction.x += 1.0
+	if Input.is_action_pressed("ui_up") or Input.is_key_pressed(KEY_W):
+		input_direction.y -= 1.0
+	if Input.is_action_pressed("ui_down") or Input.is_key_pressed(KEY_S):
+		input_direction.y += 1.0
+	
 	var movement_local = Vector3(input_direction.x, 0, input_direction.y) * move_speed
 	var rotated_movement = movement_local.rotated(Vector3.UP, rotation.y)
 	
 	move_target += rotated_movement
 	
-	# Clamp to bounds
 	if movement_bounds != Rect2():
 		move_target.x = clamp(move_target.x, movement_bounds.position.x, movement_bounds.position.x + movement_bounds.size.x)
 		move_target.z = clamp(move_target.z, movement_bounds.position.y, movement_bounds.position.y + movement_bounds.size.y)
 	
 	position = lerp(position, move_target, lerp_speed)
 
-func _handle_zoom(delta: float) -> void:
-	# Dynamic zoom limits based on map size
-	var min_zoom = 2.0
-	var max_zoom = max(20.0, zoom_target * 2.0)  # Allow zooming out beyond initial
+func _handle_rotation(_delta: float) -> void:
+	var q_pressed = Input.is_key_pressed(KEY_Q)
+	var e_pressed = Input.is_key_pressed(KEY_E)
 	
-	zoom_target = clamp(zoom_target, min_zoom, max_zoom)
-	camera_zoom_pivot.position.z = lerp(camera_zoom_pivot.position.z, zoom_target, lerp_speed)
-
-func _handle_rotation(delta: float) -> void:
-	if Input.is_action_pressed("rotate_left"):
-		rotation_target -= rotation_speed * delta
-	if Input.is_action_pressed("rotate_right"):
-		rotation_target += rotation_speed * delta
+	if q_pressed and not q_pressed_last_frame:
+		rotation_target += PI/2
+	if e_pressed and not e_pressed_last_frame:
+		rotation_target -= PI/2
 	
-	rotation.y = lerp_angle(rotation.y, rotation_target, lerp_speed)
+	q_pressed_last_frame = q_pressed
+	e_pressed_last_frame = e_pressed
+	
+	rotation.y = lerp_angle(rotation.y, rotation_target, lerp_speed * 2.0)
 
-# Utility functions
 func reset_camera_to_overview():
-	"""Reset camera to show entire map"""
 	if is_initialized and GameData.map_size.x > 0:
 		initialize_camera_for_map(GameData.map_size)
 
 func focus_on_position(world_pos: Vector3, zoom_level: float = -1):
-	"""Focus camera on a specific world position"""
 	move_target = world_pos
 	if zoom_level > 0:
 		zoom_target = zoom_level
+
+func toggle_projection():
+	use_orthogonal = !use_orthogonal
+	if use_orthogonal:
+		camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+		camera.size = zoom_target if zoom_target > 0 else ortho_size_base
+	else:
+		camera.projection = Camera3D.PROJECTION_PERSPECTIVE
+		camera.fov = 75.0
