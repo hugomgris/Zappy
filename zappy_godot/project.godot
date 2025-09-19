@@ -12,13 +12,13 @@ config_version=5
 
 config/name="ZappyGUI3D"
 run/main_scene="uid://bohcw6ef7e55a"
-config/features=PackedStringArray("4.4", "Forward Plus")
+config/features=PackedStringArray("4.5", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
 
-GameData="*res://scripts/DataManager.gd"
-GameConfig="*res://scripts/GameConfig.gd"
+GameData="*res://scenes/DataManager.gd"
+GameConfig="*res://scenes/GameConfig.gd"
 
 [display]
 
@@ -28,6 +28,10 @@ window/size/viewport_height=1080
 [dotnet]
 
 project/assembly_name="ZappyGUI3D"
+
+[filesystem]
+
+import/blender/enabled=false
 
 [input]
 

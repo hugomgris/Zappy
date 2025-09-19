@@ -1,0 +1,130 @@
+[gd_scene load_steps=12 format=3 uid="uid://b6ypoxlvlb3mx"]
+
+[ext_resource type="PackedScene" uid="uid://bqgb138ugstto" path="res://scenes/level/level_test.glb" id="1_k0mgt"]
+[ext_resource type="Shader" uid="uid://bjmhk4evlpqdo" path="res://materials/shaders/water.gdshader" id="2_njr5j"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_njr5j"]
+sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+ground_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+
+[sub_resource type="Sky" id="Sky_rdhbp"]
+sky_material = SubResource("ProceduralSkyMaterial_njr5j")
+
+[sub_resource type="Environment" id="Environment_4xtnr"]
+background_mode = 2
+sky = SubResource("Sky_rdhbp")
+tonemap_mode = 2
+glow_enabled = true
+fog_density = 0.0126
+volumetric_fog_density = 0.2309
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_njr5j"]
+albedo_color = Color(0.82993436, 0.4727366, 0.28858358, 1)
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_k0mgt"]
+animation = &"floating_idle"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_njr5j"]
+advance_mode = 2
+
+[sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_rdhbp"]
+states/floating_idle/node = SubResource("AnimationNodeAnimation_k0mgt")
+states/floating_idle/position = Vector2(460, 88.666664)
+transitions = ["Start", "floating_idle", SubResource("AnimationNodeStateMachineTransition_njr5j")]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_rdhbp"]
+render_priority = 0
+shader = ExtResource("2_njr5j")
+shader_parameter/WATER_COL = Color(0.04, 0.38, 0.88, 1)
+shader_parameter/WATER2_COL = Color(0.04, 0.35, 0.78, 1)
+shader_parameter/FOAM_COL = Color(0.8125, 0.9609, 0.9648, 1)
+shader_parameter/distortion_speed = 2.0
+shader_parameter/tile = Vector2(400, 400)
+shader_parameter/height = 0.01
+shader_parameter/wave_size = Vector2(2, 2)
+shader_parameter/wave_speed = 1.5
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_mge0y"]
+
+[node name="level_test" instance=ExtResource("1_k0mgt")]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." index="0"]
+environment = SubResource("Environment_4xtnr")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." index="1"]
+transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
+light_color = Color(0.8525759, 0.7933772, 0.6551198, 1)
+shadow_enabled = true
+directional_shadow_max_distance = 1.0
+
+[node name="rock_mass" parent="." index="2"]
+surface_material_override/0 = SubResource("StandardMaterial3D_njr5j")
+
+[node name="floating_rocks_03" parent="." index="3"]
+transform = Transform3D(0.9883012, 0, 0.1525141, 0, 1, 0, -0.1525141, 0, 0.9883012, 9.950119, -13.650501, -8.703163)
+
+[node name="floating_rocks_02" parent="." index="4"]
+transform = Transform3D(0.9883012, 0, -0.1525141, 0, 1, 0, 0.1525141, 0, 0.9883012, 10.535038, -12.1105385, -8.503593)
+
+[node name="floating_rocks_01" parent="." index="5"]
+transform = Transform3D(0.9974683, 0, -0.071112394, 0, 1, 0, 0.071112394, 0, 0.9974683, 9.97301, -8.275745, -7.415732)
+
+[node name="floating_rocks_04" parent="." index="6"]
+transform = Transform3D(0.995928, 0.011901002, 0.08935923, -4.4237808e-08, 0.99124765, -0.1320153, -0.090148255, 0.13147785, 0.9872112, 9.837428, -8.091026, 2.0871556)
+
+[node name="floating_rocks_05" parent="." index="7"]
+transform = Transform3D(-0.9061139, 0.42303357, 0, -0.42303357, -0.9061139, 0, 0, 0, 1, 10.23174, -9.1365385, 1.5220846)
+
+[node name="floating_rocks_06" parent="." index="8"]
+transform = Transform3D(0.9651462, -0.021696398, 0.2608103, 6.8079675e-07, 0.9965579, 0.08289957, -0.26171115, -0.08001003, 0.9618241, -2.091884, -9.182053, -4.6116977)
+
+[node name="floating_rocks_07" parent="." index="9"]
+transform = Transform3D(0.99592817, 0.009746507, 0.089618325, -6.165353e-07, 0.99413854, -0.10811144, -0.09014674, 0.1076712, 0.990091, -2.3769424, -11.182053, -3.935417)
+
+[node name="floating_rocks_08" parent="." index="10"]
+transform = Transform3D(1, 0, 0, 0, 0.99430466, -0.10657442, 0, 0.10657442, 0.99430466, -1.331577, -12.182053, -4.5999484)
+
+[node name="floating_rocks_09" parent="." index="11"]
+transform = Transform3D(0.96182126, 0.08938096, 0.2586705, -0.059959695, 0.99102306, -0.11948824, -0.26702857, 0.099416554, 0.95854646, -10.525663, -3.1365387, -11.68487)
+
+[node name="floating_rocks_10" parent="." index="12"]
+transform = Transform3D(0.9186274, 1.6061792e-07, 0.3951249, -1.7484555e-07, 1, 0, -0.3951249, -6.9085836e-08, 0.9186274, -11.417623, -2.9512632, -8.805795)
+
+[node name="floating_rocks_11" parent="." index="13"]
+transform = Transform3D(-0.90923077, 0, 0.41629252, 0, 1, 0, -0.41629252, 0, -0.90923077, -2.8885782, -17.439077, 4.511396)
+
+[node name="floating_rocks_12" parent="." index="14"]
+transform = Transform3D(0.98873496, 0, -0.14967689, 0, 1, 0, 0.14967689, 0, 0.98873496, -0.9968501, -14.463447, 4.1198373)
+
+[node name="floating_rocks_13" parent="." index="15"]
+transform = Transform3D(0.98022485, 0, 0.19788636, 0, 1, 0, -0.19788636, 0, 0.98022485, -7.0436506, -4.7072806, 10.982903)
+
+[node name="floating_rocks_14" parent="." index="16"]
+transform = Transform3D(0.96915704, 0, 0.24644406, 0, 1, 0, -0.24644406, 0, 0.96915704, -5.300199, -7.1117916, 11.53701)
+
+[node name="floating_rocks_15" parent="." index="17"]
+transform = Transform3D(0.969157, -0.24644399, 0, 0.24644399, 0.969157, 0, 0, 0, 1, 11.333306, -6.136539, 8.190558)
+
+[node name="floating_rocks_16" parent="." index="18"]
+transform = Transform3D(0.969157, 0.24644399, 0, -0.24644399, 0.969157, 0, 0, 0, 1, 11.730111, -7.1820517, 8.104769)
+
+[node name="floating_rocks_17" parent="." index="19"]
+transform = Transform3D(0.94537604, 0, -0.32598147, 0, 1, 0, 0.32598147, 0, 0.94537604, 5.2136817, -10.926893, 7.387768)
+
+[node name="floating_rocks_18" parent="." index="20"]
+transform = Transform3D(0.98374796, -0.17955416, 0, 0.17955416, 0.98374796, 0, 0, 0, 1, 4.7409678, -12.926893, 8.13831)
+
+[node name="floating_rocks_19" parent="." index="21"]
+transform = Transform3D(0.98374796, 0.17955416, 0, -0.17955416, 0.98374796, 0, 0, 0, 1, 5.8407426, -14.414708, 7.5669303)
+
+[node name="AnimationPlayer" parent="." index="22"]
+autoplay = "floating_idle"
+
+[node name="AnimationTree" type="AnimationTree" parent="." index="23"]
+tree_root = SubResource("AnimationNodeStateMachine_rdhbp")
+anim_player = NodePath("../AnimationPlayer")
+
+[node name="sea" type="MeshInstance3D" parent="." index="24"]
+transform = Transform3D(298.3875, 0, 0, 0, 298.3875, 0, 0, 0, 298.3875, -4, 1.3101168, 3.3562298)
+material_override = SubResource("ShaderMaterial_rdhbp")
+mesh = SubResource("PlaneMesh_mge0y")
