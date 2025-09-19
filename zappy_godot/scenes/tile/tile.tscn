@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://chsumim6hl5dm" path="res://scenes/tile/TileManager.gd" id="1_bibkx"]
 [ext_resource type="Material" uid="uid://jpgjvia5t5ga" path="res://materials/TileMaterial.tres" id="2_2jaqc"]
-[ext_resource type="PackedScene" uid="uid://wgvnwfc4tct4" path="res://scenes/tile/resource.tscn" id="3_002hm"]
+[ext_resource type="PackedScene" uid="uid://b6ep8vty1o72l" path="res://scenes/tile/resource.tscn" id="3_bibkx"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_3dk36"]
 
@@ -20,10 +20,10 @@ mesh = SubResource("BoxMesh_3dk36")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.468949, 0)
 shape = SubResource("BoxShape3D_1abcd")
 
-[node name="MeshInstance3D2" parent="." instance=ExtResource("3_002hm")]
-transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, -0.3305885, 0.3709768, -0.306934)
-visible = false
-
 [node name="Marker3D" type="Marker3D" parent="."]
 unique_name_in_owner = true
-transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, -0.31764132, 0.37788123, -0.27851942)
+transform = Transform3D(0.15, 0, 0, 0, 0.15, 0, 0, 0, 0.15, -0.31764132, 0.37788123, -0.27851942)
+
+[node name="placeholder_resource" parent="." instance=ExtResource("3_bibkx")]
+transform = Transform3D(0.345, 0, 0, 0, 0.345, 0, 0, 0, 0.345, 0, 0.43276364, 0)
+visible = false

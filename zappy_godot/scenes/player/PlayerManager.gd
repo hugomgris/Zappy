@@ -7,7 +7,7 @@ extends Node3D
 var players = {}
 
 # Configuration constants
-const PLAYER_HEIGHT = 0.5
+const PLAYER_HEIGHT = 0.3
 const MOVEMENT_TWEEN_DURATION = 0.3
 
 # Team colors configuration
