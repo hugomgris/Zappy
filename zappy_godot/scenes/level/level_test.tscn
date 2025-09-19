@@ -39,8 +39,8 @@ shader_parameter/WATER_COL = Color(0.04, 0.38, 0.88, 1)
 shader_parameter/WATER2_COL = Color(0.04, 0.35, 0.78, 1)
 shader_parameter/FOAM_COL = Color(0.8125, 0.9609, 0.9648, 1)
 shader_parameter/distortion_speed = 2.0
-shader_parameter/tile = Vector2(400, 400)
-shader_parameter/height = 0.01
+shader_parameter/tile = Vector2(250, 250)
+shader_parameter/height = 0.05
 shader_parameter/wave_size = Vector2(2, 2)
 shader_parameter/wave_speed = 1.5
 
@@ -61,61 +61,61 @@ directional_shadow_max_distance = 1.0
 surface_material_override/0 = SubResource("StandardMaterial3D_njr5j")
 
 [node name="floating_rocks_03" parent="." index="3"]
-transform = Transform3D(0.9883012, 0, 0.1525141, 0, 1, 0, -0.1525141, 0, 0.9883012, 9.950119, -13.650501, -8.703163)
+transform = Transform3D(0.9999661, 0, -0.008224047, 0, 1, 0, 0.008224047, 0, 0.9999661, 9.950119, -12.010298, -8.703163)
 
 [node name="floating_rocks_02" parent="." index="4"]
-transform = Transform3D(0.9883012, 0, -0.1525141, 0, 1, 0, 0.1525141, 0, 0.9883012, 10.535038, -12.1105385, -8.503593)
+transform = Transform3D(0.9999661, 0, 0.008224047, 0, 1, 0, -0.008224047, 0, 0.9999661, 10.535038, -11.007724, -8.503593)
 
 [node name="floating_rocks_01" parent="." index="5"]
-transform = Transform3D(0.9974683, 0, -0.071112394, 0, 1, 0, 0.071112394, 0, 0.9974683, 9.97301, -8.275745, -7.415732)
+transform = Transform3D(0.99999946, 0, -0.0010080034, 0, 1, 0, 0.0010080034, 0, 0.99999946, 9.97301, -8.005149, -7.415732)
 
 [node name="floating_rocks_04" parent="." index="6"]
-transform = Transform3D(0.995928, 0.011901002, 0.08935923, -4.4237808e-08, 0.99124765, -0.1320153, -0.090148255, 0.13147785, 0.9872112, 9.837428, -8.091026, 2.0871556)
+transform = Transform3D(0.9849238, -5.7884834e-05, -0.17298685, -1.894877e-07, 0.9999999, -0.00033569837, 0.1729869, 0.00033067033, 0.9849236, 9.837428, -8.005149, 2.0871556)
 
 [node name="floating_rocks_05" parent="." index="7"]
-transform = Transform3D(-0.9061139, 0.42303357, 0, -0.42303357, -0.9061139, 0, 0, 0, 1, 10.23174, -9.1365385, 1.5220846)
+transform = Transform3D(0.9999977, 0.00210108, 0, -0.00210108, 0.9999977, 0, 0, 0, 1, 10.23174, -9.007724, 1.5220846)
 
 [node name="floating_rocks_06" parent="." index="8"]
-transform = Transform3D(0.9651462, -0.021696398, 0.2608103, 6.8079675e-07, 0.9965579, 0.08289957, -0.26171115, -0.08001003, 0.9618241, -2.091884, -9.182053, -4.6116977)
+transform = Transform3D(0.99999976, 5.513869e-05, 0.00063758116, 2.7927123e-07, 0.99624366, -0.086594224, -0.0006399608, 0.08659421, 0.9962435, -2.091884, -9.010298, -4.6116977)
 
 [node name="floating_rocks_07" parent="." index="9"]
-transform = Transform3D(0.99592817, 0.009746507, 0.089618325, -6.165353e-07, 0.99413854, -0.10811144, -0.09014674, 0.1076712, 0.990091, -2.3769424, -11.182053, -3.935417)
+transform = Transform3D(0.9849076, 0.035867877, -0.16932145, -2.5704495e-07, 0.9782914, 0.20723301, 0.17307872, -0.20410539, 0.96352714, -2.3769424, -11.010298, -3.935417)
 
 [node name="floating_rocks_08" parent="." index="10"]
-transform = Transform3D(1, 0, 0, 0, 0.99430466, -0.10657442, 0, 0.10657442, 0.99430466, -1.331577, -12.182053, -4.5999484)
+transform = Transform3D(1, 0, 0, 0, 0.9999991, -0.0012402138, 0, 0.0012402138, 0.9999991, -1.331577, -12.010298, -4.5999484)
 
 [node name="floating_rocks_09" parent="." index="11"]
-transform = Transform3D(0.96182126, 0.08938096, 0.2586705, -0.059959695, 0.99102306, -0.11948824, -0.26702857, 0.099416554, 0.95854646, -10.525663, -3.1365387, -11.68487)
+transform = Transform3D(0.86509657, -0.008130097, -0.50153893, -0.0599597, 0.991023, -0.11948826, 0.49800846, 0.13344105, 0.85684323, -10.525663, -3.007723, -11.68487)
 
 [node name="floating_rocks_10" parent="." index="12"]
-transform = Transform3D(0.9186274, 1.6061792e-07, 0.3951249, -1.7484555e-07, 1, 0, -0.3951249, -6.9085836e-08, 0.9186274, -11.417623, -2.9512632, -8.805795)
+transform = Transform3D(0.70824176, 1.2383293e-07, -0.7059698, -1.7484554e-07, 1, 0, 0.7059698, 1.234357e-07, 0.70824176, -11.417623, -1.0026445, -8.805795)
 
 [node name="floating_rocks_11" parent="." index="13"]
-transform = Transform3D(-0.90923077, 0, 0.41629252, 0, 1, 0, -0.41629252, 0, -0.90923077, -2.8885782, -17.439077, 4.511396)
+transform = Transform3D(0.9999978, 0, 0.0021080764, 0, 1, 0, -0.0021080764, 0, 0.9999978, -2.8885782, -15.003306, 4.511396)
 
 [node name="floating_rocks_12" parent="." index="14"]
-transform = Transform3D(0.98873496, 0, -0.14967689, 0, 1, 0, 0.14967689, 0, 0.98873496, -0.9968501, -14.463447, 4.1198373)
+transform = Transform3D(0.9999999, 0, -0.00048185728, 0, 1, 0, 0.00048185728, 0, 0.9999999, -0.9968501, -13.002016, 4.1198373)
 
 [node name="floating_rocks_13" parent="." index="15"]
-transform = Transform3D(0.98022485, 0, 0.19788636, 0, 1, 0, -0.19788636, 0, 0.98022485, -7.0436506, -4.7072806, 10.982903)
+transform = Transform3D(0.97837377, 0, -0.2068442, 0, 1, 0, 0.2068442, 0, 0.97837377, -7.0436506, -4.005835, 10.982903)
 
 [node name="floating_rocks_14" parent="." index="16"]
-transform = Transform3D(0.96915704, 0, 0.24644406, 0, 1, 0, -0.24644406, 0, 0.96915704, -5.300199, -7.1117916, 11.53701)
+transform = Transform3D(0.9662353, 0, -0.25766143, 0, 1, 0, 0.25766143, 0, 0.9662353, -5.300199, -6.005835, 11.53701)
 
 [node name="floating_rocks_15" parent="." index="17"]
-transform = Transform3D(0.969157, -0.24644399, 0, 0.24644399, 0.969157, 0, 0, 0, 1, 11.333306, -6.136539, 8.190558)
+transform = Transform3D(0.9662352, 0.25766143, 0, -0.25766143, 0.9662352, 0, 0, 0, 1, 11.333306, -6.0077233, 8.190558)
 
 [node name="floating_rocks_16" parent="." index="18"]
-transform = Transform3D(0.969157, 0.24644399, 0, -0.24644399, 0.969157, 0, 0, 0, 1, 11.730111, -7.1820517, 8.104769)
+transform = Transform3D(0.9662352, -0.25766143, 0, 0.25766143, 0.9662352, 0, 0, 0, 1, 11.730111, -7.010298, 8.104769)
 
 [node name="floating_rocks_17" parent="." index="19"]
-transform = Transform3D(0.94537604, 0, -0.32598147, 0, 1, 0, 0.32598147, 0, 0.94537604, 5.2136817, -10.926893, 7.387768)
+transform = Transform3D(0.9401623, 0, 0.3407266, 0, 1, 0, -0.3407266, 0, 0.9401623, 5.2136817, -8.003926, 7.387768)
 
 [node name="floating_rocks_18" parent="." index="20"]
-transform = Transform3D(0.98374796, -0.17955416, 0, 0.17955416, 0.98374796, 0, 0, 0, 1, 4.7409678, -12.926893, 8.13831)
+transform = Transform3D(0.9400444, 0.34105158, 0, -0.34105158, 0.9400444, 0, 0, 0, 1, 4.7409678, -10.003926, 8.13831)
 
 [node name="floating_rocks_19" parent="." index="21"]
-transform = Transform3D(0.98374796, 0.17955416, 0, -0.17955416, 0.98374796, 0, 0, 0, 1, 5.8407426, -14.414708, 7.5669303)
+transform = Transform3D(0.9400444, -0.34105158, 0, 0.34105158, 0.9400444, 0, 0, 0, 1, 5.8407426, -11.00457, 7.5669303)
 
 [node name="AnimationPlayer" parent="." index="22"]
 autoplay = "floating_idle"
@@ -125,6 +125,6 @@ tree_root = SubResource("AnimationNodeStateMachine_rdhbp")
 anim_player = NodePath("../AnimationPlayer")
 
 [node name="sea" type="MeshInstance3D" parent="." index="24"]
-transform = Transform3D(298.3875, 0, 0, 0, 298.3875, 0, 0, 0, 298.3875, -4, 1.3101168, 3.3562298)
+transform = Transform3D(86.71045, 0, 0, 0, 86.71045, 0, 0, 0, 86.71045, -4, -20.937246, 3.356)
 material_override = SubResource("ShaderMaterial_rdhbp")
 mesh = SubResource("PlaneMesh_mge0y")

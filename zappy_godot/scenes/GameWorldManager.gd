@@ -60,40 +60,49 @@ func _set_up_tile(x: int,y: int):
 	if not tile_data:
 		return
 
-	var marker_1 := tile_scene.get_node("Marker3D") as Marker3D
-	var resource_scene := preload("res://scenes/tile/resource.tscn").instantiate()
-	var mesh_instance := resource_scene.get_node("MeshInstance3D") as MeshInstance3D
-	if (marker_1 and resource_scene and mesh_instance.material_override):
-		var new_material := mesh_instance.material_override.duplicate() as StandardMaterial3D
+	for resource in tile_data.resources:
+		if tile_data.resources[resource] > 0:
+			tile_scene.available_resources[resource] = tile_data.resources[resource]
 
-		var max_resource = 0
-		var dominant_resource = ""
-		for resource in tile_data.resources:
-			if tile_data.resources[resource] > max_resource:
-				max_resource = tile_data.resources[resource]
-				dominant_resource = resource
+			var resource_scene := preload("res://scenes/tile/resource.tscn").instantiate()
+			var mesh_instance := resource_scene.get_node("MeshInstance3D") as MeshInstance3D
+			
+			if (resource_scene and mesh_instance):
+				var new_material := mesh_instance.material_override.duplicate() as StandardMaterial3D
+				var base_color = tile_scene.resource_colors.get(resource)
+				var intensity = min(float(tile_scene.available_resources[resource]) / 3.0, 1.0)
+				new_material.albedo_color = base_color * intensity + Color.WHITE * (1.0 - intensity)
+				mesh_instance.material_override = new_material
 
-		var resource_colors = {
-			"nourriture": Color.GREEN,
-			"linemate": Color.YELLOW,
-			"deraumere": Color.BLUE,
-			"sibur": Color.RED,
-			"mendiane": Color.PURPLE,
-			"phiras": Color.ORANGE,
-			"thystame": Color.CYAN
-		}
+				var marker_1 := tile_scene.get_node("Marker3D") as Marker3D
+				marker_1.add_child(resource_scene)
+				resource_scene.global_transform = marker_1.global_transform
+				
+				var quantity = tile_scene.available_resources[resource]
+				var scale_factor = 1.0 + (quantity - 1) * 0.5  # Increased multiplier for more visible effect
+				resource_scene.scale = Vector3(scale_factor, scale_factor, scale_factor)
+				
+				place_resource_in_tile(tile_scene, resource_scene)
+				
+				# DEBUG
+				print("Resource: ", resource, " Quantity: ", quantity, " Scale: ", scale_factor)
 
-		if dominant_resource != "" and max_resource > 0:
-			var base_color = resource_colors.get(dominant_resource, Color.GRAY)
-			var intensity = min(float(max_resource) / 3.0, 1.0)
-			new_material.albedo_color = base_color * intensity + Color.WHITE * (1.0 - intensity)
-		else:
-			new_material.albedo_color = Color(0.3, 0.3, 0.3)
+func place_resource_in_tile(tile_scene: Variant, resource_scene: Variant) -> void:
+	var x = randi() % 3
+	var y = randi() % 3
 
-		mesh_instance.material_override = new_material
-		marker_1.add_child(resource_scene)
-		resource_scene.global_transform = marker_1.global_transform
+	while tile_scene.is_position_available(x, y) != true:
+		x = randi() % 3
+		y = randi() % 3
+
+	tile_scene.occupy_position(x, y)
+
+	var offset: Vector2 = tile_scene.get_position_values(x, y)
+
+	resource_scene.global_position += Vector3(offset.x, 0.0, offset.y)
+	print(resource_scene.global_transform)
 	
+# DEPRECATED
 func _update_tile_visual(x: int, y: int):
 	"""Update a single tile's visual representation"""
 	var tile_pos = Vector2i(x, y)
