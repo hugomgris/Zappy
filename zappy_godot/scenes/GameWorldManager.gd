@@ -47,8 +47,53 @@ func _generate_map():
 			tiles[Vector2i(x, y)] = tile_scene
 			
 			# Update tile visual with current data
-			_update_tile_visual(x, y)
+			#_update_tile_visual(x, y)
+			_set_up_tile(x, y)
 
+func _set_up_tile(x: int,y: int):
+	var tile_pos = Vector2i(x, y)
+	if not tiles.has(tile_pos):
+		return
+
+	var tile_scene = tiles[tile_pos]
+	var tile_data = GameData.get_tile_data(x, y)
+	if not tile_data:
+		return
+
+	var marker_1 := tile_scene.get_node("Marker3D") as Marker3D
+	var resource_scene := preload("res://scenes/tile/resource.tscn").instantiate()
+	var mesh_instance := resource_scene.get_node("MeshInstance3D") as MeshInstance3D
+	if (marker_1 and resource_scene and mesh_instance.material_override):
+		var new_material := mesh_instance.material_override.duplicate() as StandardMaterial3D
+
+		var max_resource = 0
+		var dominant_resource = ""
+		for resource in tile_data.resources:
+			if tile_data.resources[resource] > max_resource:
+				max_resource = tile_data.resources[resource]
+				dominant_resource = resource
+
+		var resource_colors = {
+			"nourriture": Color.GREEN,
+			"linemate": Color.YELLOW,
+			"deraumere": Color.BLUE,
+			"sibur": Color.RED,
+			"mendiane": Color.PURPLE,
+			"phiras": Color.ORANGE,
+			"thystame": Color.CYAN
+		}
+
+		if dominant_resource != "" and max_resource > 0:
+			var base_color = resource_colors.get(dominant_resource, Color.GRAY)
+			var intensity = min(float(max_resource) / 3.0, 1.0)
+			new_material.albedo_color = base_color * intensity + Color.WHITE * (1.0 - intensity)
+		else:
+			new_material.albedo_color = Color(0.3, 0.3, 0.3)
+
+		mesh_instance.material_override = new_material
+		marker_1.add_child(resource_scene)
+		resource_scene.global_transform = marker_1.global_transform
+	
 func _update_tile_visual(x: int, y: int):
 	"""Update a single tile's visual representation"""
 	var tile_pos = Vector2i(x, y)
