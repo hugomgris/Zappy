@@ -139,9 +139,9 @@ func _handle_rotation(_delta: float) -> void:
 	var e_pressed = Input.is_key_pressed(KEY_E)
 	
 	if q_pressed and not q_pressed_last_frame:
-		rotation_target += PI/2
-	if e_pressed and not e_pressed_last_frame:
 		rotation_target -= PI/2
+	if e_pressed and not e_pressed_last_frame:
+		rotation_target += PI/2
 	
 	q_pressed_last_frame = q_pressed
 	e_pressed_last_frame = e_pressed
