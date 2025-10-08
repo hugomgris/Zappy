@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3 uid="uid://cfvl12uad5jf1"]
+
+[ext_resource type="PackedScene" uid="uid://babvh68siwu4s" path="res://scenes/resources/sibur.tscn" id="1_c8oa4"]
+
+[node name="Node3D" type="Node3D"]
+
+[node name="sibur2" parent="." instance=ExtResource("1_c8oa4")]
+
+[node name="AnimationPlayer" parent="sibur2" index="9"]
+autoplay = "sibur"
+
+[editable path="sibur2"]

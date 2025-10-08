@@ -1,0 +1,21 @@
+[gd_scene load_steps=2 format=3 uid="uid://deqc7frbf2qcl"]
+
+[ext_resource type="PackedScene" uid="uid://dv0suqwsup7x5" path="res://scenes/resources/thystame.tscn" id="1_vjqft"]
+
+[node name="Node3D" type="Node3D"]
+
+[node name="thystame2" parent="." instance=ExtResource("1_vjqft")]
+
+[node name="Cube_120" parent="thystame2/Empty" index="2"]
+transform = Transform3D(-8.742278e-09, 0.2, 0, -0.2, -8.742278e-09, 0, 0, 0, 0.2, -1.3709068e-06, 0, 2.9802322e-08)
+
+[node name="Cube_121" parent="thystame2/Empty" index="3"]
+transform = Transform3D(-8.742278e-09, 0.2, 8.742278e-09, 0, -8.742278e-09, 0.2, 0.2, 8.742278e-09, 3.821371e-16, 0.5499998, 1.1920929e-07, -0.54999995)
+
+[node name="Cube_122" parent="thystame2/Empty" index="4"]
+transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, 0.5500007, 0.5500001, 5.9604645e-08)
+
+[node name="AnimationPlayer" parent="thystame2" index="1"]
+autoplay = "thystame"
+
+[editable path="thystame2"]

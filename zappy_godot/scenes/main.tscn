@@ -7,7 +7,7 @@
 [ext_resource type="Script" uid="uid://cqlc6khfoxqod" path="res://scenes/player/PlayerManager.gd" id="5_eb6dy"]
 [ext_resource type="PackedScene" uid="uid://d01wcqvgamr8t" path="res://scenes/UI/UI.tscn" id="6_trceg"]
 [ext_resource type="Script" uid="uid://2yx4asihvwhu" path="res://scenes/CameraController.gd" id="7_a8y0u"]
-[ext_resource type="PackedScene" uid="uid://b6ypoxlvlb3mx" path="res://scenes/level/level_test.tscn" id="8_jkv2x"]
+[ext_resource type="PackedScene" uid="uid://rrvgfd65iocc" path="res://scenes/level/enviro.tscn" id="8_tipki"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_tipki")
@@ -47,7 +47,7 @@ unique_name_in_owner = true
 
 [node name="Camera" type="Camera3D" parent="CameraPosition/CameraRotationX/CameraZoomPivot"]
 unique_name_in_owner = true
+projection = 1
 current = true
 
-[node name="level_test2" parent="." instance=ExtResource("8_jkv2x")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.7853827, -3.1184669, 2.8314204)
+[node name="Node3D" parent="." instance=ExtResource("8_tipki")]

@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://chsumim6hl5dm" path="res://scenes/tile/TileManager.gd" id="1_bibkx"]
 [ext_resource type="Material" uid="uid://jpgjvia5t5ga" path="res://materials/TileMaterial.tres" id="2_2jaqc"]
-[ext_resource type="PackedScene" uid="uid://b6ep8vty1o72l" path="res://scenes/tile/resource.tscn" id="3_bibkx"]
+[ext_resource type="PackedScene" uid="uid://b6ep8vty1o72l" path="res://scenes/resources/linemateResource.tscn" id="3_bibkx"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_3dk36"]
 
