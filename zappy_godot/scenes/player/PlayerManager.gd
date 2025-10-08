@@ -81,7 +81,7 @@ func _update_player_visual(player_id: int):
 	var player_scene = players[player_id]
 	var pos = player_data.position
 	var target_pos = world_manager.get_world_position(pos.x, pos.y)
-	target_pos.y = PLAYER_HEIGHT
+	target_pos.y = PLAYER_HEIGHT - 0.3
 	
 	# Smooth movement
 	var tween = create_tween()

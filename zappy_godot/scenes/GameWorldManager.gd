@@ -64,7 +64,7 @@ func _set_up_tile(x: int,y: int):
 		if tile_data.resources[resource] > 0:
 			tile_scene.available_resources[resource] = tile_data.resources[resource]
 
-			var resource_scene := preload("res://scenes/tile/resource.tscn").instantiate()
+			var resource_scene := preload("res://scenes/resources/linemateResource.tscn").instantiate()
 			var mesh_instance := resource_scene.get_node("MeshInstance3D") as MeshInstance3D
 			
 			if (resource_scene and mesh_instance):
