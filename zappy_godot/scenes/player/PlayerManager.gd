@@ -3,12 +3,13 @@ extends Node3D
 
 @onready var player_root: Node3D
 @onready var world_manager: Node3D
+@onready var egg_root: Node3D
 
 var players = {}
+var eggs= {}
 
 # Configuration constants
-const PLAYER_HEIGHT = 0.3
-const MOVEMENT_TWEEN_DURATION = 0.3
+const PLAYER_HEIGHT = 0
 
 # Team colors configuration
 var team_colors = {
@@ -22,19 +23,26 @@ func _ready():
 	# Connect to GameData signals
 	GameData.connect("game_state_updated", _on_game_state_updated)
 	GameData.connect("player_updated", _on_player_updated)
+	GameData.connect("egg_updated", _on_egg_updated)
 
-func initialize(player_root_node: Node3D, world_manager_ref: Node3D):
+func initialize(player_root_node: Node3D, world_manager_ref: Node3D, egg_root_node: Node3D):
 	"""Initialize the player manager with required node references"""
 	player_root = player_root_node
 	world_manager = world_manager_ref
+	egg_root = egg_root_node
 
 func _on_game_state_updated():
 	"""Update all players when game state changes"""
 	_update_all_players()
+	_update_all_eggs()
 
 func _on_player_updated(player_id: int):
 	"""Update a specific player when their data changes"""
 	_update_player_visual(player_id)
+
+func _on_egg_updated(egg_id: int):
+	"""Update a specific egg when their data changes"""
+	_update_egg_visual(egg_id)
 
 func _update_all_players():
 	"""Update all player visuals"""	
@@ -49,6 +57,39 @@ func _update_all_players():
 	# Create new player visuals
 	for player_id in GameData.players:
 		_create_player_visual(player_id)
+		
+func _update_all_eggs():
+	if not egg_root:
+		return
+
+	# Clear existing eggs
+	for child in egg_root.get_children():
+		child.queue_free()
+	eggs.clear()
+
+	for egg_id in GameData.eggs:
+		_create_egg_visual(egg_id)
+	
+
+func _create_egg_visual(egg_id: int):
+	"""Create visual representation for egg"""
+	var egg_data = GameData.get_egg_data(egg_id)
+
+	# WILL NEED TO HANDLE DIFFERENT EGG STATES
+	if not egg_data or not egg_root or not world_manager:
+		print("me fui papa")
+		return
+
+	var egg_scene = preload("res://scenes/resources/eggResource.tscn").instantiate()
+	var pos = egg_data.position
+	var world_pos = world_manager.get_world_position(pos.x, pos.y)
+
+	egg_scene.position = world_pos
+	egg_root.add_child(egg_scene)
+	eggs[egg_id] = egg_scene
+
+func _update_egg_visual(egg_id: int):
+	pass
 
 func _create_player_visual(player_id: int):
 	"""Create visual representation for a player"""
@@ -56,7 +97,18 @@ func _create_player_visual(player_id: int):
 	if not player_data or not player_root or not world_manager:
 		return
 	
-	var player_scene = preload("res://scenes/player/player_cuby.tscn").instantiate()
+	var player_scene
+	match player_data.team:
+		"Alpha":
+			player_scene = preload("res://scenes/player/playerDody.tscn").instantiate()
+		"Beta":
+			player_scene = preload("res://scenes/player/playerPiry.tscn").instantiate()
+		"Gamma":
+			player_scene = preload("res://scenes/player/playerBally.tscn").instantiate()
+		"Delta":
+			player_scene = preload("res://scenes/player/playerCuby.tscn").instantiate()
+		_:
+			player_scene = preload("res://scenes/player/playerIcy.tscn").instantiate()
 	var pos = player_data.position
 	var world_pos = world_manager.get_world_position(pos.x, pos.y)
 	world_pos.y = PLAYER_HEIGHT
@@ -83,38 +135,16 @@ func _update_player_visual(player_id: int):
 	var target_pos = world_manager.get_world_position(pos.x, pos.y)
 	target_pos.y = PLAYER_HEIGHT - 0.3
 	
-	# Smooth movement
-	var tween = create_tween()
-	tween.tween_property(player_scene, "position", target_pos, MOVEMENT_TWEEN_DURATION)
-	
 	# Update player label
 	var player_label = player_scene.get_node("Label3D") as Label3D
 	if player_label:
 		player_label.text = "Player_" + player_data.team + "_" + str(player_id)
-	
+
 	# Update player color based on team and status
 	_update_player_color(player_scene, player_data)
 
 func _update_player_color(player_scene: Node3D, player_data: Dictionary):
-	"""Update player color based on team and status"""
-	var mesh_instance := player_scene.get_node("MeshInstance3D") as MeshInstance3D
-	if not mesh_instance or not mesh_instance.material_override:
-		return
-		
-	var new_material := mesh_instance.material_override.duplicate() as StandardMaterial3D
-	var base_color = team_colors.get(player_data.team, Color.WHITE)
-	
-	# Modify color based on status
-	match player_data.status:
-		"incantation":
-			base_color = base_color.lerp(Color.WHITE, 0.5)  # Lighter for incantation
-		"broadcasting":
-			base_color = base_color.lerp(Color.YELLOW, 0.3)  # Yellowish for broadcasting
-		_:
-			pass  # Normal color
-	
-	new_material.albedo_color = base_color
-	mesh_instance.material_override = new_material
+	pass
 
 func get_player_count() -> int:
 	"""Get the current number of players"""

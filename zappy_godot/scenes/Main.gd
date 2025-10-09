@@ -4,6 +4,7 @@ extends Node3D
 @onready var network_manager = $NetworkManager
 @onready var map_root = $MapRoot
 @onready var player_root = $PlayerRoot
+@onready var egg_root = $EggRoot
 @onready var ui = $UI
 @onready var camera = $Camera
 @onready var camera_controller = $CameraPosition
@@ -24,11 +25,10 @@ func _ready():
 
 func _setup_managers():
 	"""Initialize all manager components"""
-	# Initialize world manager
 	world_manager.initialize(map_root)
 	
 	# Initialize player manager
-	player_manager.initialize(player_root, world_manager)
+	player_manager.initialize(player_root, world_manager, egg_root)
 
 	GameData.connect("game_state_updated", _on_game_state_loaded)
 	
@@ -44,7 +44,7 @@ func _load_test_data():
 	await get_tree().create_timer(1.0).timeout
 	
 	# Load the sample JSON data
-	var file = FileAccess.open("res://json_examples/server2observer/game_10x10.json", FileAccess.READ)
+	var file = FileAccess.open("res://json_examples/server2observer/game_10x10B.json", FileAccess.READ)
 	if file:
 		var json_string = file.get_as_text()
 		file.close()
