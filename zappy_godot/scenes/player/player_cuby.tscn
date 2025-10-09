@@ -3,3 +3,32 @@
 [ext_resource type="PackedScene" uid="uid://beewavrfo2c4g" path="res://scenes/player/player_cuby.glb" id="1_yivjq"]
 
 [node name="player_cuby" instance=ExtResource("1_yivjq")]
+transform = Transform3D(-6.5567085e-09, 0, -0.15, 0, 0.15, 0, 0.15, 0, -6.5567085e-09, 0, 0, 0)
+
+[node name="body" parent="." index="0"]
+transform = Transform3D(0.9924039, -0.08682408, -0.08715574, 0.08715574, 0.9961947, 2.3283064e-10, 0.08682408, -0.0075961226, 0.9961947, 0.4141747, 2.542834, -0.09545612)
+
+[node name="Skeleton3D" parent="body/left_arm" index="0"]
+bones/1/rotation = Quaternion(0.12164685, -6.5692736e-09, 0.019266974, 0.99238646)
+bones/2/rotation = Quaternion(0.12164684, -5.982731e-09, 0.01926697, 0.99238646)
+bones/3/rotation = Quaternion(0.12164685, -5.0442632e-09, 0.019266957, 0.99238646)
+bones/4/rotation = Quaternion(0.12164677, -2.7755576e-17, 0.019266943, 0.99238646)
+
+[node name="Skeleton3D" parent="body/right_arm" index="0"]
+bones/1/rotation = Quaternion(0.12164685, -1.4077015e-08, 0.01926697, 0.99238646)
+bones/2/rotation = Quaternion(0.12164682, -2.1350141e-08, 0.019266961, 0.99238646)
+bones/3/rotation = Quaternion(0.121646784, -4.035411e-08, 0.01926697, 0.99238646)
+bones/4/rotation = Quaternion(0.121646754, -3.2846366e-08, 0.019266982, 0.99238646)
+
+[node name="Skeleton3D" parent="right_leg" index="0"]
+bones/0/position = Vector3(4.27272e-08, -0.061352678, -5.4451687e-07)
+bones/0/rotation = Quaternion(-4.0584597e-15, 2.6220143e-08, -0.17364815, 0.9848078)
+bones/2/rotation = Quaternion(-1.2663704e-13, -6.1437553e-15, 0.17364815, 0.9848078)
+
+[node name="Skeleton3D" parent="left_leg" index="0"]
+bones/0/position = Vector3(1.40249e-07, -0.061352674, -5.277888e-07)
+bones/0/rotation = Quaternion(-4.0584597e-15, 2.6220143e-08, -0.17364815, 0.9848078)
+bones/2/rotation = Quaternion(-1.2663704e-13, -6.1437553e-15, 0.17364815, 0.9848078)
+
+[node name="AnimationPlayer" parent="." index="3"]
+autoplay = "idle"
