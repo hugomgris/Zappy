@@ -4,9 +4,9 @@
 
 [node name="StaticBody3D" type="Node3D"]
 
-[node name="linemate2" parent="." instance=ExtResource("1_7fk20")]
+[node name="linemate_resource" parent="." instance=ExtResource("1_7fk20")]
 
-[node name="AnimationPlayer" parent="linemate2" index="1"]
+[node name="AnimationPlayer" parent="linemate_resource" index="1"]
 autoplay = "Linemate"
 
-[editable path="linemate2"]
+[editable path="linemate_resource"]

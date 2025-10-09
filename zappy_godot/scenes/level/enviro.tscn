@@ -12,7 +12,12 @@ background_mode = 2
 sky = SubResource("Sky_rdhbp")
 tonemap_mode = 2
 glow_enabled = true
-fog_density = 0.0126
+fog_enabled = true
+fog_light_color = Color(0.2455518, 0.61659425, 0.6085558, 1)
+fog_light_energy = 0.75
+fog_density = 0.005
+fog_height = -0.1
+fog_height_density = 5.0
 volumetric_fog_density = 0.2309
 
 [node name="Node3D" type="Node3D"]
