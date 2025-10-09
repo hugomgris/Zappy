@@ -56,7 +56,7 @@ func _create_player_visual(player_id: int):
 	if not player_data or not player_root or not world_manager:
 		return
 	
-	var player_scene = preload("res://scenes/player/Player.tscn").instantiate()
+	var player_scene = preload("res://scenes/player/player_cuby.tscn").instantiate()
 	var pos = player_data.position
 	var world_pos = world_manager.get_world_position(pos.x, pos.y)
 	world_pos.y = PLAYER_HEIGHT
