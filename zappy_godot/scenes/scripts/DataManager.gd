@@ -71,6 +71,7 @@ func _update_players_data(players_data):
 	for player_data in players_data:
 		var player_id = int(player_data.id)  # Convert to integer
 		players[player_id] = {
+			"id": player_id,
 			"position": Vector2i(int(player_data.position.x), int(player_data.position.y)),
 			"orientation": int(player_data.orientation),
 			"level": int(player_data.level),

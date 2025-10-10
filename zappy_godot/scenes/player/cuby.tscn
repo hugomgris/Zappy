@@ -3,7 +3,7 @@
 [ext_resource type="PackedScene" uid="uid://2ngtpy6xoubc" path="res://scenes/player/cuby.glb" id="1_y4q7f"]
 
 [node name="test_cuby" instance=ExtResource("1_y4q7f")]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0, 0, 0)
+transform = Transform3D(-4.371139e-09, 0, -0.1, 0, 0.1, 0, 0.1, 0, -4.371139e-09, 0, 0, 0)
 
 [node name="body" parent="." index="0"]
 transform = Transform3D(0.99844664, -0.019411288, 0.05222431, 0.019437367, 0.99981105, 8.567935e-06, -0.052214608, 0.0010065484, 0.99863535, 0.4141747, 2.5839524, -0.09545612)

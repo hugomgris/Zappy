@@ -25,7 +25,7 @@ func _ready():
 
 func _setup_managers():
 	"""Initialize all manager components"""
-	world_manager.initialize(map_root)
+	world_manager.initialize(map_root, ui)
 	
 	# Initialize player manager
 	player_manager.initialize(player_root, world_manager, egg_root)
@@ -44,7 +44,7 @@ func _load_test_data():
 	await get_tree().create_timer(1.0).timeout
 	
 	# Load the sample JSON data
-	var file = FileAccess.open("res://json_examples/server2observer/game_10x10B.json", FileAccess.READ)
+	var file = FileAccess.open("res://json_examples/server2observer/game_10x10.json", FileAccess.READ)
 	if file:
 		var json_string = file.get_as_text()
 		file.close()
