@@ -184,14 +184,14 @@ gap = 0.0
 script = ExtResource("5_eb6dy")
 
 [node name="UI" parent="." instance=ExtResource("6_trceg")]
-grow_horizontal = 2
-grow_vertical = 2
+unique_name_in_owner = true
 
 [node name="CameraPosition" type="Node3D" parent="."]
 transform = Transform3D(-0.652826, 0.535639, -0.535639, 0, 0.707107, 0.707107, 0.757508, 0.461618, -0.461618, -0.515, 2.49332, -1)
 script = ExtResource("7_a8y0u")
 move_speed = 0.3
 lerp_speed = 0.1
+isometric_angle = 5.0
 
 [node name="CameraRotationX" type="Node3D" parent="CameraPosition"]
 unique_name_in_owner = true

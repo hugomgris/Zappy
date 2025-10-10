@@ -4,6 +4,7 @@ extends Node3D
 @export var tile_size = 1.0
 @export var gap = 0.1
 var tiles = {}
+var ui_reference
 
 
 signal world_ready
@@ -13,9 +14,10 @@ func _ready():
 	GameData.connect("game_state_updated", _on_game_state_updated)
 	GameData.connect("tile_updated", _on_tile_updated)
 
-func initialize(map_root_node: Node3D):
+func initialize(map_root_node: Node3D, ui_node: Control):
 	"""Initialize the world manager with the map root node"""
 	map_root = map_root_node
+	ui_reference = ui_node
 	emit_signal("world_ready")
 
 func _on_game_state_updated():
@@ -59,7 +61,7 @@ func _set_up_tile(x: int,y: int):
 		return
 
 	# Signal setup for hovering
-	tile_scene.setup_hover_signals(tile_data)
+	tile_scene.setup_tile_hover_signals(tile_data, ui_reference, x, y)
 	
 	# Color managament -> checkerboard pattern
 	var tile_mesh = tile_scene.get_node("MeshInstance3D") as MeshInstance3D

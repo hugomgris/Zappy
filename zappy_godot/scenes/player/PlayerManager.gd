@@ -1,6 +1,7 @@
 # PlayerManager.gd - Manages the visual representation of players
 extends Node3D
 
+@onready var ui: Control = $"../UI"
 @onready var player_root: Node3D
 @onready var world_manager: Node3D
 @onready var egg_root: Node3D
@@ -43,6 +44,21 @@ func _on_player_updated(player_id: int):
 func _on_egg_updated(egg_id: int):
 	"""Update a specific egg when their data changes"""
 	_update_egg_visual(egg_id)
+
+func _setup_player_hover_signals(player_scene, player_id: int):
+	var player_area = player_scene.find_child("Area3D") as Area3D
+	
+	if player_area.mouse_entered.is_connected(_on_player_area_mouse_entered):
+		player_area.mouse_entered.disconnect(_on_player_area_mouse_entered)
+	
+	player_area.mouse_entered.connect(_on_player_area_mouse_entered.bind(player_id))
+	player_area.mouse_exited.connect(_on_player_area_mouse_exited.bind())
+
+func _on_player_area_mouse_entered(player_id: int):
+	ui.update_ui_player_stats(player_id)
+
+func _on_player_area_mouse_exited():
+	ui.hide_player_info()
 
 func _update_all_players():
 	"""Update all player visuals"""	
@@ -109,6 +125,9 @@ func _create_player_visual(player_id: int):
 			player_scene = preload("res://scenes/player/playerCuby.tscn").instantiate()
 		_:
 			player_scene = preload("res://scenes/player/playerIcy.tscn").instantiate()
+	if not player_scene:
+		return
+	
 	var pos = player_data.position
 	var world_pos = world_manager.get_world_position(pos.x, pos.y)
 	world_pos.y = PLAYER_HEIGHT
@@ -119,6 +138,7 @@ func _create_player_visual(player_id: int):
 	
 	# Set initial player appearance
 	_update_player_visual(player_id)
+	_setup_player_hover_signals(players[player_id], player_id)
 
 func _update_player_visual(player_id: int):
 	"""Update a specific player's visual representation"""
