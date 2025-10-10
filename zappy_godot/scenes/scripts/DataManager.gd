@@ -59,6 +59,7 @@ func _update_map_data(map_data):
 	for tile_data in map_data.tiles:
 		var pos = Vector2i(tile_data.x, tile_data.y)
 		tiles[pos] = {
+			"id": tiles.size(),
 			"resources": tile_data.resources,
 			"players": tile_data.players,
 			"eggs": tile_data.eggs

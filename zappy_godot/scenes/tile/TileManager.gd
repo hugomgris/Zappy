@@ -1,4 +1,4 @@
-extends StaticBody3D
+extends Area3D
 
 @onready var marker_3d: Marker3D = %Marker3D
 
@@ -29,10 +29,20 @@ func _ready() -> void:
 func setup_resource_grid():
 	resource_positions = []
 	for x in range(3):
-		resource_positions.append([])
+		resource_positions.append([])	
 		for y in range(3):
 			resource_positions[x].append(true)
 	#var random_pos = available_positions[randi() % available_positions.size()]
+
+func setup_hover_signals(tile_data):
+	mouse_entered.connect(_on_tile_area_mouse_entered.bind(tile_data))
+	#mouse_exited.connect(_on_tile_area_mouse_exited.bind(tile_id))
+	
+func _on_tile_area_mouse_entered(tile_data):
+		print(tile_data)
+
+func _on_tile_area_mouse_exited(tile_id: int):
+	pass
 		
 func is_position_available(x: int, y: int) -> bool: return resource_positions[x][y]
 
