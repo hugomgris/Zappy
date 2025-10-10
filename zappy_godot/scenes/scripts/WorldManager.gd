@@ -53,10 +53,14 @@ func _set_up_tile(x: int,y: int):
 		return
 
 	var tile_scene = tiles[tile_pos]
+	
 	var tile_data = GameData.get_tile_data(x, y)
 	if not tile_data:
 		return
 
+	# Signal setup for hovering
+	tile_scene.setup_hover_signals(tile_data)
+	
 	# Color managament -> checkerboard pattern
 	var tile_mesh = tile_scene.get_node("MeshInstance3D") as MeshInstance3D
 	if (tile_mesh and (x % 2 == 0 and y % 2 != 0) or tile_mesh and (x % 2 != 0 and y % 2 == 0)):
