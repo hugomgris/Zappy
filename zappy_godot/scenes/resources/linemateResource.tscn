@@ -1,12 +1,14 @@
-[gd_scene load_steps=2 format=3 uid="uid://b6ep8vty1o72l"]
+[gd_scene load_steps=3 format=3 uid="uid://b6ep8vty1o72l"]
 
 [ext_resource type="PackedScene" uid="uid://dff7dxi2o2yon" path="res://scenes/resources/linemate.tscn" id="1_7fk20"]
+[ext_resource type="Script" uid="uid://boctx7eiyq0gl" path="res://scenes/resources/resourceManager.gd" id="2_4ms4c"]
 
-[node name="StaticBody3D" type="Node3D"]
+[node name="linemate_resource" type="Node3D"]
 
-[node name="linemate_resource" parent="." instance=ExtResource("1_7fk20")]
+[node name="linemate" parent="." instance=ExtResource("1_7fk20")]
+script = ExtResource("2_4ms4c")
 
-[node name="AnimationPlayer" parent="linemate_resource" index="1"]
+[node name="AnimationPlayer" parent="linemate" index="1"]
 autoplay = "Linemate"
 
-[editable path="linemate_resource"]
+[editable path="linemate"]

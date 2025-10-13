@@ -204,4 +204,4 @@ unique_name_in_owner = true
 projection = 1
 current = true
 
-[node name="Node3D" parent="." instance=ExtResource("8_tipki")]
+[node name="enviro" parent="." instance=ExtResource("8_tipki")]

@@ -1,12 +1,11 @@
-[gd_scene load_steps=2 format=3 uid="uid://dalyrdskyjf85"]
+[gd_scene load_steps=3 format=3 uid="uid://dalyrdskyjf85"]
 
+[ext_resource type="Script" uid="uid://boctx7eiyq0gl" path="res://scenes/resources/resourceManager.gd" id="1_vil1x"]
 [ext_resource type="PackedScene" uid="uid://cd5msoqe1w2bg" path="res://scenes/resources/deraumere.tscn" id="1_xvmav"]
 
-[node name="Node3D" type="Node3D"]
+[node name="derumere_resource" type="Node3D"]
 
-[node name="deraumere2" parent="." instance=ExtResource("1_xvmav")]
+[node name="deraumere" parent="." instance=ExtResource("1_xvmav")]
+script = ExtResource("1_vil1x")
 
-[node name="AnimationPlayer" parent="deraumere2" index="3"]
-autoplay = "deraumere"
-
-[editable path="deraumere2"]
+[editable path="deraumere"]
