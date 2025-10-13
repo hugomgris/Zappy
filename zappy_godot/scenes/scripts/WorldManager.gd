@@ -100,35 +100,20 @@ func _set_up_tile(x: int,y: int):
 					resource_scene = preload("res://scenes/resources/linemateResource.tscn").instantiate();
 						
 			if (resource_scene):
-				var marker_1 := tile_scene.get_node("Marker3D") as Marker3D
-				marker_1.add_child(resource_scene)
-				resource_scene.global_transform = marker_1.global_transform
-				
 				var quantity = tile_scene.available_resources[resource]
 				var scale_factor = 0.5 + (quantity - 1) * 0.2  # Increase multiplier for more visible effect
 				resource_scene.scale = Vector3(scale_factor, scale_factor, scale_factor)
 				
-				place_resource_in_tile(tile_scene, resource_scene)
-				
-				# DEBUG
-				#print("Resource: ", resource, " Quantity: ", quantity, " Scale: ", scale_factor)
+				place_resource_in_tile(tile_scene, resource_scene, scale_factor)
 
-func place_resource_in_tile(tile_scene: Variant, resource_scene: Variant) -> void:
-	var x = randi() % 3
-	var y = randi() % 3
-
-	while tile_scene.is_position_available(x, y) != true:
-		x = randi() % 3
-		y = randi() % 3
-
-	tile_scene.occupy_position(x, y)
-
-	var offset: Vector2 = tile_scene.get_position_values(x, y)
-
-	resource_scene.global_position += Vector3(offset.x, 0.0, offset.y)
+func place_resource_in_tile(tile_scene: Node3D, resource_scene: Node3D, scale_factor: float) -> void:
+	var position_index = tile_scene.get_available_position_index()
 	
-	#DEBUG
-	#print(resource_scene.global_transform)
+	if position_index == -1:
+		print("Warning: No available positions in tile for resource")
+		return
+	
+	tile_scene.occupy_position(position_index, resource_scene, scale_factor)
 
 func get_world_position(grid_x: int, grid_y: int) -> Vector3:
 	"""Convert grid coordinates to world position"""

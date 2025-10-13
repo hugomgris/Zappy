@@ -100,6 +100,8 @@ func _create_egg_visual(egg_id: int):
 	var pos = egg_data.position
 	var world_pos = world_manager.get_world_position(pos.x, pos.y)
 
+	egg_scene.scale = Vector3(0.3, 0.3, 0.3)
+	
 	egg_scene.position = world_pos
 	egg_root.add_child(egg_scene)
 	eggs[egg_id] = egg_scene

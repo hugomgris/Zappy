@@ -1,11 +1,13 @@
-[gd_scene load_steps=2 format=3 uid="uid://dmcylcbrmpyhu"]
+[gd_scene load_steps=3 format=3 uid="uid://dmcylcbrmpyhu"]
 
 [ext_resource type="PackedScene" uid="uid://b8qvkart0eeqt" path="res://scenes/resources/egg.tscn" id="1_ykyu7"]
+[ext_resource type="Script" uid="uid://cg7qgq8nvr7j" path="res://scenes/resources/EggManager.gd" id="2_7k80f"]
 
-[node name="Node3D" type="Area3D"]
+[node name="egg_resource" type="Node3D"]
 
 [node name="egg" parent="." instance=ExtResource("1_ykyu7")]
-transform = Transform3D(-8.742278e-09, 0, -0.2, 0, 0.2, 0, 0.2, 0, -8.742278e-09, 0, 0.11886597, 0)
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0, 0.46188354, 0)
+script = ExtResource("2_7k80f")
 
 [node name="drop_top_down" parent="egg" index="4"]
 transform = Transform3D(-4.3257952e-08, -1.926265e-08, 0.07313894, 0.07286063, -0.006374456, 4.1414495e-08, -0.0063744574, -0.07286061, -2.2959517e-08, -0.00025735793, 1.4636092, -0.06339463)

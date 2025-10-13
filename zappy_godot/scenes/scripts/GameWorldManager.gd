@@ -88,8 +88,8 @@ func _set_up_tile(x: int,y: int):
 				print("Resource: ", resource, " Quantity: ", quantity, " Scale: ", scale_factor)
 
 func place_resource_in_tile(tile_scene: Variant, resource_scene: Variant) -> void:
-	var x = randi() % 3
-	var y = randi() % 3
+	var x = randi() % 2
+	var y = randi() % 2
 
 	while tile_scene.is_position_available(x, y) != true:
 		x = randi() % 3

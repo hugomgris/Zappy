@@ -1,12 +1,14 @@
-[gd_scene load_steps=2 format=3 uid="uid://cfvl12uad5jf1"]
+[gd_scene load_steps=3 format=3 uid="uid://cfvl12uad5jf1"]
 
 [ext_resource type="PackedScene" uid="uid://babvh68siwu4s" path="res://scenes/resources/sibur.tscn" id="1_c8oa4"]
+[ext_resource type="Script" uid="uid://boctx7eiyq0gl" path="res://scenes/resources/resourceManager.gd" id="2_n6yxt"]
 
-[node name="Node3D" type="Node3D"]
+[node name="sibur_resource" type="Node3D"]
 
-[node name="sibur2" parent="." instance=ExtResource("1_c8oa4")]
+[node name="sibur" parent="." instance=ExtResource("1_c8oa4")]
+script = ExtResource("2_n6yxt")
 
-[node name="AnimationPlayer" parent="sibur2" index="9"]
+[node name="AnimationPlayer" parent="sibur" index="9"]
 autoplay = "sibur"
 
-[editable path="sibur2"]
+[editable path="sibur"]
