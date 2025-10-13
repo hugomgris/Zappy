@@ -8,6 +8,7 @@ extends Node3D
 @export var animation_interval_max: float = 20.0
 
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
+
 var base_position: Vector3
 var time_elapsed: float = 0.0
 var animation_timer: float = 0.0
@@ -18,21 +19,21 @@ var ui_ref
 func _ready():
 	base_position = position
 
-func setup_egg_hover_signals(ui_reference):
+func setup_nourriture_hover_signals(ui_reference):
 	ui_ref = ui_reference
 
-	var egg_area = find_child("Area3D") as Area3D
+	var nourriture_area = find_child("Area3D") as Area3D
 	
-	if egg_area.mouse_entered.is_connected(_on_egg_area_mouse_entered):
-		egg_area.mouse_entered.disconnect(_on_egg_area_mouse_entered)
+	if nourriture_area.mouse_entered.is_connected(_on_nourriture_area_mouse_entered):
+		nourriture_area.mouse_entered.disconnect(_on_nourriture_area_mouse_entered)
 	
-	egg_area.mouse_entered.connect(_on_egg_area_mouse_entered)
-	egg_area.mouse_exited.connect(_on_egg_area_mouse_exited.bind())
+	nourriture_area.mouse_entered.connect(_on_nourriture_area_mouse_entered)
+	nourriture_area.mouse_exited.connect(_on_nourriture_area_mouse_exited.bind())
 
-func _on_egg_area_mouse_entered() -> void:
-	ui_ref.update_resource_label_display("EGG")
+func _on_nourriture_area_mouse_entered() -> void:
+	ui_ref.update_resource_label_display("NOURRITURE")
 
-func _on_egg_area_mouse_exited() -> void:
+func _on_nourriture_area_mouse_exited() -> void:
 	ui_ref.hide_resource_label_display()
 
 func _process(delta: float):

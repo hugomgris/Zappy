@@ -5,9 +5,16 @@ extends Area3D
 @onready var marker_3d_br: Marker3D = %Marker3D_BR
 @onready var marker_3d_bl: Marker3D = %Marker3D_BL
 
-var corner_positions: Array[Marker3D]
+@onready var marker_3d_pl_tl: Marker3D = %Marker3D_PL_TL
+@onready var marker_3d_pl_tr: Marker3D = %Marker3D_PL_TR
+@onready var marker_3d_pl_bl: Marker3D = %Marker3D_PL_BL
+@onready var marker_3d_pl_br: Marker3D = %Marker3D_PL_BR
 
-var available_positions: Array[bool] = [true, true, true, true]
+var resource_positions: Array[Marker3D]
+var player_positions: Array[Marker3D]
+
+var available_resource_positions: Array[bool] = [true, true, true, true]
+var available_player_positions: Array[bool] = [true, true, true, true]
 
 var available_resources: Dictionary = {
 		"nourriture": 0,
@@ -26,16 +33,24 @@ var hovered_tile_y: int
 func _ready() -> void:
 	setup_resource_grid()
 	
-	corner_positions = [
-	marker_3d_tl,
-	marker_3d_tr,
-	marker_3d_br,
-	marker_3d_bl	
-]
+	resource_positions = [
+		marker_3d_tl,
+		marker_3d_tr,
+		marker_3d_br,
+		marker_3d_bl	
+	]
+
+	player_positions = [
+		marker_3d_pl_tl,
+		marker_3d_pl_tr,
+		marker_3d_pl_bl,
+		marker_3d_pl_br,
+	]
+
 
 func setup_resource_grid():
 	for i in range(4):
-		available_positions[i] = true
+		available_resource_positions[i] = true
 
 func setup_tile_hover_signals(tile_data, ui_reference, x: int, y: int):
 	ui_ref = ui_reference
@@ -56,36 +71,72 @@ func _on_tile_area_mouse_exited():
 	if ui_ref and ui_ref.has_method("hide_tile_info"):
 		ui_ref.hide_tile_info()
 		
-func is_position_available(position_index: int) -> bool:
+func is_resource_position_available(position_index: int) -> bool:
 	if position_index < 0 or position_index >= 4:
 		return false
-	return available_positions[position_index]
+	return available_resource_positions[position_index]
 
-func occupy_position(position_index: int, resource_scene: Node3D, scale_factor: float) -> void:
+func occupy_resource_position(position_index: int, resource_scene: Node3D, scale_factor: float) -> void:
 	if position_index >= 0 and position_index < 4:
-		available_positions[position_index] = false
-		var marker = corner_positions[position_index] as Marker3D
+		available_resource_positions[position_index] = false
+		var marker = resource_positions[position_index] as Marker3D
 		marker.add_child(resource_scene)
 		resource_scene.global_transform = marker.global_transform
+
+		resource_scene.global_position -= Vector3(0.0, 0.1, 0.0)
 
 		resource_scene.scale = Vector3(scale_factor, scale_factor, scale_factor)
 
 
-func free_position(position_index: int) -> void:
+func free_resource_position(position_index: int) -> void:
 	if position_index >= 0 and position_index < 4:
-		available_positions[position_index] = true
+		available_resource_positions[position_index] = true
 
-func get_available_position_index() -> int:
+func get_resource_available_position_index() -> int:
 	"""Get the next available position index, or -1 if none available"""
 	for i in range(4):
-		if available_positions[i]:
+		if available_resource_positions[i]:
 			return i
-	return -1  # No positions available
+	return -1
 
-func get_position_values(position_index: int) -> Vector3:
+func get_resource_position_values(position_index: int) -> Vector3:
 	"""Get the offset for a specific corner position"""
-	if position_index >= 0 and position_index < corner_positions.size():
-		return corner_positions[position_index].global_position
+	if position_index >= 0 and position_index < resource_positions.size():
+		return resource_positions[position_index].global_position
+	
+	print("Warning: Invalid position index: ", position_index)
+	return Vector3.ZERO
+
+func is_player_position_available(position_index: int) -> bool:
+	if position_index < 0 or position_index >= 4:
+		return false
+	return available_player_positions[position_index]
+
+func occupy_player_position(position_index: int, player_scene: Node3D) -> void:
+	if position_index >= 0 and position_index < 4:
+		available_player_positions[position_index] = false
+		var marker = player_positions[position_index] as Marker3D
+		marker.add_child(player_scene)
+		player_scene.global_transform = marker.global_transform
+
+		player_scene.global_position -= Vector3(0.0, 0.2, 0.0)
+
+
+func free_player_position(position_index: int) -> void:
+	if position_index >= 0 and position_index < 4:
+		available_player_positions[position_index] = true
+
+func get_player_available_position_index() -> int:
+	"""Get the next available position index, or -1 if none available"""
+	for i in range(4):
+		if available_player_positions[i]:
+			return i
+	return -1
+
+func get_player_position_values(position_index: int) -> Vector3:
+	"""Get the offset for a specific corner position"""
+	if position_index >= 0 and position_index < player_positions.size():
+		return player_positions[position_index].global_position
 	
 	print("Warning: Invalid position index: ", position_index)
 	return Vector3.ZERO

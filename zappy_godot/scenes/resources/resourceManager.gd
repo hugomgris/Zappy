@@ -8,10 +8,14 @@ extends Node3D
 @export var animation_interval_max: float = 20.0
 
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
+
 var base_position: Vector3
 var time_elapsed: float = 0.0
 var animation_timer: float = 0.0
 var animation_interval = randf_range(animation_interval_min, animation_interval_max)
+
+var ui_ref
+var type: String
 
 func _ready():
 	base_position = position
@@ -19,6 +23,24 @@ func _ready():
 	# Stop autoplay and set up idle state
 	if animation_player:
 		animation_player.stop()
+
+func setup_resource_hover_signals(ui_reference, sent_type: String):
+	type = sent_type.to_upper()
+	ui_ref = ui_reference
+
+	var resource_area = find_child("Area3D") as Area3D
+	
+	if resource_area.mouse_entered.is_connected(_on_resource_area_mouse_entered):
+		resource_area.mouse_entered.disconnect(_on_resource_area_mouse_entered)
+	
+	resource_area.mouse_entered.connect(_on_resource_area_mouse_entered)
+	resource_area.mouse_exited.connect(_on_resource_area_mouse_exited.bind())
+
+func _on_resource_area_mouse_entered() -> void:
+	ui_ref.update_resource_label_display(type)
+
+func _on_resource_area_mouse_exited() -> void:
+	ui_ref.hide_resource_label_display()
 
 func _process(delta: float):
 	time_elapsed += delta

@@ -25,7 +25,7 @@ func _ready():
 
 func _setup_managers():
 	"""Initialize all manager components"""
-	world_manager.initialize(map_root, ui)
+	await world_manager.initialize(map_root, ui)
 	
 	# Initialize player manager
 	player_manager.initialize(player_root, world_manager, egg_root)

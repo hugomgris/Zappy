@@ -7,12 +7,6 @@ points = PackedVector3Array(-1.1778307, -0.9988562, -1.1869165, -1.1778307, -0.9
 
 [node name="Player" type="Node3D"]
 
-[node name="Label3D" type="Label3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
-visible = false
-text = "Player"
-font_size = 20
-
 [node name="playerPiry" parent="." instance=ExtResource("1_wy7gy")]
 
 [node name="body" parent="playerPiry" index="0"]

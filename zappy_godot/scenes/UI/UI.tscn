@@ -190,3 +190,30 @@ text = "phiras: -"
 layout_mode = 2
 theme_override_font_sizes/font_size = 11
 text = "thystame: -"
+
+[node name="ResourceTypePanel" type="Panel" parent="."]
+layout_mode = 0
+offset_left = -168.0
+offset_top = 306.0
+offset_right = -19.0
+offset_bottom = 346.0
+size_flags_horizontal = 3
+
+[node name="VBox" type="VBoxContainer" parent="ResourceTypePanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+scale = Vector2(1.0062773, 1.0054314)
+
+[node name="ResourceLabel" type="Label" parent="ResourceTypePanel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Resource type"
+horizontal_alignment = 1

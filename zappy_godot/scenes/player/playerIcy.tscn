@@ -7,12 +7,6 @@ points = PackedVector3Array(-1.080778, -0.11690104, -0.6937998, -0.944934, -0.12
 
 [node name="Player" type="Node3D"]
 
-[node name="Label3D" type="Label3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.48780167, 0)
-visible = false
-text = "Player"
-font_size = 20
-
 [node name="icy" parent="." instance=ExtResource("1_1idnp")]
 
 [node name="body" parent="icy" index="0"]
