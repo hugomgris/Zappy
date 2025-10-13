@@ -1,7 +1,9 @@
-[gd_scene load_steps=3 format=3 uid="uid://deqc7frbf2qcl"]
+[gd_scene load_steps=4 format=3 uid="uid://deqc7frbf2qcl"]
 
 [ext_resource type="PackedScene" uid="uid://dv0suqwsup7x5" path="res://scenes/resources/thystame.tscn" id="1_vjqft"]
 [ext_resource type="Script" uid="uid://boctx7eiyq0gl" path="res://scenes/resources/resourceManager.gd" id="2_qilx6"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_qilx6"]
 
 [node name="thystame_resource" type="Node3D"]
 
@@ -19,5 +21,11 @@ transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, 0.5500007, 0.5500001, 5
 
 [node name="AnimationPlayer" parent="thystame" index="1"]
 autoplay = "thystame"
+
+[node name="Area3D" type="Area3D" parent="thystame"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="thystame/Area3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5080261, 0)
+shape = SubResource("BoxShape3D_qilx6")
 
 [editable path="thystame"]

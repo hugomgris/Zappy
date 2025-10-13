@@ -16,7 +16,6 @@ extends Control
 @onready var tile_phiras_label: Label = $TileInfoPanel/VBox/TilePhirasLabel
 @onready var tile_thystame_label: Label = $TileInfoPanel/VBox/TileThystameLabel
 
-
 # Player Info Panel labels
 @onready var player_info_panel: Panel = $PlayerInfoPanel
 @onready var player_title_label: Label = $PlayerInfoPanel/VBox/PlayerTitleLabel
@@ -33,9 +32,15 @@ extends Control
 @onready var player_phiras_label: Label = $PlayerInfoPanel/VBox/PlayerPhirasLabel
 @onready var player_thystame_label: Label = $PlayerInfoPanel/VBox/PlayerThystameLabel
 
+# Resource label
+@onready var resource_type_panel: Panel = $ResourceTypePanel
+@onready var resource_label: Label = $ResourceTypePanel/VBox/ResourceLabel
+
+
 # Panel - cursor tracking variables
 var is_hovering_tile := false
 var is_hovering_player := false
+var is_hovering_resource := false
 var is_following_cursor := false
 var follow_cursor_timer := 0.0
 
@@ -50,7 +55,9 @@ func _process(delta: float) -> void:
 	if is_following_cursor and tile_info_panel.visible and is_hovering_tile:
 		_position_panel_near_cursor(tile_info_panel)
 	elif is_following_cursor and player_info_panel.visible and is_hovering_player:
-			_position_panel_near_cursor(player_info_panel)
+		_position_panel_near_cursor(player_info_panel)
+	elif is_following_cursor and resource_type_panel.visible and is_hovering_resource:
+		_position_panel_near_cursor(resource_type_panel)
 
 func _setup_ui():
 	"""Initialize UI elements"""
@@ -66,7 +73,7 @@ func update_ui_tile_stats(tile_data, tile_x: int, tile_y: int):
 		return
 	
 	is_hovering_tile = true
-	tile_info_panel.visible = true;
+	tile_info_panel.visible = true
 	is_following_cursor = true
 
 	tile_id_label.text = "ID:" + str(tile_data.id)
@@ -150,3 +157,21 @@ func hide_player_info():
 	is_hovering_player = false
 	player_info_panel.visible = false
 	is_following_cursor = false
+
+func update_resource_label_display(text: String):
+	if not text:
+		resource_type_panel.visible = false
+
+	is_hovering_resource = true
+	resource_type_panel.visible = true
+	is_following_cursor = true
+
+	resource_label.text = text
+	
+	_position_panel_near_cursor(resource_type_panel)
+
+func hide_resource_label_display():
+	is_hovering_resource = false
+	resource_type_panel.visible = false
+	is_following_cursor = false
+	resource_label.text = "unknown"

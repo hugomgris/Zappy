@@ -23,6 +23,22 @@ shape = SubResource("BoxShape3D_1abcd")
 unique_name_in_owner = true
 transform = Transform3D(0.15, 0, 0, 0, 0.15, 0, 0, 0, 0.15, -0.4, 0.2, -0.4)
 
+[node name="Marker3D_PL_TL" type="Marker3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.2, -0.2)
+
+[node name="Marker3D_PL_TR" type="Marker3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.2, -0.2)
+
+[node name="Marker3D_PL_BL" type="Marker3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.2, 0.2)
+
+[node name="Marker3D_PL_BR" type="Marker3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.2, 0.2)
+
 [node name="Marker3D_TR" type="Marker3D" parent="."]
 unique_name_in_owner = true
 transform = Transform3D(0.15, 0, 0, 0, 0.15, 0, 0, 0, 0.15, 0.4, 0.2, -0.4)
