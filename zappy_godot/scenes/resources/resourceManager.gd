@@ -33,7 +33,7 @@ func setup_resource_hover_signals(ui_reference, sent_type: String):
 	if resource_area.mouse_entered.is_connected(_on_resource_area_mouse_entered):
 		resource_area.mouse_entered.disconnect(_on_resource_area_mouse_entered)
 	
-	resource_area.mouse_entered.connect(_on_resource_area_mouse_entered)
+	resource_area.mouse_entered.connect(_on_resource_area_mouse_entered.bind())
 	resource_area.mouse_exited.connect(_on_resource_area_mouse_exited.bind())
 
 func _on_resource_area_mouse_entered() -> void:

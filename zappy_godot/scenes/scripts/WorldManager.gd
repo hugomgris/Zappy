@@ -42,7 +42,12 @@ func _generate_map():
 	var spacing = tile_size + gap
 	for x in range(GameData.map_size.x):
 		for y in range(GameData.map_size.y):
-			var tile_scene = preload("res://scenes/tile/tile.tscn").instantiate()
+			var tile_scene
+			var random_index = randi_range(1, 20)
+			if (random_index % 20 == 0):
+				tile_scene = preload("res://scenes/tile/tile_arch_01_scene.tscn").instantiate()
+			else:
+				tile_scene = preload("res://scenes/tile/tile.tscn").instantiate()
 			tile_scene.position = Vector3(x * spacing, 0, y * spacing)
 			map_root.add_child(tile_scene)
 			tiles[Vector2i(x, y)] = tile_scene
@@ -68,6 +73,9 @@ func _set_up_tile(x: int,y: int):
 	
 	# Color managament -> checkerboard pattern
 	var tile_mesh = tile_scene.get_node("MeshInstance3D") as MeshInstance3D
+	if not tile_mesh:
+		tile_mesh = tile_scene.get_node("tile").get_node("tile_arch_01") as MeshInstance3D
+		print(tile_mesh)
 	if (tile_mesh and (x % 2 == 0 and y % 2 != 0) or tile_mesh and (x % 2 != 0 and y % 2 == 0)):
 		var new_material := tile_mesh.material_override.duplicate() as StandardMaterial3D
 		
