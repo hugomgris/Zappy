@@ -18,7 +18,7 @@ var ui_ref
 func _ready():
 	base_position = position
 
-func setup_egg_hover_signals(ui_reference):
+func setup_egg_hover_signals(ui_reference, egg_id):
 	ui_ref = ui_reference
 
 	var egg_area = find_child("Area3D") as Area3D
@@ -26,14 +26,14 @@ func setup_egg_hover_signals(ui_reference):
 	if egg_area.mouse_entered.is_connected(_on_egg_area_mouse_entered):
 		egg_area.mouse_entered.disconnect(_on_egg_area_mouse_entered)
 	
-	egg_area.mouse_entered.connect(_on_egg_area_mouse_entered)
+	egg_area.mouse_entered.connect(_on_egg_area_mouse_entered.bind(egg_id))
 	egg_area.mouse_exited.connect(_on_egg_area_mouse_exited.bind())
 
-func _on_egg_area_mouse_entered() -> void:
-	ui_ref.update_resource_label_display("EGG")
+func _on_egg_area_mouse_entered(egg_id: int) -> void:
+	ui_ref.update_egg_panel(egg_id)
 
 func _on_egg_area_mouse_exited() -> void:
-	ui_ref.hide_resource_label_display()
+	ui_ref.hide_egg_panel()
 
 func _process(delta: float):
 	time_elapsed += delta

@@ -111,7 +111,7 @@ func _create_egg_visual(egg_id: int):
 	var pos = egg_data.position
 	var world_pos = world_manager.get_world_position(pos.x, pos.y)
 
-	egg_scene.get_node("egg").setup_egg_hover_signals(ui)
+	egg_scene.get_node("egg").setup_egg_hover_signals(ui, egg_id)
 
 	egg_scene.scale = Vector3(0.3, 0.3, 0.3)
 	
@@ -148,12 +148,13 @@ func _create_player_visual(player_id: int):
 	if world_is_ready and world_manager.tiles.has(pos):
 		var tile_scene = world_manager.tiles[pos]
 		if tile_scene:
-			place_player_in_tile(tile_scene, player_scene)
+			place_player_in_tile(tile_scene, player_scene, player_id)
 		else:
 			player_root.add_child(player_scene)
 			var world_pos = world_manager.get_world_position(pos.x, pos.y)
 			world_pos.y = PLAYER_HEIGHT - 0.3
 			player_scene.position = world_pos
+
 	else:
 		player_root.add_child(player_scene)
 		var world_pos = world_manager.get_world_position(pos.x, pos.y)
@@ -165,14 +166,14 @@ func _create_player_visual(player_id: int):
 	_update_player_visual(player_id)
 	_setup_player_hover_signals(players[player_id], player_id)
 
-func place_player_in_tile(tile_scene: Area3D, player_scene: Node3D):
+func place_player_in_tile(tile_scene: Area3D, player_scene: Node3D, player_id: int):
 	var position_index = tile_scene.get_player_available_position_index()
 
 	if position_index == -1:
 		print("Warning: No available positions in tile for player")
 		return
 
-	tile_scene.occupy_player_position(position_index, player_scene)
+	tile_scene.occupy_player_position(position_index, player_scene, player_id)
 
 func _update_player_visual(player_id: int):
 	"""Update a specific player's visual representation"""

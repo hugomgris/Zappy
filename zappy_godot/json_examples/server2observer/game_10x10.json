@@ -111,7 +111,7 @@
         {"x": 6, "y": 9, "resources": {"nourriture": 2, "linemate": 0, "deraumere": 0, "sibur": 1, "mendiane": 1, "phiras": 0, "thystame": 0}, "players": [], "eggs": []},
         {"x": 7, "y": 9, "resources": {"nourriture": 0, "linemate": 1, "deraumere": 0, "sibur": 0, "mendiane": 0, "phiras": 2, "thystame": 1}, "players": [], "eggs": []},
         {"x": 8, "y": 9, "resources": {"nourriture": 1, "linemate": 0, "deraumere": 3, "sibur": 0, "mendiane": 0, "phiras": 1, "thystame": 0}, "players": [], "eggs": []},
-        {"x": 9, "y": 9, "resources": {"nourriture": 0, "linemate": 0, "deraumere": 0, "sibur": 0, "mendiane": 0, "phiras": 0, "thystame": 4}, "players": [], "eggs": []}
+        {"x": 9, "y": 9, "resources": {"nourriture": 1, "linemate": 1, "deraumere": 1, "sibur": 1, "mendiane": 1, "phiras": 1, "thystame": 1}, "players": [], "eggs": []}
       ]
     },
     "players": [
@@ -131,7 +131,11 @@
       {"id": 14, "position": {"x": 3, "y": 3}, "orientation": 2, "level": 3, "team": "Delta", "inventory": {"nourriture": 10, "linemate": 1, "deraumere": 0, "sibur": 0, "mendiane": 0, "phiras": 1, "thystame": 0}, "status": "normal"},
       {"id": 15, "position": {"x": 6, "y": 3}, "orientation": 1, "level": 4, "team": "Alpha", "inventory": {"nourriture": 13, "linemate": 0, "deraumere": 0, "sibur": 1, "mendiane": 2, "phiras": 1, "thystame": 0}, "status": "incantation"},
       {"id": 16, "position": {"x": 5, "y": 4}, "orientation": 3, "level": 1, "team": "Beta", "inventory": {"nourriture": 4, "linemate": 1, "deraumere": 0, "sibur": 0, "mendiane": 0, "phiras": 0, "thystame": 0}, "status": "normal"},
-      {"id": 17, "position": {"x": 5, "y": 4}, "orientation": 4, "level": 2, "team": "Beta", "inventory": {"nourriture": 7, "linemate": 0, "deraumere": 1, "sibur": 1, "mendiane": 0, "phiras": 0, "thystame": 0}, "status": "forking"}
+      {"id": 17, "position": {"x": 5, "y": 4}, "orientation": 4, "level": 2, "team": "Beta", "inventory": {"nourriture": 7, "linemate": 0, "deraumere": 1, "sibur": 1, "mendiane": 0, "phiras": 0, "thystame": 0}, "status": "forking"},
+      {"id": 18, "position": {"x": 2, "y": 5}, "orientation": 4, "level": 2, "team": "Epsilon", "inventory": {"nourriture": 7, "linemate": 0, "deraumere": 1, "sibur": 1, "mendiane": 0, "phiras": 0, "thystame": 1}, "status": "forking"},
+      {"id": 19, "position": {"x": 2, "y": 5}, "orientation": 4, "level": 5, "team": "Epsilon", "inventory": {"nourriture": 2, "linemate": 2, "deraumere": 3, "sibur": 1, "mendiane": 1, "phiras": 1, "thystame": 0}, "status": "broadcasting"},
+      {"id": 20, "position": {"x": 7, "y": 5}, "orientation": 3, "level": 2, "team": "Epsilon", "inventory": {"nourriture": 8, "linemate": 0, "deraumere": 2, "sibur": 2, "mendiane": 0, "phiras": 0, "thystame": 0}, "status": "incantation"},
+      {"id": 20, "position": {"x": 7, "y": 5}, "orientation": 2, "level": 3, "team": "Epsilon", "inventory": {"nourriture": 7, "linemate": 6, "deraumere": 1, "sibur": 1, "mendiane": 0, "phiras": 1, "thystame": 1}, "status": "nromal"}
     ],
     "eggs": [
       {"id": 101, "position": {"x": 1, "y": 0}, "status": "laid", "parent_id": 6, "team": "Gamma"},

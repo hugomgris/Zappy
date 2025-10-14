@@ -22,6 +22,7 @@ extends Control
 @onready var player_id_label: Label = $PlayerInfoPanel/VBox/PlayerIDLabel
 @onready var player_position_label: Label = $PlayerInfoPanel/VBox/PlayerPositionLabel
 @onready var player_level_label: Label = $PlayerInfoPanel/VBox/PlayerLevelLabel
+@onready var player_orientation_label: Label = $PlayerInfoPanel/VBox/PlayerOrientationLabel
 @onready var player_team_label: Label = $PlayerInfoPanel/VBox/PlayerTeamLabel
 @onready var player_status_label: Label = $PlayerInfoPanel/VBox/PlayerStatusLabel
 @onready var player_nourriture_label: Label = $PlayerInfoPanel/VBox/PlayerNourritureLabel
@@ -36,13 +37,20 @@ extends Control
 @onready var resource_type_panel: Panel = $ResourceTypePanel
 @onready var resource_label: Label = $ResourceTypePanel/VBox/ResourceLabel
 
+# Egg label
+@onready var egg_info_panel: Panel = $EggInfoPanel
+@onready var egg_id_label: Label = $EggInfoPanel/VBox/EggIDLabel
+@onready var egg_position_label: Label = $EggInfoPanel/VBox/EggPositionLabel
+@onready var egg_team_label: Label = $EggInfoPanel/VBox/EggTeamLabel
+@onready var egg_status_label: Label = $EggInfoPanel/VBox/EggStatusLabel
 
 # Panel - cursor tracking variables
-var is_hovering_tile := false
-var is_hovering_player := false
-var is_hovering_resource := false
-var is_following_cursor := false
-var follow_cursor_timer := 0.0
+var is_hovering_tile:= false
+var is_hovering_player:= false
+var is_hovering_egg:= false
+var is_hovering_resource:= false
+var is_following_cursor:= false
+var follow_cursor_timer:= 0.0
 
 func _ready():
 	_setup_ui()
@@ -58,6 +66,8 @@ func _process(delta: float) -> void:
 		_position_panel_near_cursor(player_info_panel)
 	elif is_following_cursor and resource_type_panel.visible and is_hovering_resource:
 		_position_panel_near_cursor(resource_type_panel)
+	elif is_following_cursor and egg_info_panel.visible and is_hovering_egg:
+		_position_panel_near_cursor(egg_info_panel)
 
 func _setup_ui():
 	"""Initialize UI elements"""
@@ -108,6 +118,7 @@ func update_ui_player_stats(player_id: int):
 	player_id_label.text = "ID: " + str(player_data.id)
 	player_position_label.text = "Position: " + str(player_data.position)
 	player_level_label.text = "Level: " + str(player_data.level)
+	player_orientation_label.text = "Orientation: " + str(player_data.orientation)
 	player_team_label.text = "Team: " + str(player_data.team)
 	player_status_label.text = "Status: " + str(player_data.status)
 
@@ -175,3 +186,26 @@ func hide_resource_label_display():
 	resource_type_panel.visible = false
 	is_following_cursor = false
 	resource_label.text = "unknown"
+	
+func update_egg_panel(egg_id: int):
+	var egg_data = GameData.get_egg_data(egg_id)
+
+	if not egg_info_panel or not egg_data:
+		egg_info_panel.visible = false
+
+	is_hovering_egg = true
+	egg_info_panel.visible = true
+	is_following_cursor = true
+
+	egg_id_label.text = "ID: " + str(int(egg_data.id))
+	egg_position_label.text = "Position: " + str(egg_data.position)
+	egg_team_label.text = "Team: " + str(egg_data.team)
+	egg_status_label.text = "Status: " + str(egg_data.status)
+
+	_position_panel_near_cursor(egg_info_panel)
+
+	
+func hide_egg_panel():
+	is_hovering_egg = false
+	egg_info_panel.visible = false
+	is_following_cursor = false

@@ -11,17 +11,21 @@
 script = ExtResource("1_bibkx")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.472469, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 material_override = ExtResource("2_2jaqc")
 mesh = SubResource("BoxMesh_3dk36")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.468949, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 shape = SubResource("BoxShape3D_1abcd")
 
 [node name="Marker3D_TL" type="Marker3D" parent="."]
 unique_name_in_owner = true
 transform = Transform3D(0.15, 0, 0, 0, 0.15, 0, 0, 0, 0.15, -0.4, 0.2, -0.4)
+
+[node name="Marker3D_TL_2" type="Marker3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(0.15, 0, 0, 0, 0.15, 0, 0, 0, 0.15, -0.3, 0.2, -0.3)
 
 [node name="Marker3D_PL_TL" type="Marker3D" parent="."]
 unique_name_in_owner = true
@@ -43,10 +47,22 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.2, 0.2)
 unique_name_in_owner = true
 transform = Transform3D(0.15, 0, 0, 0, 0.15, 0, 0, 0, 0.15, 0.4, 0.2, -0.4)
 
+[node name="Marker3D_TR_2" type="Marker3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(0.15, 0, 0, 0, 0.15, 0, 0, 0, 0.15, 0.3, 0.2, -0.3)
+
 [node name="Marker3D_BR" type="Marker3D" parent="."]
 unique_name_in_owner = true
 transform = Transform3D(0.15, 0, 0, 0, 0.15, 0, 0, 0, 0.15, 0.4, 0.2, 0.4)
 
+[node name="Marker3D_BR_2" type="Marker3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(0.14999999, 0, 0, 0, 0.14999999, 0, 0, 0, 0.14999999, 0.3, 0.2, 0.3)
+
 [node name="Marker3D_BL" type="Marker3D" parent="."]
 unique_name_in_owner = true
 transform = Transform3D(0.15, 0, 0, 0, 0.15, 0, 0, 0, 0.15, -0.4, 0.2, 0.4)
+
+[node name="Marker3D_BL_2" type="Marker3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(0.15, 0, 0, 0, 0.15, 0, 0, 0, 0.15, -0.3, 0.2, 0.3)

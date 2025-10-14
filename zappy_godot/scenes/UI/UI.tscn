@@ -104,7 +104,7 @@ layout_mode = 0
 offset_left = -166.0
 offset_top = 4.0
 offset_right = -17.0
-offset_bottom = 294.0
+offset_bottom = 316.965
 size_flags_horizontal = 3
 
 [node name="VBox" type="VBoxContainer" parent="PlayerInfoPanel"]
@@ -142,6 +142,11 @@ text = "Position:-"
 layout_mode = 2
 theme_override_font_sizes/font_size = 11
 text = "Level: -"
+
+[node name="PlayerOrientationLabel" type="Label" parent="PlayerInfoPanel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Orientation: -"
 
 [node name="PlayerTeamLabel" type="Label" parent="PlayerInfoPanel/VBox"]
 layout_mode = 2
@@ -191,12 +196,61 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 11
 text = "thystame: -"
 
+[node name="EggInfoPanel" type="Panel" parent="."]
+layout_mode = 0
+offset_left = -337.0
+offset_top = 281.0
+offset_right = -188.0
+offset_bottom = 401.0
+size_flags_horizontal = 3
+
+[node name="VBox" type="VBoxContainer" parent="EggInfoPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="EggTitleLabel" type="Label" parent="EggInfoPanel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "EGG"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="EggInfoPanel/VBox"]
+layout_mode = 2
+
+[node name="EggIDLabel" type="Label" parent="EggInfoPanel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "ID: -"
+
+[node name="EggPositionLabel" type="Label" parent="EggInfoPanel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Position:-"
+
+[node name="EggTeamLabel" type="Label" parent="EggInfoPanel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Team: -"
+
+[node name="EggStatusLabel" type="Label" parent="EggInfoPanel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Status: -"
+
 [node name="ResourceTypePanel" type="Panel" parent="."]
 layout_mode = 0
 offset_left = -168.0
-offset_top = 306.0
+offset_top = 328.0
 offset_right = -19.0
-offset_bottom = 346.0
+offset_bottom = 368.0
 size_flags_horizontal = 3
 
 [node name="VBox" type="VBoxContainer" parent="ResourceTypePanel"]

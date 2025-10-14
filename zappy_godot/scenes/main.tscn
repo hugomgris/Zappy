@@ -1,10 +1,11 @@
-[gd_scene load_steps=9 format=3 uid="uid://bohcw6ef7e55a"]
+[gd_scene load_steps=12 format=3 uid="uid://bohcw6ef7e55a"]
 
 [ext_resource type="Script" uid="uid://b2yc51sdfhp5r" path="res://scenes/Main.gd" id="1_tipki"]
 [ext_resource type="Script" uid="uid://dfd525mqeflrb" path="res://scenes/scripts/WorldManager.gd" id="4_ya4ey"]
 [ext_resource type="Script" uid="uid://cqlc6khfoxqod" path="res://scenes/player/PlayerManager.gd" id="5_eb6dy"]
 [ext_resource type="PackedScene" uid="uid://d01wcqvgamr8t" path="res://scenes/UI/UI.tscn" id="6_trceg"]
 [ext_resource type="Script" uid="uid://2yx4asihvwhu" path="res://scenes/scripts/CameraController.gd" id="7_a8y0u"]
+[ext_resource type="Shader" uid="uid://bb6v6h5mrc31j" path="res://materials/shaders/post_processing_test.gdshader" id="7_o6xl0"]
 [ext_resource type="PackedScene" uid="uid://rrvgfd65iocc" path="res://scenes/level/enviro.tscn" id="8_tipki"]
 
 [sub_resource type="GDScript" id="GDScript_tefeu"]
@@ -160,6 +161,15 @@ func get_resource_total(resource_name: String) -> int:
 	return total
 "
 
+[sub_resource type="QuadMesh" id="QuadMesh_tipki"]
+flip_faces = true
+size = Vector2(2, 2)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_85g3d"]
+render_priority = 0
+shader = ExtResource("7_o6xl0")
+shader_parameter/aberration_strength = 0.334000015865
+
 [node name="Main" type="Node3D"]
 script = ExtResource("1_tipki")
 
@@ -205,3 +215,15 @@ projection = 1
 current = true
 
 [node name="enviro" parent="." instance=ExtResource("8_tipki")]
+
+[node name="DirectionalLight3D" parent="enviro" index="1"]
+transform = Transform3D(0.5000001, -0.75, 0.4330126, 2.7805946e-08, 0.49999994, 0.86602545, -0.8660254, -0.4330128, 0.25, 0, 0, 0)
+light_color = Color(0.85897857, 0.99265605, 0.9756332, 1)
+light_indirect_energy = 3.833
+
+[node name="PostProcessing" type="MeshInstance3D" parent="."]
+extra_cull_margin = 16384.0
+mesh = SubResource("QuadMesh_tipki")
+surface_material_override/0 = SubResource("ShaderMaterial_85g3d")
+
+[editable path="enviro"]
