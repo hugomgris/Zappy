@@ -12,8 +12,8 @@ sun_curve = 0.15
 sky_material = SubResource("ProceduralSkyMaterial_jg7hq")
 
 [sub_resource type="Environment" id="Environment_fqgig"]
-background_mode = 2
-sky = SubResource("Sky_rdhbp")
+background_mode = 1
+bg_color = Color(0, 0, 0, 1)
 ambient_light_color = Color(0.4, 0.5, 0.7, 1)
 ambient_light_energy = 0.3
 reflected_light_source = 2
