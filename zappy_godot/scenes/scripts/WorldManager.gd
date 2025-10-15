@@ -44,10 +44,14 @@ func _generate_map():
 		for y in range(GameData.map_size.y):
 			var tile_scene
 			var random_index = randi_range(1, 20)
-			if (random_index % 20 == 0):
+			if (random_index % 7 == 0):
 				tile_scene = preload("res://scenes/tile/tile_arch_01_scene.tscn").instantiate()
+			elif (random_index % 11 == 0):
+				tile_scene = preload("res://scenes/tile/tile_arch_02_scene.tscn").instantiate()
+			elif (random_index % 13 == 0):
+				tile_scene = preload("res://scenes/tile/tile_arch_03_scene.tscn").instantiate()
 			else:
-				tile_scene = preload("res://scenes/tile/tile.tscn").instantiate()
+				tile_scene = preload("res://scenes/tile/tile_base_scene.tscn").instantiate()
 			tile_scene.position = Vector3(x * spacing, 0, y * spacing)
 			map_root.add_child(tile_scene)
 			tiles[Vector2i(x, y)] = tile_scene
@@ -72,10 +76,17 @@ func _set_up_tile(x: int,y: int):
 	tile_scene.setup_tile_hover_signals(tile_data, ui_reference, x, y)
 	
 	# Color managament -> checkerboard pattern
-	var tile_mesh = tile_scene.get_node("MeshInstance3D") as MeshInstance3D
+	var tile_mesh = tile_scene.get_node_or_null("tile_base/basic_tile") as MeshInstance3D
+	print("Found tile mesh: ", tile_mesh)
 	if not tile_mesh:
-		tile_mesh = tile_scene.get_node("tile").get_node("tile_arch_01") as MeshInstance3D
-		print(tile_mesh)
+		tile_mesh = tile_scene.get_node_or_null("tile_base/tile_1f") as MeshInstance3D
+		print("Found tile mesh: ", tile_mesh)
+	if not tile_mesh:
+		tile_mesh = tile_scene.get_node_or_null("tile_base/tile_2f") as MeshInstance3D
+		print("Found tile mesh: ", tile_mesh)
+	if not tile_mesh:
+		tile_mesh = tile_scene.get_node_or_null("tile_base/tile_3f") as MeshInstance3D
+		print("Found tile mesh: ", tile_mesh)
 	if (tile_mesh and (x % 2 == 0 and y % 2 != 0) or tile_mesh and (x % 2 != 0 and y % 2 == 0)):
 		var new_material := tile_mesh.material_override.duplicate() as StandardMaterial3D
 		

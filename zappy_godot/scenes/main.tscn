@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://bohcw6ef7e55a"]
+[gd_scene load_steps=14 format=3 uid="uid://bohcw6ef7e55a"]
 
 [ext_resource type="Script" uid="uid://b2yc51sdfhp5r" path="res://scenes/Main.gd" id="1_tipki"]
 [ext_resource type="Script" uid="uid://dfd525mqeflrb" path="res://scenes/scripts/WorldManager.gd" id="4_ya4ey"]
@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://d01wcqvgamr8t" path="res://scenes/UI/UI.tscn" id="6_trceg"]
 [ext_resource type="Script" uid="uid://2yx4asihvwhu" path="res://scenes/scripts/CameraController.gd" id="7_a8y0u"]
 [ext_resource type="Shader" uid="uid://bb6v6h5mrc31j" path="res://materials/shaders/post_processing_test.gdshader" id="7_o6xl0"]
+[ext_resource type="Shader" uid="uid://pv47rqgm4g3o" path="res://materials/shaders/chromatic_aberration.gdshader" id="8_85g3d"]
 [ext_resource type="PackedScene" uid="uid://rrvgfd65iocc" path="res://scenes/level/enviro.tscn" id="8_tipki"]
 
 [sub_resource type="GDScript" id="GDScript_tefeu"]
@@ -168,7 +169,13 @@ size = Vector2(2, 2)
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_85g3d"]
 render_priority = 0
 shader = ExtResource("7_o6xl0")
-shader_parameter/aberration_strength = 0.334000015865
+shader_parameter/aberration_direction = Vector2(1, 1)
+shader_parameter/strength = 0.002000000095
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_choun"]
+shader = ExtResource("8_85g3d")
+shader_parameter/aberration = 0.5
+shader_parameter/strength = 0.10000000149012
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_tipki")
@@ -222,8 +229,20 @@ light_color = Color(0.85897857, 0.99265605, 0.9756332, 1)
 light_indirect_energy = 3.833
 
 [node name="PostProcessing" type="MeshInstance3D" parent="."]
+visible = false
 extra_cull_margin = 16384.0
 mesh = SubResource("QuadMesh_tipki")
 surface_material_override/0 = SubResource("ShaderMaterial_85g3d")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+visible = false
+
+[node name="ColorRect" type="ColorRect" parent="CanvasLayer"]
+material = SubResource("ShaderMaterial_choun")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [editable path="enviro"]
