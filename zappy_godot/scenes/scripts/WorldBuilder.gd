@@ -9,6 +9,7 @@ enum PatternType {
 	MEDIUM_COURTYARD,
 	MEDIUM_WALLS,
 	CORNER_TOWERS,
+	CENTER_TOWER,
 	
 	# Large patterns (>12)
 	LARGE_MAZE,
@@ -28,7 +29,7 @@ func select_pattern(map_size: Vector2i) -> PatternType:
 		return [PatternType.SMALL_FORTRESS, PatternType.SMALL_ARENA].pick_random()
 	elif max_dimension <= 12:
 		# Medium patterns  
-		return [PatternType.MEDIUM_COURTYARD, PatternType.MEDIUM_WALLS, PatternType.CORNER_TOWERS].pick_random()
+		return [PatternType.MEDIUM_COURTYARD, PatternType.MEDIUM_WALLS, PatternType.CORNER_TOWERS, PatternType.CENTER_TOWER].pick_random()
 	else:
 		# Large patterns
 		return [PatternType.LARGE_MAZE, PatternType.LARGE_TOWERS, PatternType.LARGE_STRONGHOLD].pick_random()
@@ -46,6 +47,8 @@ func get_tile_type_for_position(pattern: PatternType, x: int, y: int, map_size: 
 			return _build_medium_walls(x, y, map_size)
 		PatternType.CORNER_TOWERS:
 			return _build_corner_towers(x, y, map_size)
+		PatternType.CENTER_TOWER:
+			return _build_center_tower(x, y, map_size)
 		PatternType.LARGE_MAZE:
 			return _build_large_maze(x, y, map_size)
 		PatternType.LARGE_TOWERS:
@@ -68,14 +71,14 @@ func get_pattern_name(pattern: PatternType) -> String:
 			return "Medium Walls"
 		PatternType.CORNER_TOWERS:
 			return "Corner Towers"
+		PatternType.CENTER_TOWER:
+			return "Center Tower"
 		PatternType.LARGE_MAZE:
 			return "Large Maze"
 		PatternType.LARGE_TOWERS:
 			return "Large Towers"
 		PatternType.LARGE_STRONGHOLD:
 			return "Large Stronghold"
-		PatternType.CORNER_TOWERS:
-			return "Corner Towers"
 		_:
 			return "Unknown Pattern"
 
@@ -116,6 +119,16 @@ func _build_corner_towers(x: int, y: int, map_size: Vector2i) -> TileRule.TileTy
 	elif _is_sub_corner(x, y, map_size):
 		return TileRule.TileType.ARCH_2F
 	elif _is_sub_sub_corner(x, y, map_size):
+		return TileRule.TileType.ARCH_1F
+	return TileRule.TileType.BASIC
+
+func _build_center_tower(x: int, y: int, map_size: Vector2i) -> TileRule.TileType:
+	"""Center tower: 3F center (4 tiles), 2F surrounding ring, 1F next ring, basic rest"""
+	if _is_center_core(x, y, map_size):
+		return TileRule.TileType.ARCH_3F
+	elif _is_center_ring_1(x, y, map_size):
+		return TileRule.TileType.ARCH_2F
+	elif _is_center_ring_2(x, y, map_size):
 		return TileRule.TileType.ARCH_1F
 	return TileRule.TileType.BASIC
 
@@ -192,6 +205,81 @@ func _is_inner_border(x: int, y: int, map_size: Vector2i) -> bool:
 func _is_inner_center(x: int, y: int, map_size: Vector2i) -> bool:
 	return not _is_border(x, y, map_size) and not _is_inner_border(x, y, map_size)
 
+# Center Tower Helper Functions
+
+func _is_center_core(x: int, y: int, map_size: Vector2i) -> bool:
+	"""Check if position is in the 2x2 center core (3F tiles)"""
+	@warning_ignore("INTEGER_DIVISION")
+	var center_x = map_size.x / 2
+	@warning_ignore("INTEGER_DIVISION") 
+	var center_y = map_size.y / 2
+	
+	# Always create a 2x2 center, positioned at the map center
+	# For 8x8: center at (3,3), (3,4), (4,3), (4,4)
+	return (x >= center_x - 1 and x <= center_x) and (y >= center_y - 1 and y <= center_y)
+
+func _is_center_ring_1(x: int, y: int, map_size: Vector2i) -> bool:
+	"""Check if position is in the 4x4 hollowed ring around center (2F tiles)"""
+	@warning_ignore("INTEGER_DIVISION")
+	var center_x = map_size.x / 2
+	@warning_ignore("INTEGER_DIVISION") 
+	var center_y = map_size.y / 2
+	
+	# Ring 1 forms a 4x4 area, but hollowed out (excludes the 2x2 center)
+	# For 8x8: positions (2,2) to (5,5) but excluding center core
+	var in_4x4_area = (x >= center_x - 2 and x <= center_x + 1) and (y >= center_y - 2 and y <= center_y + 1)
+	return in_4x4_area and not _is_center_core(x, y, map_size)
+
+func _is_center_ring_2(x: int, y: int, map_size: Vector2i) -> bool:
+	"""Check if position is in the 6x6 hollowed ring around center (1F tiles)"""
+	@warning_ignore("INTEGER_DIVISION")
+	var center_x = map_size.x / 2
+	@warning_ignore("INTEGER_DIVISION") 
+	var center_y = map_size.y / 2
+	
+	# Ring 2 forms a 6x6 area, but hollowed out (excludes the 4x4 area)
+	# For 8x8: positions (1,1) to (6,6) but excluding inner 4x4 area
+	var in_6x6_area = (x >= center_x - 3 and x <= center_x + 2) and (y >= center_y - 3 and y <= center_y + 2)
+	var in_4x4_area = (x >= center_x - 2 and x <= center_x + 1) and (y >= center_y - 2 and y <= center_y + 1)
+	return in_6x6_area and not in_4x4_area
+
+# Helper function to manually verify CENTER_TOWER logic
+func verify_center_tower_8x8():
+	"""Manually verify the CENTER_TOWER pattern matches expected output"""
+	var map_size = Vector2i(8, 8)
+	print("Verifying CENTER_TOWER 8x8 pattern:")
+	print("Expected: 2x2 center (3F), 4x4 ring (2F), 6x6 ring (1F), rest Basic")
+	
+	# Test key positions
+	var test_cases = [
+		[Vector2i(3,3), "3F", "center core"],
+		[Vector2i(3,4), "3F", "center core"], 
+		[Vector2i(4,3), "3F", "center core"],
+		[Vector2i(4,4), "3F", "center core"],
+		[Vector2i(2,2), "2F", "4x4 ring corner"],
+		[Vector2i(5,5), "2F", "4x4 ring corner"],
+		[Vector2i(3,2), "2F", "4x4 ring edge"],
+		[Vector2i(1,1), "1F", "6x6 ring corner"],
+		[Vector2i(6,6), "1F", "6x6 ring corner"],
+		[Vector2i(0,0), "B", "outside all rings"],
+		[Vector2i(7,7), "B", "outside all rings"]
+	]
+	
+	for test_case in test_cases:
+		var pos = test_case[0]
+		var expected = test_case[1]
+		var description = test_case[2]
+		var actual_type = get_tile_type_for_position(PatternType.CENTER_TOWER, pos.x, pos.y, map_size)
+		var actual = ""
+		match actual_type:
+			TileRule.TileType.BASIC: actual = "B"
+			TileRule.TileType.ARCH_1F: actual = "1F"
+			TileRule.TileType.ARCH_2F: actual = "2F" 
+			TileRule.TileType.ARCH_3F: actual = "3F"
+		
+		var status = "✓" if actual == expected else "✗"
+		print("  %s (%d,%d) %s: expected %s, got %s %s" % [status, pos.x, pos.y, description, expected, actual, "✓" if actual == expected else "✗"])
+
 # DEBUG
 func test_pattern_system():
 	"""Test function to check pattern selection"""
@@ -209,4 +297,54 @@ func test_pattern_system():
 	print("Pattern for 8x8: ", get_pattern_name(medium_pattern))
 	print("Pattern for 15x15: ", get_pattern_name(large_pattern))
 	
+	# Test the new CENTER_TOWER pattern specifically
+	print("\n=== TESTING CENTER_TOWER PATTERN ===")
+	verify_center_tower_8x8()
+	print()
+	test_center_tower_pattern()
+	
 	print("=== END PATTERN TEST ===")
+
+func test_center_tower_pattern():
+	"""Test the CENTER_TOWER pattern with different map sizes"""
+	print("Testing CENTER_TOWER pattern:")
+	
+	# Test with 8x8 map
+	var map_size = Vector2i(8, 8)
+	var pattern = PatternType.CENTER_TOWER
+	
+	print("\n8x8 map (should show: 2x2 center=3, 4x4 ring=2, 6x6 ring=1, rest=B):")
+	print("  0 1 2 3 4 5 6 7")
+	for y in range(map_size.y):
+		var row = str(y) + " "
+		for x in range(map_size.x):
+			var tile_type = get_tile_type_for_position(pattern, x, y, map_size)
+			match tile_type:
+				TileRule.TileType.BASIC:
+					row += "B "
+				TileRule.TileType.ARCH_1F:
+					row += "1 "
+				TileRule.TileType.ARCH_2F:
+					row += "2 "
+				TileRule.TileType.ARCH_3F:
+					row += "3 "
+		print(row)
+	
+	# Also test with 10x10 to see how it scales
+	print("\n10x10 map:")
+	print("  0 1 2 3 4 5 6 7 8 9")
+	map_size = Vector2i(10, 10)
+	for y in range(map_size.y):
+		var row = str(y) + " "
+		for x in range(map_size.x):
+			var tile_type = get_tile_type_for_position(pattern, x, y, map_size)
+			match tile_type:
+				TileRule.TileType.BASIC:
+					row += "B "
+				TileRule.TileType.ARCH_1F:
+					row += "1 "
+				TileRule.TileType.ARCH_2F:
+					row += "2 "
+				TileRule.TileType.ARCH_3F:
+					row += "3 "
+		print(row)
