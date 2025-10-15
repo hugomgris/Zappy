@@ -39,19 +39,17 @@ func _generate_map():
 		child.queue_free()
 	tiles.clear()
 
+	# Select pattern based on map size
+	var selected_pattern = WorldBuilder.select_pattern(GameData.map_size)
+	#print("Selected pattern: ", selected_pattern.pattern_name, " for map size: ", GameData.map_size)
+
 	var spacing = tile_size + gap
 	for x in range(GameData.map_size.x):
 		for y in range(GameData.map_size.y):
-			var tile_scene
-			var random_index = randi_range(1, 20)
-			if (random_index % 7 == 0):
-				tile_scene = preload("res://scenes/tile/tile_arch_01_scene.tscn").instantiate()
-			elif (random_index % 11 == 0):
-				tile_scene = preload("res://scenes/tile/tile_arch_02_scene.tscn").instantiate()
-			elif (random_index % 13 == 0):
-				tile_scene = preload("res://scenes/tile/tile_arch_03_scene.tscn").instantiate()
-			else:
-				tile_scene = preload("res://scenes/tile/tile_base_scene.tscn").instantiate()
+			# Get tile type from pattern
+			var tile_type = WorldBuilder.get_tile_type_for_position(selected_pattern, x, y, GameData.map_size)
+			var tile_scene = _create_tile_from_type(tile_type)
+			
 			tile_scene.position = Vector3(x * spacing, 0, y * spacing)
 			map_root.add_child(tile_scene)
 			tiles[Vector2i(x, y)] = tile_scene
@@ -61,6 +59,18 @@ func _generate_map():
 	if not world_ready_emitted:
 		world_ready_emitted = true
 		emit_signal("world_ready")
+
+func _create_tile_from_type(tile_type: TileRule.TileType) -> Node3D:
+	"""Create a tile scene based on the tile type"""
+	match tile_type:
+		TileRule.TileType.ARCH_1F:
+			return preload("res://scenes/tile/tile_arch_01_scene.tscn").instantiate()
+		TileRule.TileType.ARCH_2F:
+			return preload("res://scenes/tile/tile_arch_02_scene.tscn").instantiate()
+		TileRule.TileType.ARCH_3F:
+			return preload("res://scenes/tile/tile_arch_03_scene.tscn").instantiate()
+		_: # TileRule.TileType.BASIC or default
+			return preload("res://scenes/tile/tile_base_scene.tscn").instantiate()
 
 func _set_up_tile(x: int,y: int):
 	var tile_pos = Vector2i(x, y)
@@ -77,16 +87,12 @@ func _set_up_tile(x: int,y: int):
 	
 	# Color managament -> checkerboard pattern
 	var tile_mesh = tile_scene.get_node_or_null("tile_base/basic_tile") as MeshInstance3D
-	print("Found tile mesh: ", tile_mesh)
 	if not tile_mesh:
 		tile_mesh = tile_scene.get_node_or_null("tile_base/tile_1f") as MeshInstance3D
-		print("Found tile mesh: ", tile_mesh)
 	if not tile_mesh:
 		tile_mesh = tile_scene.get_node_or_null("tile_base/tile_2f") as MeshInstance3D
-		print("Found tile mesh: ", tile_mesh)
 	if not tile_mesh:
 		tile_mesh = tile_scene.get_node_or_null("tile_base/tile_3f") as MeshInstance3D
-		print("Found tile mesh: ", tile_mesh)
 	if (tile_mesh and (x % 2 == 0 and y % 2 != 0) or tile_mesh and (x % 2 != 0 and y % 2 == 0)):
 		var new_material := tile_mesh.material_override.duplicate() as StandardMaterial3D
 		
