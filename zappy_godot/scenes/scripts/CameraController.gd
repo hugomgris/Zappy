@@ -73,7 +73,7 @@ func initialize_camera_for_map(map_size: Vector2i):
 
 func _calculate_optimal_ortho_size(map_size: Vector2i) -> float:
 	var max_dimension = max(map_size.x, map_size.y)
-	var base_size = max_dimension
+	var base_size = max_dimension + 5.0
 	var final_size = base_size * (0.8 + viewport_margin_ratio * 5.0)
 	return final_size
 

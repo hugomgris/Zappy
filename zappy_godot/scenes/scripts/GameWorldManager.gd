@@ -41,13 +41,11 @@ func _generate_map():
 	var spacing = tile_size + gap
 	for x in range(GameData.map_size.x):
 		for y in range(GameData.map_size.y):
-			var tile_scene = preload("res://scenes/tile/tile.tscn").instantiate()
+			var tile_scene = preload("res://scenes/tile/tile_base.tscn").instantiate()
 			tile_scene.position = Vector3(x * spacing, 0, y * spacing)
 			map_root.add_child(tile_scene)
 			tiles[Vector2i(x, y)] = tile_scene
 			
-			# Update tile visual with current data
-			#_update_tile_visual(x, y)
 			_set_up_tile(x, y)
 
 func _set_up_tile(x: int,y: int):
@@ -81,6 +79,7 @@ func _set_up_tile(x: int,y: int):
 				var quantity = tile_scene.available_resources[resource]
 				var scale_factor = 1.0 + (quantity - 1) * 0.5  # Increased multiplier for more visible effect
 				resource_scene.scale = Vector3(scale_factor, scale_factor, scale_factor)
+
 				
 				place_resource_in_tile(tile_scene, resource_scene)
 				

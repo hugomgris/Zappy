@@ -174,7 +174,7 @@ shader_parameter/strength = 0.0010000000475
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_choun"]
 shader = ExtResource("8_85g3d")
-shader_parameter/aberration = 0.5
+shader_parameter/aberration = 0.10000000475
 shader_parameter/strength = 0.10000000149012
 
 [node name="Main" type="Node3D"]
@@ -229,7 +229,6 @@ light_color = Color(0.85897857, 0.99265605, 0.9756332, 1)
 light_indirect_energy = 3.833
 
 [node name="PostProcessing" type="MeshInstance3D" parent="."]
-visible = false
 extra_cull_margin = 16384.0
 mesh = SubResource("QuadMesh_tipki")
 surface_material_override/0 = SubResource("ShaderMaterial_85g3d")
