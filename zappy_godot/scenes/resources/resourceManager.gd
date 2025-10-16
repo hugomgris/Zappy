@@ -13,7 +13,7 @@ var base_position: Vector3
 var time_elapsed: float = 0.0
 var animation_timer: float = 0.0
 var animation_interval = randf_range(animation_interval_min, animation_interval_max)
-var tile_position: Vector2i
+var position_tile: Vector2i
 
 var ui_ref
 var type: String
@@ -37,7 +37,7 @@ func setup_resource_hover_signals(ui_reference, sent_type: String):
 	resource_area.mouse_exited.connect(_on_resource_area_mouse_exited.bind())
 
 func _on_resource_area_mouse_entered() -> void:
-	ui_ref.update_resource_label_display(type)
+	ui_ref.update_resource_label_display(type, position_tile)
 
 func _on_resource_area_mouse_exited() -> void:
 	ui_ref.hide_resource_label_display()
