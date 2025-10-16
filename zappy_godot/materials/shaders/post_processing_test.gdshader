@@ -3,7 +3,7 @@ render_mode unshaded, fog_disabled;
 
 uniform sampler2D screen_tex : source_color, hint_screen_texture;
 uniform vec2 aberration_direction = vec2(1.0, 0.0);
-uniform float strength: hint_range(0.0, 0.1, 0.001) = 0.05;
+uniform float strength: hint_range(0.0, 0.1, 0.001) = 0.01;
 
 void vertex() {
     POSITION = vec4(VERTEX.xy, 1.0, 1.0);

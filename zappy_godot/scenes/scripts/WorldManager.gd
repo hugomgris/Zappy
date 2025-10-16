@@ -215,6 +215,7 @@ func _place_resources(tile_scene: Node3D, tile_data):
 		
 		var resource_node = resource_scene.get_node(resource) if resource_scene.has_node(resource) else null
 		if resource_node:
+			resource_node.position_tile = tile_data.position
 			if resource == "nourriture":
 				resource_node.setup_nourriture_hover_signals(ui_reference)
 			else:

@@ -6,7 +6,7 @@ extends Node3D
 @onready var world_manager: Node3D = %WorldManager
 
 @export var move_speed = 0.6
-@export var zoom_speed = 12.0
+@export var zoom_speed = 6.0
 @export var rotation_speed = 2.0
 @export var lerp_speed = 0.05
 @export var viewport_margin_ratio = 0.1

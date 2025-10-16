@@ -15,6 +15,7 @@ var animation_timer: float = 0.0
 var animation_interval = randf_range(animation_interval_min, animation_interval_max)
 
 var ui_ref
+var position_tile: Vector2i
 
 func _ready():
 	base_position = position
@@ -31,7 +32,7 @@ func setup_nourriture_hover_signals(ui_reference):
 	nourriture_area.mouse_exited.connect(_on_nourriture_area_mouse_exited.bind())
 
 func _on_nourriture_area_mouse_entered() -> void:
-	ui_ref.update_resource_label_display("NOURRITURE")
+	ui_ref.update_resource_label_display("NOURRITURE", position_tile)
 
 func _on_nourriture_area_mouse_exited() -> void:
 	ui_ref.hide_resource_label_display()

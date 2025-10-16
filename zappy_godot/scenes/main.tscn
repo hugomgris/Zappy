@@ -176,6 +176,11 @@ shader_parameter/strength = 0.0010000000475
 shader = ExtResource("8_85g3d")
 shader_parameter/aberration = 0.10000000475
 shader_parameter/strength = 0.10000000149012
+shader_parameter/scanline_intensity = 0.3
+shader_parameter/scanline_thickness = 1.0
+shader_parameter/noise_intensity = 0.1
+shader_parameter/grain_intensity = 0.05
+shader_parameter/flicker_intensity = 0.02
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_tipki")

@@ -169,15 +169,19 @@ func hide_player_info():
 	player_info_panel.visible = false
 	is_following_cursor = false
 
-func update_resource_label_display(text: String):
-	if not text:
+func update_resource_label_display(type: String, position: Vector2i):
+	if not type:
 		resource_type_panel.visible = false
+		return
 
 	is_hovering_resource = true
 	resource_type_panel.visible = true
 	is_following_cursor = true
+	
+	# Use bracket notation to access dictionary with variable key
+	var quantity = GameData.tiles[position].resources[type.to_lower()]
 
-	resource_label.text = text
+	resource_label.text = type + " (" + str(quantity) + ")"
 	
 	_position_panel_near_cursor(resource_type_panel)
 
