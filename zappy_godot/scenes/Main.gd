@@ -20,7 +20,7 @@ func _ready():
 	# Connect to network signals
 	network_manager.connect("line_received", _on_server_line)
 	
-	# Test with sample data (remove this when connecting to real server)
+	# Test data -> Needs to be connected to server sent data
 	_load_test_data()
 
 func _setup_managers():
@@ -31,10 +31,6 @@ func _setup_managers():
 	player_manager.initialize(player_root, world_manager, egg_root)
 
 	GameData.connect("game_state_updated", _on_game_state_loaded)
-	
-	# Test the new pattern system (temporary)
-	await get_tree().create_timer(0.5).timeout
-	WorldBuilder.test_pattern_system()
 	
 	print("Zappy GUI initialized successfully")
 
@@ -79,7 +75,7 @@ func _on_server_line(line: String):
 	_handle_server_command(tokens)
 
 func _handle_server_command(tokens: Array):
-	"""Handle individual server commands"""
+	"""Handle individual server commands. Placeholder until server connection is coded."""
 	if tokens.is_empty():
 		return
 		
@@ -100,7 +96,6 @@ func _handle_server_command(tokens: Array):
 		_:
 			print("Unknown command: ", tokens[0])
 
-# Public interface for UI and other systems
 func connect_to_server():
 	"""Connect to the Zappy server"""
 	network_manager.connect_to_server()
