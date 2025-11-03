@@ -2,6 +2,7 @@
 
 [sub_resource type="Environment" id="Environment_fqgig"]
 background_mode = 1
+background_color = Color(0.02286979, 0.005679672, 0.124098726, 1)
 ambient_light_color = Color(0.6, 0.6, 0.7, 1)
 ambient_light_energy = 0.5
 reflected_light_source = 2
@@ -18,7 +19,7 @@ glow_normalized = true
 glow_intensity = 0.3
 glow_strength = 0.8
 fog_enabled = true
-fog_light_color = Color(0.06666667, 0.09803922, 0.15686275, 1)
+fog_light_color = Color(0.023529412, 0.003921569, 0.1254902, 1)
 fog_sun_scatter = 0.1
 fog_aerial_perspective = 0.1
 fog_height = 0.1
