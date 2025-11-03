@@ -56,8 +56,10 @@ func _update_map_data(map_data):
 	tiles.clear()
 	
 	# Update tiles
+	var tile_id = 0
 	for tile_data in map_data.tiles:
 		var pos = Vector2i(tile_data.x, tile_data.y)
+		print(tiles.size())
 		tiles[pos] = {
 			"id": tiles.size(),
 			"position": pos,

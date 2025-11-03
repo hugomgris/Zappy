@@ -3,7 +3,7 @@ render_mode unshaded, fog_disabled;
 
 uniform sampler2D screen_tex : source_color, hint_screen_texture;
 uniform vec2 aberration_direction = vec2(1.0, 0.0);
-uniform float strength: hint_range(0.0, 0.1, 0.001) = 0.01;
+uniform float strength: hint_range(0.0, 0.1, 0.001) = 0.005;
 
 void vertex() {
     POSITION = vec4(VERTEX.xy, 1.0, 1.0);
@@ -17,5 +17,9 @@ void fragment() {
     vec4 green = texture(screen_tex, suv + aberration_vec);
     vec4 blue = texture(screen_tex, suv);
     
-    ALBEDO = vec3(red.r, green.g, blue.b);
+    // Ensure we're not darkening the image
+    vec3 color = vec3(red.r, green.g, blue.b);
+    
+    ALBEDO = color;
+    ALPHA = 1.0;
 }
