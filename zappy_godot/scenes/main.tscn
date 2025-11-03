@@ -174,10 +174,10 @@ shader_parameter/strength = 0.0010000000475
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_choun"]
 shader = ExtResource("8_85g3d")
-shader_parameter/aberration = 0.10000000475
+shader_parameter/aberration = 0.1110000052725
 shader_parameter/strength = 0.10000000149012
 shader_parameter/scanline_intensity = 0.3
-shader_parameter/scanline_thickness = 1.0
+shader_parameter/scanline_thickness = 2.59300011990762
 shader_parameter/noise_intensity = 0.1
 shader_parameter/grain_intensity = 0.05
 shader_parameter/flicker_intensity = 0.02
@@ -234,12 +234,12 @@ light_color = Color(0.85897857, 0.99265605, 0.9756332, 1)
 light_indirect_energy = 3.833
 
 [node name="PostProcessing" type="MeshInstance3D" parent="."]
+visible = false
 extra_cull_margin = 16384.0
 mesh = SubResource("QuadMesh_tipki")
 surface_material_override/0 = SubResource("ShaderMaterial_85g3d")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
-visible = false
 
 [node name="ColorRect" type="ColorRect" parent="CanvasLayer"]
 material = SubResource("ShaderMaterial_choun")
@@ -248,5 +248,6 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 
 [editable path="enviro"]

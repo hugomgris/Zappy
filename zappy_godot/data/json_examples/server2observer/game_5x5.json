@@ -31,31 +31,7 @@
         {"x": 1, "y": 4, "resources": {"nourriture": 0, "linemate": 1, "deraumere": 1, "sibur": 0, "mendiane": 0, "phiras": 2, "thystame": 0}, "players": [], "eggs": []},
         {"x": 2, "y": 4, "resources": {"nourriture": 2, "linemate": 0, "deraumere": 0, "sibur": 2, "mendiane": 0, "phiras": 1, "thystame": 0}, "players": [], "eggs": []},
         {"x": 3, "y": 4, "resources": {"nourriture": 1, "linemate": 0, "deraumere": 2, "sibur": 1, "mendiane": 0, "phiras": 0, "thystame": 0}, "players": [], "eggs": []},
-        {"x": 4, "y": 4, "resources": {"nourriture": 0, "linemate": 0, "deraumere": 1, "sibur": 0, "mendiane": 2, "phiras": 0, "thystame": 1}, "players": [], "eggs": []},
-        
-        {"x": 0, "y": 2, "resources": {"nourriture": 2, "linemate": 0, "deraumere": 1, "sibur": 0, "mendiane": 0, "phiras": 1, "thystame": 0}, "players": [], "eggs": []},
-        {"x": 1, "y": 3, "resources": {"nourriture": 0, "linemate": 0, "deraumere": 0, "sibur": 0, "mendiane": 3, "phiras": 0, "thystame": 1}, "players": [], "eggs": []},
-        {"x": 2, "y": 1, "resources": {"nourriture": 1, "linemate": 1, "deraumere": 0, "sibur": 2, "mendiane": 0, "phiras": 0, "thystame": 0}, "players": [], "eggs": []},
-        {"x": 3, "y": 4, "resources": {"nourriture": 0, "linemate": 2, "deraumere": 2, "sibur": 0, "mendiane": 0, "phiras": 0, "thystame": 0}, "players": [], "eggs": []},
-        {"x": 4, "y": 0, "resources": {"nourriture": 3, "linemate": 0, "deraumere": 0, "sibur": 1, "mendiane": 0, "phiras": 0, "thystame": 0}, "players": [], "eggs": []},       
-        
-        {"x": 0, "y": 3, "resources": {"nourriture": 0, "linemate": 1, "deraumere": 0, "sibur": 1, "mendiane": 2, "phiras": 0, "thystame": 0}, "players": [], "eggs": []},
-        {"x": 1, "y": 4, "resources": {"nourriture": 2, "linemate": 0, "deraumere": 2, "sibur": 0, "mendiane": 0, "phiras": 1, "thystame": 0}, "players": [], "eggs": []},
-        {"x": 2, "y": 2, "resources": {"nourriture": 1, "linemate": 0, "deraumere": 1, "sibur": 0, "mendiane": 0, "phiras": 0, "thystame": 2}, "players": [], "eggs": []},
-        {"x": 3, "y": 0, "resources": {"nourriture": 0, "linemate": 3, "deraumere": 0, "sibur": 1, "mendiane": 0, "phiras": 0, "thystame": 0}, "players": [], "eggs": []},
-        {"x": 4, "y": 1, "resources": {"nourriture": 1, "linemate": 1, "deraumere": 0, "sibur": 0, "mendiane": 1, "phiras": 1, "thystame": 0}, "players": [], "eggs": []},
-        
-        {"x": 0, "y": 2, "resources": {"nourriture": 1, "linemate": 0, "deraumere": 1, "sibur": 0, "mendiane": 0, "phiras": 0, "thystame": 2}, "players": [], "eggs": []},
-        {"x": 1, "y": 4, "resources": {"nourriture": 0, "linemate": 1, "deraumere": 0, "sibur": 2, "mendiane": 0, "phiras": 1, "thystame": 0}, "players": [], "eggs": []},
-        {"x": 2, "y": 2, "resources": {"nourriture": 2, "linemate": 2, "deraumere": 0, "sibur": 0, "mendiane": 0, "phiras": 0, "thystame": 0}, "players": [], "eggs": []},
-        {"x": 3, "y": 3, "resources": {"nourriture": 0, "linemate": 0, "deraumere": 0, "sibur": 1, "mendiane": 3, "phiras": 0, "thystame": 0}, "players": [], "eggs": []},
-        {"x": 4, "y": 0, "resources": {"nourriture": 1, "linemate": 0, "deraumere": 2, "sibur": 0, "mendiane": 1, "phiras": 0, "thystame": 0}, "players": [], "eggs": []},
-        
-        {"x": 0, "y": 1, "resources": {"nourriture": 0, "linemate": 0, "deraumere": 2, "sibur": 1, "mendiane": 0, "phiras": 1, "thystame": 0}, "players": [], "eggs": []},
-        {"x": 1, "y": 2, "resources": {"nourriture": 1, "linemate": 2, "deraumere": 0, "sibur": 0, "mendiane": 1, "phiras": 0, "thystame": 0}, "players": [], "eggs": []},
-        {"x": 2, "y": 3, "resources": {"nourriture": 0, "linemate": 1, "deraumere": 1, "sibur": 0, "mendiane": 0, "phiras": 0, "thystame": 2}, "players": [], "eggs": []},
-        {"x": 3, "y": 4, "resources": {"nourriture": 2, "linemate": 0, "deraumere": 0, "sibur": 0, "mendiane": 0, "phiras": 2, "thystame": 0}, "players": [], "eggs": []},
-        {"x": 4, "y": 0, "resources": {"nourriture": 0, "linemate": 0, "deraumere": 0, "sibur": 3, "mendiane": 1, "phiras": 0, "thystame": 0}, "players": [], "eggs": []}
+        {"x": 4, "y": 4, "resources": {"nourriture": 0, "linemate": 0, "deraumere": 1, "sibur": 0, "mendiane": 2, "phiras": 0, "thystame": 1}, "players": [], "eggs": []}
       ]
     },
     "players": [
