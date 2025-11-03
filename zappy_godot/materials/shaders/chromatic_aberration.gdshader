@@ -1,9 +1,13 @@
 shader_type canvas_item;
 uniform sampler2D screen_tex: hint_screen_texture, filter_linear;
 
-// Chromatic Aberration Controls
+// Risograph Misregistration Controls
 uniform float aberration: hint_range(0.0, 1.5, 0.001) = 0.5;
 uniform float strength: hint_range(0.0, 0.1, 0.001) = 0.05;
+uniform vec3 ink_color_1: source_color = vec3(0.2, 0.8, 0.7); // Bright Pink (classic risograph)
+uniform vec3 ink_color_2: source_color = vec3(0.6, 0.3, 0.8); // Bright Blue
+uniform vec3 ink_color_3: source_color = vec3(0.4, 0.9, 0.5); // Yellow
+uniform float ink_mix_mode: hint_range(0.0, 1.0, 0.01) = 0.8; // How much to blend vs overlay
 
 // Paper Effect Controls
 uniform float paper_grain_intensity: hint_range(0.0, 1.0, 0.01) = 0.3;
@@ -44,11 +48,33 @@ void fragment() {
 	vec2 offset = normalize(scaled_suv) * strength;
 	vec2 aberration_vec = offset * aberration * strength;
 
-	// Apply chromatic aberration
-	vec4 red = texture(screen_tex, suv - aberration_vec);
-	vec4 green = texture(screen_tex, suv + aberration_vec);
-	vec4 blue = texture(screen_tex, suv);
-	vec3 aberrated_color = vec3(red.r, green.g, blue.b);
+	// Sample original image at different offsets for risograph misregistration
+	vec4 original = texture(screen_tex, suv);
+	vec4 layer_1 = texture(screen_tex, suv - aberration_vec);
+	vec4 layer_2 = texture(screen_tex, suv + aberration_vec * 0.5);
+	vec4 layer_3 = texture(screen_tex, suv + aberration_vec);
+	
+	// Convert to grayscale for each layer (simulating ink separation)
+	float intensity_1 = dot(layer_1.rgb, vec3(0.299, 0.587, 0.114));
+	float intensity_2 = dot(layer_2.rgb, vec3(0.299, 0.587, 0.114));
+	float intensity_3 = dot(layer_3.rgb, vec3(0.299, 0.587, 0.114));
+	
+	// Apply ink colors to each layer
+	vec3 ink_layer_1 = ink_color_1 * intensity_1;
+	vec3 ink_layer_2 = ink_color_2 * intensity_2;
+	vec3 ink_layer_3 = ink_color_3 * intensity_3;
+	
+	// Blend the ink layers using multiply blend mode (like real printing)
+	vec3 base_color = original.rgb;
+	vec3 risograph_color = base_color;
+	
+	// Apply each ink layer with multiply blending
+	risograph_color *= (1.0 - intensity_1) + ink_layer_1 * ink_mix_mode;
+	risograph_color *= (1.0 - intensity_2) + ink_layer_2 * ink_mix_mode;
+	risograph_color *= (1.0 - intensity_3) + ink_layer_3 * ink_mix_mode;
+	
+	// Mix with original based on ink_mix_mode for more control
+	vec3 aberrated_color = mix(base_color, risograph_color, ink_mix_mode);
 
 	// Generate paper texture
 	float paper_grain = paper_noise(suv);
