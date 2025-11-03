@@ -174,6 +174,12 @@ shader = ExtResource("7_o6xl0")
 shader = ExtResource("8_85g3d")
 shader_parameter/aberration = 0.1110000052725
 shader_parameter/strength = 0.10000000149012
+shader_parameter/paper_grain_intensity = 0.3
+shader_parameter/paper_grain_scale = 15.0
+shader_parameter/paper_color = Color(0.95, 0.93, 0.85, 1)
+shader_parameter/paper_color_intensity = 0.86999998055376
+shader_parameter/vignette_intensity = 0.73999998345952
+shader_parameter/vignette_smoothness = 2.0
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_tipki")
@@ -227,12 +233,12 @@ light_color = Color(0.85897857, 0.99265605, 0.9756332, 1)
 light_indirect_energy = 3.833
 
 [node name="PostProcessing" type="MeshInstance3D" parent="."]
+visible = false
 extra_cull_margin = 16384.0
 mesh = SubResource("QuadMesh_tipki")
 surface_material_override/0 = SubResource("ShaderMaterial_85g3d")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
-visible = false
 
 [node name="ColorRect" type="ColorRect" parent="CanvasLayer"]
 material = SubResource("ShaderMaterial_choun")
