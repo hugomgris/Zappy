@@ -181,7 +181,7 @@ func _apply_checkerboard_pattern(tile_scene: Node3D, x: int, y: int):
 	var material_key = str(original_material.get_rid())
 	if not shared_dark_materials.has(material_key):
 		var new_material = original_material.duplicate() as StandardMaterial3D
-		new_material.albedo_color = original_material.albedo_color.darkened(0.5)
+		new_material.albedo_color = original_material.albedo_color.darkened(0.3)
 		shared_dark_materials[material_key] = new_material
 	
 	tile_mesh.material_override = shared_dark_materials[material_key]
