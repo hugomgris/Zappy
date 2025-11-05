@@ -172,12 +172,12 @@ shader = ExtResource("7_o6xl0")
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_choun"]
 shader = ExtResource("8_85g3d")
-shader_parameter/aberration = 0.7430000352925
-shader_parameter/strength = 0.062000002945
+shader_parameter/aberration = 1.06400005054
+shader_parameter/strength = 0.0770000036575
 shader_parameter/ink_color_1 = Color(0.2, 0.8, 0.7, 1)
 shader_parameter/ink_color_2 = Color(0.6, 0.3, 0.8, 1)
 shader_parameter/ink_color_3 = Color(0.4, 0.9, 0.5, 1)
-shader_parameter/ink_mix_mode = 0.499999988824
+shader_parameter/ink_mix_mode = 0.3999999910592
 shader_parameter/paper_grain_intensity = 0.31999999284736
 shader_parameter/paper_grain_scale = 50.0
 shader_parameter/paper_color = Color(0.9706488, 0.96044666, 0.91437066, 1)
