@@ -13,7 +13,19 @@ extends Node3D
 @onready var world_manager = $WorldManager
 @onready var player_manager = $PlayerManager
 
+var mock_server: MockServer
+var command_processor: CommandProcessor
+
 func _ready():
+	# Initialize MockServer and CommandProcessor but DON'T start yet
+	mock_server = MockServer.new()
+	command_processor = CommandProcessor.new()
+	add_child(mock_server)
+	add_child(command_processor)
+	
+	mock_server.set_command_processor(command_processor)
+	# Remove this line: mock_server.initialize()
+
 	# Initialize managers
 	_setup_managers()
 	
@@ -22,13 +34,18 @@ func _ready():
 	
 	# Test data -> Needs to be connected to server sent data
 	_load_test_data()
+	
+	# Debug signals
+	command_processor.command_processed.connect(_on_command_processed)
+	command_processor.command_failed.connect(_on_command_failed)
+	command_processor.player_orientation_change.connect(_on_player_orientation_changed)
 
 func _setup_managers():
 	"""Initialize all manager components"""
 	await world_manager.initialize(map_root, ui)
 	
 	# Initialize player manager
-	player_manager.initialize(player_root, world_manager, egg_root)
+	player_manager.initialize(player_root, world_manager, egg_root, command_processor)
 
 	GameData.connect("game_state_updated", _on_game_state_loaded)
 	
@@ -44,7 +61,7 @@ func _load_test_data():
 	await get_tree().create_timer(1.0).timeout
 	
 	# Load the sample JSON data
-	var file = FileAccess.open("res://data/json_examples/server2observer/game_5x5.json", FileAccess.READ)
+	var file = FileAccess.open("res://data/initial_data/game.json", FileAccess.READ)
 	if file:
 		var json_string = file.get_as_text()
 		file.close()
@@ -54,6 +71,9 @@ func _load_test_data():
 		if parse_result == OK:
 			GameData.update_game_state(json.data)
 			print("Test data loaded successfully")
+			
+			# NOW start MockServer after data is loaded
+			mock_server.initialize()
 		else:
 			print("Error parsing JSON: ", json.get_error_message())
 	else:
@@ -108,3 +128,14 @@ func get_game_stats() -> Dictionary:
 		"tick": GameData.game_info.get("tick", 0),
 		"teams": GameData.teams
 	}
+
+func _on_player_orientation_changed(player_id: int, new_orientation: int) -> void:
+	print("✅ Player orientation changed: player ", player_id, " now facing ", new_orientation)
+
+# DEBUG 
+func _on_command_processed(command_type: String, player_id: int):
+	print ("Command correctly processed: ", command_type, " for player ", player_id)
+
+func _on_command_failed(command_type: String, error: String):
+	print ("Command failed: ", command_type, " - ", error)
+	

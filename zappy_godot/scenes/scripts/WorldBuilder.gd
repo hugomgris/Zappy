@@ -15,16 +15,22 @@ enum PatternType {
 	# Large patterns (>12)
 	LARGE_MAZE,
 	LARGE_TOWERS,
-	LARGE_STRONGHOLD
+	LARGE_STRONGHOLD,
+
+	# DEBUG
+	DEBUG
 }
 
 func _ready() -> void:
 	print("WorldBuilder initialized with simple pattern system")
 
-func select_pattern(map_size: Vector2i) -> PatternType:
+func select_pattern(debug_mode: bool, map_size: Vector2i) -> PatternType:
 	"""Select a random pattern based on map size"""
 	var max_dimension = max(map_size.x, map_size.y)
 	
+	if debug_mode:
+		return PatternType.DEBUG
+
 	if max_dimension <= 5:
 		# Small patterns
 		return [PatternType.SMALL_FORTRESS, PatternType.SMALL_ARENA, PatternType.SMALL_TOWER].pick_random()
@@ -302,72 +308,3 @@ func verify_center_tower_8x8():
 		
 		var status = "✓" if actual == expected else "✗"
 		print("  %s (%d,%d) %s: expected %s, got %s %s" % [status, pos.x, pos.y, description, expected, actual, "✓" if actual == expected else "✗"])
-
-# DEBUG
-func test_pattern_system():
-	"""Test function to check pattern selection"""
-	print("=== TESTING NEW PATTERN SYSTEM ===")
-	
-	var test_small = Vector2i(4, 4)
-	var test_medium = Vector2i(8, 8)
-	var test_large = Vector2i(15, 15)
-	
-	var small_pattern = select_pattern(test_small)
-	var medium_pattern = select_pattern(test_medium)
-	var large_pattern = select_pattern(test_large)
-	
-	print("Pattern for 4x4: ", get_pattern_name(small_pattern))
-	print("Pattern for 8x8: ", get_pattern_name(medium_pattern))
-	print("Pattern for 15x15: ", get_pattern_name(large_pattern))
-	
-	# Test the new CENTER_TOWER pattern specifically
-	print("\n=== TESTING CENTER_TOWER PATTERN ===")
-	verify_center_tower_8x8()
-	print()
-	test_center_tower_pattern()
-	
-	print("=== END PATTERN TEST ===")
-
-func test_center_tower_pattern():
-	"""Test the CENTER_TOWER pattern with different map sizes"""
-	print("Testing CENTER_TOWER pattern:")
-	
-	# Test with 8x8 map
-	var map_size = Vector2i(8, 8)
-	var pattern = PatternType.MEDIUM_CENTER_TOWER
-	
-	print("\n8x8 map (should show: 2x2 center=3, 4x4 ring=2, 6x6 ring=1, rest=B):")
-	print("  0 1 2 3 4 5 6 7")
-	for y in range(map_size.y):
-		var row = str(y) + " "
-		for x in range(map_size.x):
-			var tile_type = get_tile_type_for_position(pattern, x, y, map_size)
-			match tile_type:
-				TileRule.TileType.BASIC:
-					row += "B "
-				TileRule.TileType.ARCH_1F:
-					row += "1 "
-				TileRule.TileType.ARCH_2F:
-					row += "2 "
-				TileRule.TileType.ARCH_3F:
-					row += "3 "
-		print(row)
-	
-	# Test with 10x10 to see how it scales
-	print("\n10x10 map:")
-	print("  0 1 2 3 4 5 6 7 8 9")
-	map_size = Vector2i(10, 10)
-	for y in range(map_size.y):
-		var row = str(y) + " "
-		for x in range(map_size.x):
-			var tile_type = get_tile_type_for_position(pattern, x, y, map_size)
-			match tile_type:
-				TileRule.TileType.BASIC:
-					row += "B "
-				TileRule.TileType.ARCH_1F:
-					row += "1 "
-				TileRule.TileType.ARCH_2F:
-					row += "2 "
-				TileRule.TileType.ARCH_3F:
-					row += "3 "
-		print(row)

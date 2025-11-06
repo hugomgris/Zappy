@@ -6,6 +6,7 @@ extends Node3D
 @onready var world_manager: Node3D
 @onready var egg_root: Node3D
 
+var command_processor: CommandProcessor
 var players = {}
 var eggs= {}
 
@@ -27,7 +28,7 @@ func _ready():
 	GameData.connect("player_updated", _on_player_updated)
 	GameData.connect("egg_updated", _on_egg_updated)
 
-func initialize(player_root_node: Node3D, world_manager_ref: Node3D, egg_root_node: Node3D):
+func initialize(player_root_node: Node3D, world_manager_ref: Node3D, egg_root_node: Node3D, processor: CommandProcessor):
 	"""Initialize the player manager with required node references"""
 	player_root = player_root_node
 	world_manager = world_manager_ref
@@ -35,6 +36,14 @@ func initialize(player_root_node: Node3D, world_manager_ref: Node3D, egg_root_no
 
 	if world_manager.has_signal("world_ready"):
 		world_manager.connect("world_ready", _on_world_ready)
+
+	# Connect to CommandProcessor's signals
+	command_processor = processor
+	_connect_processor_signals()
+
+func _connect_processor_signals():
+	command_processor.connect("player_orientation_change", _on_player_orientation_change)
+	command_processor.connect("player_position_change", _on_player_position_change)
 
 func _on_game_state_updated():
 	"""Update all players when game state changes"""
@@ -148,6 +157,7 @@ func _create_player_visual(player_id: int):
 	if world_is_ready and world_manager.tiles.has(pos):
 		var tile_scene = world_manager.tiles[pos]
 		if tile_scene:
+			player_root.add_child(player_scene)
 			place_player_in_tile(tile_scene, player_scene, player_id)
 		else:
 			player_root.add_child(player_scene)
@@ -163,7 +173,7 @@ func _create_player_visual(player_id: int):
 
 	players[player_id] = player_scene
 	
-	_update_player_visual(player_id)
+	#_update_player_visual(player_id)
 	_setup_player_hover_signals(players[player_id], player_id)
 
 func place_player_in_tile(tile_scene: Area3D, player_scene: Node3D, player_id: int):
@@ -188,9 +198,15 @@ func _update_player_visual(player_id: int):
 	var player_scene = players[player_id]
 
 	_update_player_color(player_scene, player_data)
+	_update_player_orientation(player_scene, player_data.orientation)
 
 func _update_player_color(_player_scene: Node3D, _player_data: Dictionary):
 	pass
+
+func _update_player_orientation(player_scene: Node3D, new_orientation: int):
+	var target_rotation = deg_to_rad((new_orientation - 1) * 90.0)
+	player_scene.rotation.y = target_rotation
+	print("Player rotated to orientation ", new_orientation, " (", rad_to_deg(target_rotation), "°)")
 
 func get_player_count() -> int:
 	"""Get the current number of players"""
@@ -199,3 +215,24 @@ func get_player_count() -> int:
 func get_player_scene(player_id: int) -> Node3D:
 	"""Get the scene node for a specific player"""
 	return players.get(player_id, null)
+
+# COMMAND FUNCTIONS
+func _on_player_orientation_change(player_id: int, new_orientation: int):
+	print("PlayerManager received orientation change for player ", player_id, " to ", new_orientation)
+	_update_player_visual(player_id)
+
+func _on_player_position_change(player_id: int, current_orientation: int):
+	var player_scene = player_root.get_child(0)
+	match current_orientation:
+		1:
+			player_scene.global_position.z += 1
+		2:
+			player_scene.global_position.x += 1
+		3:
+			player_scene.global_position.z -= 1
+		4:
+			player_scene.global_position.x -= 1
+		_:
+			print("Wrong orientation data")
+	
+	_update_player_visual(player_id)
