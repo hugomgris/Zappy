@@ -1,8 +1,11 @@
 extends Node3D
 
 @onready var map_root: Node3D
+
+@export var debug_mode: bool = false
 @export var tile_size = 1.0
-@export var gap = 0.1
+@export var gap = 0.0
+
 var tiles = {}
 var ui_reference
 var world_ready_emitted = false
@@ -42,7 +45,7 @@ func _generate_map():
 	tiles.clear()
 
 	# Select pattern based on map size
-	var selected_pattern = WorldBuilder.select_pattern(GameData.map_size)
+	var selected_pattern = WorldBuilder.select_pattern(debug_mode, GameData.map_size)
 	
 	# Use batch processing for large maps to prevent frame drops
 	var total_tiles = GameData.map_size.x * GameData.map_size.y
