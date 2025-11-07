@@ -6,18 +6,18 @@ signal command_failed(command_type: String, error: String)
 signal player_orientation_change(player_id, new_orientation)
 signal player_position_change(player_id, current_orientation)
 
+var tile_size: float
+var gap: float
 var command_queue: Array[Dictionary] = []
 var data_ready: bool = false
 var queue_timer: Timer
 var processing_queue: bool = false
 
 func _ready():
-	# Listen for when GameData is ready
 	GameData.connect("game_state_updated", _on_game_data_ready)
-	
-	# Setup queue processing timer
+
 	queue_timer = Timer.new()
-	queue_timer.wait_time = 0.5  # Match your MockServer interval
+	queue_timer.wait_time = 0.5 
 	queue_timer.timeout.connect(_process_next_queued_command)
 	add_child(queue_timer)
 
@@ -28,14 +28,16 @@ func _on_game_data_ready():
 		if command_queue.size() > 0:
 			_start_queue_processing()
 
+func set_tile_size_and_gap(tile_s: float, tile_gap: float):
+	tile_size = tile_s
+	gap = tile_gap
+
 func process_command(json_data: Dictionary) -> void:
-	# If data isn't ready, queue the command
 	if not data_ready:
 		command_queue.append(json_data)
 		print("Command queued - waiting for GameData")
 		return
 	
-	# If we're processing queue, add to queue
 	if processing_queue:
 		command_queue.append(json_data)
 		print("Command queued - processing existing queue")
@@ -48,7 +50,7 @@ func _start_queue_processing():
 		processing_queue = true
 		print("Processing ", command_queue.size(), " queued commands with timing")
 		queue_timer.start()
-		_process_next_queued_command()  # Process first command immediately
+		_process_next_queued_command()
 
 func _process_next_queued_command():
 	if command_queue.size() == 0:
@@ -59,8 +61,6 @@ func _process_next_queued_command():
 	
 	var command_data = command_queue.pop_front()
 	_execute_command(command_data)
-	
-	# Timer will trigger next command automatically
 
 func _execute_command(json_data: Dictionary) -> void:
 	var command_type = json_data.get("type", "")
@@ -92,7 +92,7 @@ func handle_avance(player_id: int) -> void:
 		return
 
 	var current_orientation = player_data.orientation
-	player_position_change.emit(player_id, current_orientation)
+	player_position_change.emit(player_id, current_orientation, player_data, tile_size + gap)
 	command_processed.emit("avance", player_id)
 
 func handle_gauche(player_id: int) -> void:
@@ -109,7 +109,17 @@ func handle_gauche(player_id: int) -> void:
 	command_processed.emit("gauche", player_id)
 
 func handle_droit(player_id: int) -> void:
-	pass
+	var player_data = GameData.get_player_data(player_id)
+	if not player_data:
+		print("Warning: Player ", player_id, " not found in GameData yet")
+		command_failed.emit("gauche", "Player data not loaded")
+		return
+
+	var current_orientation = player_data.orientation
+	var new_orientation = 4 if current_orientation == 1 else current_orientation - 1
+	player_data.orientation = new_orientation
+	player_orientation_change.emit(player_id, new_orientation)
+	command_processed.emit("droit", player_id)
 
 func handle_prende(player_id: int, object: String) -> void:
 	pass

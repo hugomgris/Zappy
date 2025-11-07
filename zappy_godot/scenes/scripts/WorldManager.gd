@@ -3,9 +3,9 @@ extends Node3D
 @onready var map_root: Node3D
 
 @export var debug_mode: bool = false
-@export var tile_size = 1.0
-@export var gap = 0.0
 
+var tile_size: float
+var gap: float
 var tiles = {}
 var ui_reference
 var world_ready_emitted = false
@@ -20,8 +20,10 @@ func _ready():
 	GameData.connect("game_state_updated", _on_game_state_updated)
 	GameData.connect("tile_updated", _on_tile_updated)
 
-func initialize(map_root_node: Node3D, ui_node: Control):
+func initialize(map_root_node: Node3D, ui_node: Control, tile_s: float, tile_gap: float):
 	"""Initialize the world manager with the map root node"""
+	tile_size = tile_s
+	gap = tile_gap
 	map_root = map_root_node
 	ui_reference = ui_node
 
