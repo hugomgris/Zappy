@@ -9,7 +9,7 @@ var command_timer: Timer
 var command_processor: CommandProcessor
 
 @export var commands_folder_path: String = "res://data/commands/"
-@export var command_interval: float = 0.1 # seconds
+@export var command_interval: float = 2 # seconds
 @export var auto_start: bool = true
 
 func initialize():

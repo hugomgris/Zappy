@@ -221,18 +221,65 @@ func _on_player_orientation_change(player_id: int, new_orientation: int):
 	print("PlayerManager received orientation change for player ", player_id, " to ", new_orientation)
 	_update_player_visual(player_id)
 
-func _on_player_position_change(player_id: int, current_orientation: int):
+func _on_player_position_change(player_id: int, current_orientation: int, player_data: Dictionary, movement_length: float):
 	var player_scene = player_root.get_child(0)
+	if not player_scene:
+		print("Warning: Player scene not found for ID ", player_id)
+		return
+	
+	var old_pos = Vector2i(player_data.position.x, player_data.position.y)
+	var new_pos = old_pos
+
 	match current_orientation:
 		1:
-			player_scene.global_position.z += 1
+			new_pos.y += 1
+			if new_pos.y < GameData.map_size.y:
+				player_scene.global_position.z += movement_length
+			else:
+				new_pos.y = 0
+				player_scene.global_position.z -= (GameData.map_size.y - 1) * movement_length
 		2:
-			player_scene.global_position.x += 1
+			new_pos.x += 1
+			if new_pos.x < GameData.map_size.x:
+				player_scene.global_position.x += movement_length
+			else:
+				new_pos.x = 0
+				player_scene.global_position.x -= (GameData.map_size.x - 1) * movement_length
 		3:
-			player_scene.global_position.z -= 1
+			new_pos.y -= 1
+			if new_pos.y >= 0:
+				player_scene.global_position.z -= movement_length
+			else:
+				new_pos.y = GameData.map_size.y - 1
+				player_scene.global_position.z += (GameData.map_size.y - 1) * movement_length
 		4:
-			player_scene.global_position.x -= 1
+			new_pos.x -= 1
+			if player_scene.position.x >= 0:
+				player_scene.global_position.x -= movement_length
+			else:
+				new_pos.x = GameData.map_size.x - 1
+				player_scene.global_position.x += (GameData.map_size.x - 1) * movement_length
 		_:
 			print("Wrong orientation data")
+			return
+
+	player_data.position.x = new_pos.x
+	player_data.position.y = new_pos.y
+
+	player_data.position.x = new_pos.x
+	player_data.position.y = new_pos.y
 	
-	_update_player_visual(player_id)
+	var old_tile = GameData.tiles.get(old_pos)
+	if old_tile and old_tile.players.has(player_id):
+		old_tile.players.erase(player_id)
+		GameData.emit_signal("tile_updated", old_pos.x, old_pos.y)
+	
+	var new_tile = GameData.tiles.get(new_pos)
+	if new_tile:
+		if not new_tile.players.has(player_id):
+			new_tile.players.append(player_id)
+		GameData.emit_signal("tile_updated", new_pos.x, new_pos.y)
+	else:
+		print("Warning: Target tile not found at position ", new_pos)
+	
+	print("Player ", player_id, " moved from ", old_pos, " to ", new_pos)

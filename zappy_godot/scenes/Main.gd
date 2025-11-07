@@ -13,6 +13,9 @@ extends Node3D
 @onready var world_manager = $WorldManager
 @onready var player_manager = $PlayerManager
 
+@export var tile_size: float = 1.0
+@export var gap: float = 0.0
+
 var mock_server: MockServer
 var command_processor: CommandProcessor
 
@@ -24,6 +27,7 @@ func _ready():
 	add_child(command_processor)
 	
 	mock_server.set_command_processor(command_processor)
+	command_processor.set_tile_size_and_gap(tile_size, gap)
 	# Remove this line: mock_server.initialize()
 
 	# Initialize managers
@@ -42,7 +46,7 @@ func _ready():
 
 func _setup_managers():
 	"""Initialize all manager components"""
-	await world_manager.initialize(map_root, ui)
+	await world_manager.initialize(map_root, ui, tile_size, gap)
 	
 	# Initialize player manager
 	player_manager.initialize(player_root, world_manager, egg_root, command_processor)
@@ -61,7 +65,7 @@ func _load_test_data():
 	await get_tree().create_timer(1.0).timeout
 	
 	# Load the sample JSON data
-	var file = FileAccess.open("res://data/initial_data/game.json", FileAccess.READ)
+	var file = FileAccess.open("res://data/initial_data/game_3x3.json", FileAccess.READ)
 	if file:
 		var json_string = file.get_as_text()
 		file.close()
