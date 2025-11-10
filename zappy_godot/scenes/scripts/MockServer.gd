@@ -9,7 +9,7 @@ var command_timer: Timer
 var command_processor: CommandProcessor
 
 @export var commands_folder_path: String = "res://data/commands/"
-@export var command_interval: float = 2 # seconds
+@export var command_interval: float = 0.5 # seconds
 @export var auto_start: bool = true
 
 func initialize():
@@ -27,7 +27,6 @@ func setup_timer():
 	add_child(command_timer)
 
 func load_command_files():
-	print("Loading command files...")
 	var dir = DirAccess.open(commands_folder_path)
 	if dir:
 		dir.list_dir_begin()
@@ -36,16 +35,10 @@ func load_command_files():
 		while file_name != "":
 			if file_name.ends_with(".json"):
 				command_files.append(commands_folder_path + file_name)
-				print("Loaded command file: ", file_name)
 			file_name = dir.get_next()
 
-		# ADD THIS LINE - Sort the files alphabetically
+		# DEBUG -> sorting won't be necessary after server connection
 		command_files.sort()
-
-		print("Total command files loaded: ", command_files.size())
-		print("File order after sorting:")
-		for i in range(command_files.size()):
-			print("  ", i, ": ", command_files[i].get_file())
 	else:
 		print("Failed to access commands folder: ", commands_folder_path)
 
@@ -65,7 +58,6 @@ func _send_next_command():
 	var json_data = load_json_file(file_path)
 
 	if json_data:
-		print("Sending command from: ", file_path.get_file())
 		command_sent.emit(json_data)
 
 		# Send to CommandProcessor

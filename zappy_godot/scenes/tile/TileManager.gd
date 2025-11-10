@@ -35,6 +35,7 @@ var hovered_tile_x: int
 var hovered_tile_y: int
 
 func _ready() -> void:
+	#CommandProcessor.connect("object_amount_change", _on_object_amount_change)
 	setup_resource_grid()
 	
 	resource_positions = [
@@ -151,3 +152,6 @@ func get_player_position_values(position_index: int) -> Vector3:
 	
 	print("Warning: Invalid position index: ", position_index)
 	return Vector3.ZERO
+
+func _on_object_amount_change():
+	pass
