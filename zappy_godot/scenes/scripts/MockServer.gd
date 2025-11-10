@@ -6,7 +6,6 @@ signal command_sent(json_data: Dictionary)
 var command_files: Array[String] = []
 var current_command_index: int = 0
 var command_timer: Timer
-var command_processor: CommandProcessor
 
 @export var commands_folder_path: String = "res://data/commands/"
 @export var command_interval: float = 0.5 # seconds
@@ -61,8 +60,7 @@ func _send_next_command():
 		command_sent.emit(json_data)
 
 		# Send to CommandProcessor
-		if command_processor:
-			command_processor.process_command(json_data)
+		CommandProcessor.process_command(json_data)
 
 		current_command_index += 1
 
@@ -83,6 +81,3 @@ func load_json_file(file_path: String) -> Dictionary:
 	else:
 		print("Failed to open file: ", file_path)
 		return {}
-
-func set_command_processor(processor: CommandProcessor):
-	command_processor = processor

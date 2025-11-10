@@ -17,18 +17,13 @@ extends Node3D
 @export var gap: float = 0.0
 
 var mock_server: MockServer
-var command_processor: CommandProcessor
 
 func _ready():
 	# Initialize MockServer and CommandProcessor but DON'T start yet
 	mock_server = MockServer.new()
-	command_processor = CommandProcessor.new()
 	add_child(mock_server)
-	add_child(command_processor)
 	
-	mock_server.set_command_processor(command_processor)
-	command_processor.set_tile_size_and_gap(tile_size, gap)
-	# Remove this line: mock_server.initialize()
+	CommandProcessor.set_tile_size_and_gap(tile_size, gap)
 
 	# Initialize managers
 	_setup_managers()
@@ -40,16 +35,16 @@ func _ready():
 	_load_test_data()
 	
 	# Debug signals
-	command_processor.command_processed.connect(_on_command_processed)
-	command_processor.command_failed.connect(_on_command_failed)
-	command_processor.player_orientation_change.connect(_on_player_orientation_changed)
+	CommandProcessor.command_processed.connect(_on_command_processed)
+	CommandProcessor.command_failed.connect(_on_command_failed)
+	CommandProcessor.player_orientation_change.connect(_on_player_orientation_changed)
 
 func _setup_managers():
 	"""Initialize all manager components"""
 	await world_manager.initialize(map_root, ui, tile_size, gap)
 	
 	# Initialize player manager
-	player_manager.initialize(player_root, world_manager, egg_root, command_processor)
+	player_manager.initialize(player_root, world_manager, egg_root)
 
 	GameData.connect("game_state_updated", _on_game_state_loaded)
 	
