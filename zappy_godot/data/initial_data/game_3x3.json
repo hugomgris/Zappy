@@ -25,7 +25,7 @@
 			{
 			"x": 2, "y": 0,
 			"resources": {
-				"nourriture": 0, "linemate": 0, "deraumere": 0,
+				"nourriture": 0, "linemate": 2, "deraumere": 0,
 				"sibur": 10, "mendiane": 0, "phiras": 0, "thystame": 0
 			},
 			"players": [],

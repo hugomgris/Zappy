@@ -1,4 +1,4 @@
-class_name CommandProcessor
+#class_name CommandProcessor
 extends Node
 
 signal command_processed(command_type: String, player_id: int)
@@ -78,6 +78,10 @@ func _execute_command(json_data: Dictionary) -> void:
 			handle_prende(player_id, json_data.get("object", ""))
 		"pose":
 			handle_pose(player_id, json_data.get("object", ""))
+		"incantation":
+			handle_incantation(player_id)
+		"fork":
+			handle_fork(player_id)
 		_:
 			command_failed.emit(command_type, "Unknown command type")
 
@@ -125,24 +129,29 @@ func handle_prende(player_id: int, object: String) -> void:
 		command_failed.emit("prend " + object, player_id)
 		return
 	
-	if not player_data.inventory.has(object):
-		print("Invalid object: ", object)
-		command_failed.emit("prend " + object, player_id)
-		
+	var current_tile = GameData.tiles[player_data.position]
+	var current_tile_resources = current_tile.resources
+
+	if not current_tile_resources[object] > 0.0:
+		command_failed.emit("prend", "tile does not contain target object")
+		return
 	else:
-		var current_tile = GameData.tiles[player_data.position]
-		var current_tile_resources = current_tile.resources
-		if current_tile_resources.has(object):
-			# Transfer object from tile resources to player inventory
-			current_tile.resources[object] -= 1
-			player_data.inventory[object] += 1
-			
-			# Emit signal for object visual transformation
-			object_amount_change.emit(player_data.position, object)
+		# Transfer object from tile resources to player inventory
+		current_tile.resources[object] -= 1
+		player_data.inventory[object] += 1
+		
+		# Emit signal for object visual transformation
+		object_amount_change.emit(player_data.position, object)
 			
 		
 	print(player_data.inventory)
 	command_processed.emit("prend " + object, player_id)
 
 func handle_pose(player_id: int, object: String) -> void:
+	pass
+
+func handle_incantation(player_id: int) -> void:
+	pass
+
+func handle_fork(player_id: int) -> void:
 	pass

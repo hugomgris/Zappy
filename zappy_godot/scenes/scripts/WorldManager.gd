@@ -146,6 +146,7 @@ func _set_up_tile(x: int,y: int):
 	if not tile_data:
 		return
 
+	tile_scene.initialize_tile_position(x, y)
 	tile_scene.setup_tile_hover_signals(tile_data, ui_reference, x, y)
 	
 	_apply_checkerboard_pattern(tile_scene, x, y)
@@ -228,5 +229,7 @@ func _place_resources(tile_scene: Node3D, tile_data):
 		
 		var scale_factor = 0.5 + (quantity - 1) * 0.2
 		resource_scene.scale = Vector3(scale_factor, scale_factor, scale_factor)
+
+		resource_scene.get_child(0).quantity = quantity
 		
 		place_resource_in_tile(tile_scene, resource_scene, scale_factor)

@@ -21,6 +21,7 @@ GameData="*res://scenes/scripts/DataManager.gd"
 GameConfig="*res://scenes/scripts/GameConfig.gd"
 UI="*res://scenes/UI/UI.gd"
 WorldBuilder="*res://scenes/scripts/WorldBuilder.gd"
+CommandProcessor="*res://scenes/scripts/CommandProcessor.gd"
 
 [display]
 

@@ -6,7 +6,6 @@ extends Node3D
 @onready var world_manager: Node3D
 @onready var egg_root: Node3D
 
-var command_processor: CommandProcessor
 var players = {}
 var eggs= {}
 
@@ -28,7 +27,7 @@ func _ready():
 	GameData.connect("player_updated", _on_player_updated)
 	GameData.connect("egg_updated", _on_egg_updated)
 
-func initialize(player_root_node: Node3D, world_manager_ref: Node3D, egg_root_node: Node3D, processor: CommandProcessor):
+func initialize(player_root_node: Node3D, world_manager_ref: Node3D, egg_root_node: Node3D):
 	"""Initialize the player manager with required node references"""
 	player_root = player_root_node
 	world_manager = world_manager_ref
@@ -38,12 +37,11 @@ func initialize(player_root_node: Node3D, world_manager_ref: Node3D, egg_root_no
 		world_manager.connect("world_ready", _on_world_ready)
 
 	# Connect to CommandProcessor's signals
-	command_processor = processor
 	_connect_processor_signals()
 
 func _connect_processor_signals():
-	command_processor.connect("player_orientation_change", _on_player_orientation_change)
-	command_processor.connect("player_position_change", _on_player_position_change)
+	CommandProcessor.connect("player_orientation_change", _on_player_orientation_change)
+	CommandProcessor.connect("player_position_change", _on_player_position_change)
 
 func _on_game_state_updated():
 	"""Update all players when game state changes"""
