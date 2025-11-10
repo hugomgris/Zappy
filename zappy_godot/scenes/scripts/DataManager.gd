@@ -59,12 +59,21 @@ func _update_map_data(map_data):
 	var tile_id = 0
 	for tile_data in map_data.tiles:
 		var pos = Vector2i(tile_data.x, tile_data.y)
+		
+		var player_ids = []
+		for player_id in tile_data.players:
+			player_ids.append(int(player_id))
+		
+		var egg_ids = []
+		for egg_id in tile_data.eggs:
+			egg_ids.append(int(egg_id))
+		
 		tiles[pos] = {
 			"id": tiles.size(),
 			"position": pos,
 			"resources": tile_data.resources,
-			"players": tile_data.players,
-			"eggs": tile_data.eggs
+			"players": player_ids,
+			"eggs": egg_ids
 		}
 		emit_signal("tile_updated", tile_data.x, tile_data.y)
 

@@ -6,6 +6,8 @@ signal command_failed(command_type: String, error: String)
 signal player_orientation_change(player_id, new_orientation)
 signal player_position_change(player_id, current_orientation)
 
+signal object_amount_change(position, object_name)
+
 var tile_size: float
 var gap: float
 var command_queue: Array[Dictionary] = []
@@ -24,7 +26,6 @@ func _ready():
 func _on_game_data_ready():
 	if not data_ready:
 		data_ready = true
-		print("GameData ready - starting queued command processing")
 		if command_queue.size() > 0:
 			_start_queue_processing()
 
@@ -35,12 +36,10 @@ func set_tile_size_and_gap(tile_s: float, tile_gap: float):
 func process_command(json_data: Dictionary) -> void:
 	if not data_ready:
 		command_queue.append(json_data)
-		print("Command queued - waiting for GameData")
 		return
 	
 	if processing_queue:
 		command_queue.append(json_data)
-		print("Command queued - processing existing queue")
 		return
 	
 	_execute_command(json_data)
@@ -48,7 +47,6 @@ func process_command(json_data: Dictionary) -> void:
 func _start_queue_processing():
 	if command_queue.size() > 0:
 		processing_queue = true
-		print("Processing ", command_queue.size(), " queued commands with timing")
 		queue_timer.start()
 		_process_next_queued_command()
 
@@ -56,7 +54,6 @@ func _process_next_queued_command():
 	if command_queue.size() == 0:
 		processing_queue = false
 		queue_timer.stop()
-		print("Queue processing complete")
 		return
 	
 	var command_data = command_queue.pop_front()
@@ -77,7 +74,7 @@ func _execute_command(json_data: Dictionary) -> void:
 			handle_gauche(player_id)
 		"droit":
 			handle_droit(player_id)
-		"prende":
+		"prend":
 			handle_prende(player_id, json_data.get("object", ""))
 		"pose":
 			handle_pose(player_id, json_data.get("object", ""))
@@ -122,7 +119,30 @@ func handle_droit(player_id: int) -> void:
 	command_processed.emit("droit", player_id)
 
 func handle_prende(player_id: int, object: String) -> void:
-	pass
+	var player_data = GameData.get_player_data(player_id)
+	if not player_data:
+		print("Warning: Player ", player_id, " not found in GameData yet")
+		command_failed.emit("prend " + object, player_id)
+		return
+	
+	if not player_data.inventory.has(object):
+		print("Invalid object: ", object)
+		command_failed.emit("prend " + object, player_id)
+		
+	else:
+		var current_tile = GameData.tiles[player_data.position]
+		var current_tile_resources = current_tile.resources
+		if current_tile_resources.has(object):
+			# Transfer object from tile resources to player inventory
+			current_tile.resources[object] -= 1
+			player_data.inventory[object] += 1
+			
+			# Emit signal for object visual transformation
+			object_amount_change.emit(player_data.position, object)
+			
+		
+	print(player_data.inventory)
+	command_processed.emit("prend " + object, player_id)
 
 func handle_pose(player_id: int, object: String) -> void:
 	pass

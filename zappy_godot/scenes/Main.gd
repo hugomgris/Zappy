@@ -134,11 +134,11 @@ func get_game_stats() -> Dictionary:
 	}
 
 func _on_player_orientation_changed(player_id: int, new_orientation: int) -> void:
-	print("✅ Player orientation changed: player ", player_id, " now facing ", new_orientation)
+	pass
 
 # DEBUG 
 func _on_command_processed(command_type: String, player_id: int):
-	print ("Command correctly processed: ", command_type, " for player ", player_id)
+	print ("[COMMAND] ", player_id, " -> ", command_type)
 
 func _on_command_failed(command_type: String, error: String):
 	print ("Command failed: ", command_type, " - ", error)

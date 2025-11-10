@@ -206,7 +206,6 @@ func _update_player_color(_player_scene: Node3D, _player_data: Dictionary):
 func _update_player_orientation(player_scene: Node3D, new_orientation: int):
 	var target_rotation = deg_to_rad((new_orientation - 1) * 90.0)
 	player_scene.rotation.y = target_rotation
-	print("Player rotated to orientation ", new_orientation, " (", rad_to_deg(target_rotation), "°)")
 
 func get_player_count() -> int:
 	"""Get the current number of players"""
@@ -218,7 +217,6 @@ func get_player_scene(player_id: int) -> Node3D:
 
 # COMMAND FUNCTIONS
 func _on_player_orientation_change(player_id: int, new_orientation: int):
-	print("PlayerManager received orientation change for player ", player_id, " to ", new_orientation)
 	_update_player_visual(player_id)
 
 func _on_player_position_change(player_id: int, current_orientation: int, player_data: Dictionary, movement_length: float):
@@ -281,5 +279,3 @@ func _on_player_position_change(player_id: int, current_orientation: int, player
 		GameData.emit_signal("tile_updated", new_pos.x, new_pos.y)
 	else:
 		print("Warning: Target tile not found at position ", new_pos)
-	
-	print("Player ", player_id, " moved from ", old_pos, " to ", new_pos)
