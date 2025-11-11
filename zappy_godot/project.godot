@@ -22,6 +22,7 @@ GameConfig="*res://scenes/scripts/GameConfig.gd"
 UI="*res://scenes/UI/UI.gd"
 WorldBuilder="*res://scenes/scripts/WorldBuilder.gd"
 CommandProcessor="*res://scenes/scripts/CommandProcessor.gd"
+MockServer="*res://scenes/scripts/MockServer.gd"
 
 [display]
 

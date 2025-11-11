@@ -16,13 +16,7 @@ extends Node3D
 @export var tile_size: float = 1.0
 @export var gap: float = 0.0
 
-var mock_server: MockServer
-
 func _ready():
-	# Initialize MockServer and CommandProcessor but DON'T start yet
-	mock_server = MockServer.new()
-	add_child(mock_server)
-	
 	CommandProcessor.set_tile_size_and_gap(tile_size, gap)
 
 	# Initialize managers
@@ -72,7 +66,7 @@ func _load_test_data():
 			print("Test data loaded successfully")
 			
 			# NOW start MockServer after data is loaded
-			mock_server.initialize()
+			MockServer.initialize()
 		else:
 			print("Error parsing JSON: ", json.get_error_message())
 	else:
