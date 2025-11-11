@@ -1,10 +1,10 @@
-#class_name CommandProcessor
 extends Node
 
 signal command_processed(command_type: String, player_id: int)
 signal command_failed(command_type: String, error: String)
 signal player_orientation_change(player_id, new_orientation)
 signal player_position_change(player_id, current_orientation)
+signal egg_laid(egg_id)
 
 signal object_amount_change(position, object_name)
 
@@ -75,7 +75,7 @@ func _execute_command(json_data: Dictionary) -> void:
 		"droit":
 			handle_droit(player_id)
 		"prend":
-			handle_prende(player_id, json_data.get("object", ""))
+			handle_prend(player_id, json_data.get("object", ""))
 		"pose":
 			handle_pose(player_id, json_data.get("object", ""))
 		"incantation":
@@ -122,7 +122,7 @@ func handle_droit(player_id: int) -> void:
 	player_orientation_change.emit(player_id, new_orientation)
 	command_processed.emit("droit", player_id)
 
-func handle_prende(player_id: int, object: String) -> void:
+func handle_prend(player_id: int, object: String) -> void:
 	var player_data = GameData.get_player_data(player_id)
 	if not player_data:
 		print("Warning: Player ", player_id, " not found in GameData yet")
@@ -143,9 +143,8 @@ func handle_prende(player_id: int, object: String) -> void:
 		# Emit signal for object visual transformation
 		object_amount_change.emit(player_data.position, object)
 			
-		
-	print(player_data.inventory)
 	command_processed.emit("prend " + object, player_id)
+	GameData.tile_updated.emit(player_data.position.x, player_data.position.y, "RESOURCE_" + object.to_upper())
 
 func handle_pose(player_id: int, object: String) -> void:
 	pass
@@ -154,4 +153,30 @@ func handle_incantation(player_id: int) -> void:
 	pass
 
 func handle_fork(player_id: int) -> void:
-	pass
+	var player_data = GameData.get_player_data(player_id)
+
+	# Check for existing egg in tile case (maybe not needed)
+	var tile_data = GameData.get_tile_data(player_data.position.x, player_data.position.y)
+	if not tile_data.eggs.size() == 0:
+		command_failed.emit("fork", "tile already has an egg")
+		return
+	
+	var new_egg_id: int
+	for egg in GameData.eggs:
+		new_egg_id = egg
+	new_egg_id += 1
+
+	tile_data.eggs.append(new_egg_id)
+	
+	var egg_data = {
+		"id": new_egg_id,
+		"position": player_data.position,
+		"status": "laid",
+		"parent_id": player_id,
+		"team": player_data.team
+	}
+	egg_laid.emit(egg_data)
+	command_processed.emit("fork", player_id)
+
+	# Update possibly displayed panel
+	GameData.tile_updated.emit(player_data.position.x, player_data.position.y, "EGG")

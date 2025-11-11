@@ -1,10 +1,10 @@
 [gd_scene load_steps=14 format=3 uid="uid://bohcw6ef7e55a"]
 
 [ext_resource type="Script" uid="uid://b2yc51sdfhp5r" path="res://scenes/Main.gd" id="1_tipki"]
-[ext_resource type="Script" uid="uid://dfd525mqeflrb" path="res://scenes/scripts/WorldManager.gd" id="4_ya4ey"]
+[ext_resource type="Script" uid="uid://dfd525mqeflrb" path="res://scripts/WorldManager.gd" id="4_ya4ey"]
 [ext_resource type="Script" uid="uid://cqlc6khfoxqod" path="res://scenes/player/PlayerManager.gd" id="5_eb6dy"]
 [ext_resource type="PackedScene" uid="uid://d01wcqvgamr8t" path="res://scenes/UI/UI.tscn" id="6_trceg"]
-[ext_resource type="Script" uid="uid://2yx4asihvwhu" path="res://scenes/scripts/CameraController.gd" id="7_a8y0u"]
+[ext_resource type="Script" uid="uid://2yx4asihvwhu" path="res://scripts/CameraController.gd" id="7_a8y0u"]
 [ext_resource type="Shader" uid="uid://bb6v6h5mrc31j" path="res://materials/shaders/post_processing_test.gdshader" id="7_o6xl0"]
 [ext_resource type="Shader" uid="uid://pv47rqgm4g3o" path="res://materials/shaders/chromatic_aberration.gdshader" id="8_85g3d"]
 [ext_resource type="PackedScene" uid="uid://rrvgfd65iocc" path="res://scenes/level/enviro.tscn" id="8_tipki"]

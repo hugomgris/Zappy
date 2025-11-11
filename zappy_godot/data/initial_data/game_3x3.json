@@ -20,7 +20,7 @@
 				"sibur": 0, "mendiane": 0, "phiras": 0, "thystame": 0
 			},
 			"players": [],
-			"eggs": [10]
+			"eggs": [101]
 			},
 			{
 			"x": 2, "y": 0,
@@ -91,7 +91,7 @@
 		{
 			"id": 1,
 			"position": { "x": 0, "y": 0 },
-			"orientation": 4,
+			"orientation": 2,
 			"level": 3,
 			"team": "Alpha",
 			"inventory": {
@@ -103,7 +103,7 @@
 	],
 	"eggs": [
 		{
-			"id": 10,
+			"id": 101,
 			"position": { "x": 1, "y": 0 },
 			"status": "laid",
 			"parent_id": 1,

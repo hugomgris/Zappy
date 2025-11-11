@@ -168,10 +168,11 @@ func _handle_resource_change(object: String):
 		
 		for child in marker.get_children():
 			if child.name == target_child_name:
-				print("Found ", target_child_name, " at position ", i)
 				var object_quantity = child.get_child(0).quantity
 
 				if object_quantity == 1.0:
+					if ui_ref:
+						ui_ref.hide_resource_label_display()
 					child.queue_free()
 					free_resource_position(i)
 				else:

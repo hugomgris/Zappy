@@ -1,14 +1,16 @@
 extends Node
 
-signal command_sent(json_data: Dictionary)
+var commands_folder_path: String = "res://data/commands/"
+var command_interval: float = 0.5 # seconds
+var auto_start: bool = true
+var use_realistic_timing: bool = false
 
+var time_unit_t: int = 100
 var command_files: Array[String] = []
 var current_command_index: int = 0
 var command_timer: Timer
 
-@export var commands_folder_path: String = "res://data/commands/"
-@export var command_interval: float = 0.5 # seconds
-@export var auto_start: bool = true
+signal command_sent(json_data: Dictionary)
 
 func initialize():
 	print("Readying MockServer")
@@ -17,6 +19,26 @@ func initialize():
 
 	if auto_start and command_files.size() > 0:
 		start_sending_commands()
+
+func set_time_unit_value(unit: int) -> void:
+	time_unit_t = unit
+
+func get_command_delay(command_type: String) -> float:
+	"""Calculate real delay based on Zappy time units"""
+	var time_units: Dictionary = {
+		"avance": 7,
+		"gauche": 7, 
+		"droite": 7,
+		"prend": 7,
+		"pose": 7,
+		"voir": 7,
+		"inventaire": 1,
+		"incantation": 300,
+		"fork": 42
+	}
+
+	var delay_in_time_units = time_units.get(command_type, 7)
+	return float(delay_in_time_units) / float(time_unit_t)
 
 func setup_timer():
 	command_timer = Timer.new()
@@ -42,7 +64,6 @@ func load_command_files():
 
 func start_sending_commands():
 	if command_files.size() > 0:
-		print("Starting mock server - sending commands every ", command_interval, " seconds")
 		command_timer.start()
 
 func stop_sending_commands():
@@ -56,10 +77,14 @@ func _send_next_command():
 	var json_data = load_json_file(file_path)
 
 	if json_data:
-		command_sent.emit(json_data)
+		var command_type = json_data.get("type", "avance")
 
 		# Send to CommandProcessor
 		CommandProcessor.process_command(json_data)
+
+		if use_realistic_timing:
+			var next_delay = get_command_delay(command_type)
+			command_timer.wait_time = next_delay
 
 		current_command_index += 1
 
