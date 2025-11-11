@@ -46,7 +46,7 @@ func update_game_state(json_data):
 	if json_data.has("game"):
 		_update_game_info(json_data.game)
 	
-	emit_signal("game_state_updated")
+	game_state_updated.emit()
 
 func _update_map_data(map_data):
 	map_size.x = map_data.width
@@ -75,7 +75,7 @@ func _update_map_data(map_data):
 			"players": player_ids,
 			"eggs": egg_ids
 		}
-		emit_signal("tile_updated", tile_data.x, tile_data.y)
+		tile_updated.emit(tile_data.x, tile_data.y)
 
 func _update_players_data(players_data):
 	players.clear()
@@ -90,13 +90,14 @@ func _update_players_data(players_data):
 			"inventory": player_data.inventory,
 			"status": player_data.status
 		}
-		emit_signal("player_updated", player_id)
+		player_updated.emit(player_id)
 
 func _update_eggs_data(eggs_data):
 	eggs.clear()
 	for egg_data in eggs_data:
-		eggs[egg_data.id] = {
-			"id": egg_data.id,
+		var egg_id = int(egg_data.id)
+		eggs[egg_id] = {
+			"id": egg_id,
 			"position": Vector2i(egg_data.position.x, egg_data.position.y),
 			"status": egg_data.status,
 			"parent_id": egg_data.parent_id,
@@ -109,6 +110,8 @@ func _update_game_info(game_data_info):
 		"time_unit": game_data_info.time_unit,
 		"teams": {}
 	}
+
+	MockServer.set_time_unit_value(game_info.time_unit)
 	
 	# Update teams data
 	teams.clear()
@@ -117,7 +120,7 @@ func _update_game_info(game_data_info):
 			"player_count": team_data.player_count,
 			"remaining_connections": team_data.remaining_connections
 		}
-		emit_signal("team_updated", team_data.name)
+		team_updated.emit(team_data.name)
 
 func get_tile_data(x: int, y: int):
 	var pos = Vector2i(x, y)
@@ -129,7 +132,7 @@ func get_player_data(player_id: int):
 func get_team_data(team_name: String):
 	return teams.get(team_name, null)
 
-func get_egg_data(egg_id: float):
+func get_egg_data(egg_id: int):
 	return eggs[egg_id]
 
 func get_resource_total(resource_name: String) -> int:
