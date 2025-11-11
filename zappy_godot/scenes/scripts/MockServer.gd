@@ -1,4 +1,3 @@
-class_name MockServer
 extends Node
 
 signal command_sent(json_data: Dictionary)
