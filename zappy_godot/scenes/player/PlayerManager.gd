@@ -10,6 +10,7 @@ var eggs = {}
 
 const PLAYER_HEIGHT = 0
 var world_is_ready = false
+var player_logical_orientations = {} 
 
 var team_colors = {
 	"Alpha": Color.RED,
@@ -93,6 +94,8 @@ func _create_player_visual(player_id: int):
 	players[player_id] = player_scene
 	_setup_player_hover_signals(player_scene, player_id)
 
+	player_logical_orientations[player_id] = player_data.orientation
+
 func _create_egg_visual(egg_id: int):
 	"""Create visual representation for egg"""
 	var egg_data = GameData.get_egg_data(egg_id)
@@ -113,10 +116,50 @@ func _create_egg_visual(egg_id: int):
 # Command Handlers
 func _on_player_orientation_change(player_id: int, new_orientation: int):
 	"""Handle real-time orientation changes from commands"""
-	#var player_scene = players.get(player_id)
-	#if player_scene:
-	#	_rotate_player(player_scene, new_orientation)
-	pass
+	var player_scene = players.get(player_id)
+	if not player_scene:
+		return
+	
+	var anim_player = _find_animation_player(player_scene)
+	if not anim_player:
+		print("Warning: AnimationPlayer not found for player ", player_id)
+		return
+	
+	if anim_player.current_animation != "idle":
+		anim_player.play("idle")
+	
+	var test_cuby = player_scene.get_node("test_cuby")
+	var old_orientation = player_logical_orientations.get(player_id, new_orientation)
+	
+	var turn_amount = _calculate_turn_amount(old_orientation, new_orientation)
+	var current_rotation = test_cuby.rotation.y
+	var target_rotation = current_rotation + turn_amount
+	
+	player_logical_orientations[player_id] = new_orientation
+	
+	var tween = create_tween()
+	tween.set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_QUART)
+	tween.tween_property(test_cuby, "rotation:y", target_rotation, 0.3)
+	
+	print("Rotating player ", player_id, " from ", old_orientation, " to ", new_orientation, " (turn: ", rad_to_deg(turn_amount), "°)")
+
+func _find_animation_player(player_scene: Node3D) -> AnimationPlayer:
+	"""Find AnimationPlayer in the player scene hierarchy"""
+	var test_cuby = player_scene.get_node("test_cuby")
+	if test_cuby:
+		return test_cuby.find_child("AnimationPlayer", true, false)
+	return null
+
+func _calculate_turn_amount(from_orientation: int, to_orientation: int) -> float:
+	"""Calculate the rotation amount for the turn"""
+	var turn = (to_orientation - from_orientation + 4) % 4
+	
+	match turn:
+		1: return deg_to_rad(90)
+		2: return deg_to_rad(180)
+		3: return deg_to_rad(-90)
+		_: return 0.0 
 
 func _on_player_position_change(player_id: int, current_orientation: int, player_data: Dictionary, movement_length: float):
 	"""Handle real-time position changes from commands"""
@@ -128,18 +171,62 @@ func _on_player_position_change(player_id: int, current_orientation: int, player
 	var old_pos = Vector2i(player_data.position.x, player_data.position.y)
 	var new_pos = _calculate_new_position(old_pos, current_orientation)
 	
-	# Update visual position
-	_move_player_visual(new_pos, player_scene, current_orientation, movement_length)
-	
 	# Update data
 	player_data.position.x = new_pos.x
 	player_data.position.y = new_pos.y
 	
 	# Update tile data
 	_update_tile_player_data(player_id, old_pos, new_pos)
-	
 	GameData.tile_updated.emit(old_pos.x, old_pos.y, "PLAYER_EXIT")
 	GameData.tile_updated.emit(new_pos.x, new_pos.y, "PLAYER_ENTER")
+
+	_move_player_visual(player_scene, old_pos, new_pos, current_orientation)
+
+func _move_player_visual(player_scene: Node3D, old_pos: Vector2i, new_pos: Vector2i, orientation: int):
+	"""Smoothly move player visual between positions"""
+	var current_world_pos = player_scene.global_position
+	var target_world_pos = _calculate_target_world_position(old_pos, new_pos, orientation, current_world_pos)
+	
+	# Create smooth movement tween
+	var tween = create_tween()
+	tween.set_ease(Tween.EASE_IN)
+	tween.set_ease(Tween.EASE_OUT)
+	tween.set_trans(Tween.TRANS_QUART)
+	tween.tween_property(player_scene, "global_position", target_world_pos, 1)
+	
+	print("Moving player from ", old_pos, " to ", new_pos, " (", current_world_pos, " → ", target_world_pos, ")")
+
+func _calculate_target_world_position(old_pos: Vector2i, new_pos: Vector2i, orientation: int, current_pos: Vector3) -> Vector3:
+	"""Calculate the target world position handling wrapping"""
+	var target_pos = current_pos
+	var tile_size = world_manager.tile_size if world_manager.has_method("get_tile_size") else 1.0
+	
+	match orientation:
+		1: # North
+			if new_pos.y == 0 and old_pos.y == GameData.map_size.y - 1:
+				target_pos.z = current_pos.z - (GameData.map_size.y * tile_size - 1)
+			else:
+				target_pos.z = current_pos.z + tile_size
+		
+		2: # East  
+			if new_pos.x == 0 and old_pos.x == GameData.map_size.x - 1:
+				target_pos.x = current_pos.x - (GameData.map_size.x * tile_size - 1)
+			else:
+				target_pos.x = current_pos.x + tile_size
+		
+		3: # South
+			if new_pos.y == GameData.map_size.y - 1 and old_pos.y == 0:
+				target_pos.z = current_pos.z + (GameData.map_size.y * tile_size - 1)
+			else:
+				target_pos.z = current_pos.z - tile_size
+		
+		4: # West
+			if new_pos.x == GameData.map_size.x - 1 and old_pos.x == 0:
+				target_pos.x = current_pos.x + (GameData.map_size.x * tile_size - 1)
+			else:
+				target_pos.x = current_pos.x - tile_size
+	
+	return target_pos
 
 func _on_egg_laid(egg_data: Dictionary) -> void:
 	GameData.eggs[egg_data.id] = egg_data
@@ -197,42 +284,18 @@ func _calculate_new_position(old_pos: Vector2i, orientation: int) -> Vector2i:
 	
 	return new_pos
 
-func _move_player_visual(position: Vector2i, player_scene: Node3D, orientation: int, movement_length: float):
-	"""Update player's visual position"""
-	match orientation:
-		1:
-			if position.y == 0:
-				player_scene.global_position.z -= movement_length * GameData.map_size.y - 1
-			else:
-				player_scene.global_position.z += movement_length
-		2:
-			if position.x == 0:
-				player_scene.global_position.x -= movement_length * GameData.map_size.x - 1
-			else:
-				player_scene.global_position.x += movement_length
-		3:
-			if position.y == GameData.map_size.y - 1:
-				player_scene.global_position.z += movement_length * GameData.map_size.y - 1
-			else:
-				player_scene.global_position.z -= movement_length
-		4:
-			if position.x == GameData.map_size.x - 1:
-				player_scene.global_position.x += movement_length * GameData.map_size.x - 1
-			else:
-				player_scene.global_position.x -= movement_length
-
 func _update_tile_player_data(player_id: int, old_pos: Vector2i, new_pos: Vector2i):
 	"""Update tile player lists"""
 	var old_tile = GameData.tiles.get(old_pos)
 	if old_tile and old_tile.players.has(player_id):
 		old_tile.players.erase(player_id)
-		GameData.tile_updated.emit(old_pos.x, old_pos.y)
+		GameData.tile_updated.emit(old_pos.x, old_pos.y, "PLAYER_ERASE")
 	
 	var new_tile = GameData.tiles.get(new_pos)
 	if new_tile:
 		if not new_tile.players.has(player_id):
 			new_tile.players.append(player_id)
-		GameData.tile_updated.emit(new_pos.x, new_pos.y)
+		GameData.tile_updated.emit(new_pos.x, new_pos.y, "PLAYER_ADD")
 
 func _setup_player_hover_signals(player_scene: Node3D, player_id: int):
 	"""Setup mouse hover for player"""

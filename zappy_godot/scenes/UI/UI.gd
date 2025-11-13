@@ -86,7 +86,7 @@ func _on_tile_updated(x: int, y: int, reason: String = ""):
 	var tile_data = GameData.get_tile_data(x, y)
 	if is_hovering_tile and hovered_tile_position.x == x and hovered_tile_position.y == y:
 		match reason:
-			"EGG":
+			"EGG_ADD":
 				tile_eggs_label.text = "Eggs: " + str(tile_data.get("eggs", []).size())
 			"PLAYER_ENTER":
 				tile_players_label.text = "Players: " + str(tile_data.get("players", []).size())

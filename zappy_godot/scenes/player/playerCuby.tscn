@@ -9,31 +9,13 @@ points = PackedVector3Array(-1, -1, -1, 1, 1, 1, 1, -1, 1, 1, 1, -1, -1, 1, 1, 1
 
 [node name="test_cuby" parent="." instance=ExtResource("1_ebg58")]
 
-[node name="Empty" parent="test_cuby" index="0"]
-transform = Transform3D(3.0231547, 0, 0, 0, 3.0231547, 0, 0, 0, 3.0231547, 0.4141747, 2.542834, -0.09545612)
-
 [node name="body" parent="test_cuby/Empty" index="0"]
-transform = Transform3D(0.32826766, -0.028719703, -0.028829409, 0.028829403, 0.32952166, -2.310474e-10, 0.028719699, -0.0025126485, 0.32952166, 0, 0, 3.7252903e-09)
+transform = Transform3D(0.32952166, -0.02882941, 0, 0.02882941, 0.32952166, 0, 0, 0, 0.3307803, 0, 0, 3.7252903e-09)
 
-[node name="Area3D" type="Area3D" parent="test_cuby/Empty/body" index="0"]
-transform = Transform3D(1.3190544, -0.5632399, 9.896609, -0.11794112, 9.9822445, 0.5838333, -9.911919, -0.19373246, 1.3100692, 0.33229756, -6.1186543, 4.3645024)
+[node name="Area3D" type="Area3D" parent="test_cuby/Empty/body" index="2"]
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="test_cuby/Empty/body/Area3D"]
-transform = Transform3D(0.013190541, -0.0011794118, -0.09911923, -0.0056323977, 0.09982247, -0.001937325, 0.09896607, 0.0058383327, 0.013100698, 0.42100656, 0.62110627, -0.05434148)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 3.5527137e-15, 0, 1, 0, 0, 0)
 shape = SubResource("ConvexPolygonShape3D_ebg58")
-
-[node name="Skeleton3D" parent="test_cuby/Empty/body/left_arm" index="0"]
-bones/0/rotation = Quaternion(0.3291453, -4.9389257e-09, 0.05213152, 0.94283915)
-bones/1/rotation = Quaternion(0.12164684, -8.563517e-09, 0.019266967, 0.99238646)
-bones/2/rotation = Quaternion(0.12164685, -1.5719333e-08, 0.019266956, 0.99238646)
-bones/3/rotation = Quaternion(0.12164685, 8.211591e-09, 0.019266954, 0.99238646)
-bones/4/rotation = Quaternion(0.12164684, 2.5338625e-08, 0.01926695, 0.99238646)
-
-[node name="Skeleton3D" parent="test_cuby/Empty/body/right_arm" index="0"]
-bones/0/rotation = Quaternion(0.3291453, -4.9389257e-09, 0.05213152, 0.94283915)
-bones/1/rotation = Quaternion(0.12164684, -3.988487e-09, 0.019266985, 0.99238646)
-bones/2/rotation = Quaternion(0.121646784, 1.1730898e-10, 0.01926699, 0.99238646)
-bones/3/rotation = Quaternion(0.12164677, 4.1996426e-08, 0.01926699, 0.99238646)
-bones/4/rotation = Quaternion(0.12164674, 5.9475386e-08, 0.019266978, 0.99238646)
 
 [editable path="test_cuby"]
