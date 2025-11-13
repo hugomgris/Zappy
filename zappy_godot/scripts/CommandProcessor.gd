@@ -142,9 +142,10 @@ func handle_prend(player_id: int, object: String) -> void:
 		
 		# Emit signal for object visual transformation
 		object_amount_change.emit(player_data.position, object)
-			
+
 	command_processed.emit("prend " + object, player_id)
 	GameData.tile_updated.emit(player_data.position.x, player_data.position.y, "RESOURCE_" + object.to_upper())
+	GameData.player_inventory_updated.emit(player_id, object)
 
 func handle_pose(player_id: int, object: String) -> void:
 	pass
