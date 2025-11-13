@@ -113,9 +113,10 @@ func _create_egg_visual(egg_id: int):
 # Command Handlers
 func _on_player_orientation_change(player_id: int, new_orientation: int):
 	"""Handle real-time orientation changes from commands"""
-	var player_scene = players.get(player_id)
-	if player_scene:
-		_rotate_player(player_scene, new_orientation)
+	#var player_scene = players.get(player_id)
+	#if player_scene:
+	#	_rotate_player(player_scene, new_orientation)
+	pass
 
 func _on_player_position_change(player_id: int, current_orientation: int, player_data: Dictionary, movement_length: float):
 	"""Handle real-time position changes from commands"""
