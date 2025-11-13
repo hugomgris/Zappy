@@ -81,12 +81,12 @@ func _hatch_egg() -> void:
 			var tile_data = GameData.get_tile_data(egg_pos.x, egg_pos.y)
 			if tile_data and tile_data.eggs.has(egg_id):
 				tile_data.eggs.erase(egg_id)
-				GameData.tile_updated.emit(egg_pos.x, egg_pos.y)
+				GameData.tile_updated.emit(egg_pos.x, egg_pos.y, "EGG_REMOVE")
 			
 			# Remove from PlayerManager's eggs dictionary
 			_notify_player_manager_of_removal(egg_id)
 
-			GameData.tile_updated.emit(tile_data.position.x, tile_data.position.y, "EGG")
+			GameData.tile_updated.emit(tile_data.position.x, tile_data.position.y, "EGG_ADD")
 
 	if ui_ref:
 		ui_ref.hide_egg_panel()

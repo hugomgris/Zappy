@@ -18,7 +18,6 @@ signal world_ready
 func _ready():
 	# Connect to GameData signals
 	GameData.connect("game_state_updated", _on_game_state_updated)
-	GameData.connect("tile_updated", _on_tile_updated)
 
 func initialize(map_root_node: Node3D, ui_node: Control, tile_s: float, tile_gap: float):
 	"""Initialize the world manager with the map root node"""
@@ -30,10 +29,6 @@ func initialize(map_root_node: Node3D, ui_node: Control, tile_s: float, tile_gap
 func _on_game_state_updated():
 	"""Regenerate the entire world when game state updates"""
 	_generate_map()
-
-func _on_tile_updated(_x: int, _y: int):
-	"""Update a specific tile when its data changes"""
-	pass
 
 func _generate_map():
 	"""Generate the visual representation of the map"""

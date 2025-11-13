@@ -91,7 +91,7 @@
 		{
 			"id": 1,
 			"position": { "x": 0, "y": 0 },
-			"orientation": 2,
+			"orientation": 4,
 			"level": 3,
 			"team": "Alpha",
 			"inventory": {

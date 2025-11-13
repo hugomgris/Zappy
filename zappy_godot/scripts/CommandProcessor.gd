@@ -105,7 +105,9 @@ func handle_gauche(player_id: int) -> void:
 
 	var current_orientation = player_data.orientation
 	var new_orientation = 1 if current_orientation == 4 else current_orientation + 1
+	
 	player_data.orientation = new_orientation
+	
 	player_orientation_change.emit(player_id, new_orientation)
 	command_processed.emit("gauche", player_id)
 
@@ -113,12 +115,14 @@ func handle_droit(player_id: int) -> void:
 	var player_data = GameData.get_player_data(player_id)
 	if not player_data:
 		print("Warning: Player ", player_id, " not found in GameData yet")
-		command_failed.emit("gauche", "Player data not loaded")
+		command_failed.emit("droit", "Player data not loaded")
 		return
 
 	var current_orientation = player_data.orientation
 	var new_orientation = 4 if current_orientation == 1 else current_orientation - 1
+	
 	player_data.orientation = new_orientation
+	
 	player_orientation_change.emit(player_id, new_orientation)
 	command_processed.emit("droit", player_id)
 
@@ -180,4 +184,4 @@ func handle_fork(player_id: int) -> void:
 	command_processed.emit("fork", player_id)
 
 	# Update possibly displayed panel
-	GameData.tile_updated.emit(player_data.position.x, player_data.position.y, "EGG")
+	GameData.tile_updated.emit(player_data.position.x, player_data.position.y, "EGG_ADD")

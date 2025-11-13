@@ -28,7 +28,7 @@ enum Orientation {
 signal game_state_updated
 signal player_updated(player_id)
 signal player_inventory_updated(player_id, object)
-signal tile_updated(x, y)
+signal tile_updated(x, y, object)
 signal team_updated(team_name)
 
 func update_game_state(json_data):
@@ -76,7 +76,7 @@ func _update_map_data(map_data):
 			"players": player_ids,
 			"eggs": egg_ids
 		}
-		tile_updated.emit(tile_data.x, tile_data.y)
+		tile_updated.emit(tile_data.x, tile_data.y, "MAP_DATA_UPDATE")
 
 func _update_players_data(players_data):
 	players.clear()
