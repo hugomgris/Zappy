@@ -18,14 +18,13 @@ extends Node3D
 
 func _ready():
 	CommandProcessor.set_tile_size_and_gap(tile_size, gap)
+	
+	test_websocket_connection()
 
-	# Initialize managers
 	_setup_managers()
 	
-	# Connect to network signals
 	network_manager.connect("line_received", _on_server_line)
 	
-	# Test data -> Needs to be connected to server sent data
 	_load_test_data()
 	
 	# Debug signals
@@ -37,7 +36,6 @@ func _setup_managers():
 	"""Initialize all manager components"""
 	await world_manager.initialize(map_root, ui, tile_size, gap)
 	
-	# Initialize player manager
 	player_manager.initialize(player_root, world_manager, egg_root)
 
 	GameData.connect("game_state_updated", _on_game_state_loaded)
@@ -53,7 +51,6 @@ func _load_test_data():
 	"""Load test data for demonstration (remove when connecting to real server)"""
 	await get_tree().create_timer(1.0).timeout
 	
-	# Load the sample JSON data
 	var file = FileAccess.open("res://data/initial_data/game_3x3.json", FileAccess.READ)
 	if file:
 		var json_string = file.get_as_text()
@@ -65,7 +62,6 @@ func _load_test_data():
 			GameData.update_game_state(json.data)
 			print("Test data loaded successfully")
 			
-			# NOW start MockServer after data is loaded
 			MockServer.initialize()
 		else:
 			print("Error parsing JSON: ", json.get_error_message())
@@ -76,14 +72,12 @@ func _on_server_line(line: String):
 	"""Handle incoming server messages"""
 	print("Zappy server says:", line)
 	
-	# Try to parse as JSON first (for game state updates)
 	var json = JSON.new()
 	var parse_result = json.parse(line)
 	if parse_result == OK:
 		GameData.update_game_state(json.data)
 		return
 	
-	# Otherwise, parse as command tokens (for individual commands)
 	var tokens = line.split(" ")
 	_handle_server_command(tokens)
 
@@ -94,17 +88,14 @@ func _handle_server_command(tokens: Array):
 		
 	match tokens[0]:
 		"msz":
-			# Map size - could trigger a map regeneration
 			if tokens.size() >= 3:
 				var new_size = Vector2i(int(tokens[1]), int(tokens[2]))
 				if GameData.map_size != new_size:
 					GameData.map_size = new_size
 					print("Map size updated: ", new_size)
 		"pnw":
-			# New player - will be handled by JSON updates
 			print("New player detected")
 		"ppo":
-			# Player position - will be handled by JSON updates
 			print("Player position update")
 		_:
 			print("Unknown command: ", tokens[0])
@@ -131,4 +122,50 @@ func _on_command_processed(command_type: String, player_id: int):
 
 func _on_command_failed(command_type: String, error: String):
 	print ("Command failed: ", command_type, " - ", error)
+
+func test_websocket_connection():
+	print("Testing WebSocket connection...")
+	print("ZappyWS class available: ", ZappyWS != null)
 	
+	if ZappyWS != null:
+		var ws_client = ZappyWS.new()
+		print("ZappyWS instance created: ", ws_client != null)
+		
+		if ws_client != null:
+			print("Available methods:")
+			print("  - init: ", ws_client.has_method("init"))
+			print("  - send: ", ws_client.has_method("send"))
+			print("  - recv: ", ws_client.has_method("recv"))
+			print("  - close: ", ws_client.has_method("close"))
+			
+			ws_client.init()
+			print("WebSocket initialized and connecting...")
+			
+			await get_tree().create_timer(2.0).timeout
+			
+			print("Sending test message...")
+			ws_client.send("test from godot")
+			
+			print("Attempting to receive messages...")
+			for i in range(10):
+				var received = ws_client.recv()
+				if received != "":
+					print("Received: ", received)
+				else:
+					print("No message received (attempt ", i + 1, ")")
+				await get_tree().create_timer(0.5).timeout
+			
+			print("Sending another test message...")
+			ws_client.send("ping")
+			
+			await get_tree().create_timer(1.0).timeout
+			var ping_response = ws_client.recv()
+			if ping_response != "":
+				print("Ping response: ", ping_response)
+			else:
+				print("No ping response received")
+			
+			print("Closing WebSocket connection...")
+			ws_client.close()
+	else:
+		print("ZappyWS class not available - extension not loaded")
