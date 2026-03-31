@@ -81,9 +81,18 @@ static void websocket_handshake(SSL *ssl, const char *request)
     unsigned char sha1_hash[SHA_DIGEST_LENGTH];
     char accept_key[128];
 
+    fprintf(stderr, ">>> websocket_handshake called\n");
+    fflush(stderr);
+    
     key_header = strstr(request, "Sec-WebSocket-Key: ");
-    if (!key_header) return;
+    if (!key_header) {
+        fprintf(stderr, ">>> ERROR: No Sec-WebSocket-Key found in request!\n");
+        fflush(stderr);
+        return;
+    }
     sscanf(key_header, "Sec-WebSocket-Key: %255s", sec_websocket_key);
+    fprintf(stderr, ">>> Found key: %s\n", sec_websocket_key);
+    fflush(stderr);
 
     /* Combine key + magic GUID */
     snprintf(key_guid, sizeof(key_guid), "%s258EAFA5-E914-47DA-95CA-C5AB0DC85B11", sec_websocket_key);
@@ -93,6 +102,8 @@ static void websocket_handshake(SSL *ssl, const char *request)
 
     /* Base64 encode */
     base64_encode(sha1_hash, SHA_DIGEST_LENGTH, accept_key);
+    fprintf(stderr, ">>> Accept key computed: %s\n", accept_key);
+    fflush(stderr);
 
     snprintf(response, sizeof(response),
         "HTTP/1.1 101 Switching Protocols\r\n"
@@ -100,7 +111,12 @@ static void websocket_handshake(SSL *ssl, const char *request)
         "Connection: Upgrade\r\n"
         "Sec-WebSocket-Accept: %s\r\n\r\n", accept_key);
 
-    SSL_write(ssl, response, strlen(response));
+    fprintf(stderr, ">>> Sending HTTP response (%zu bytes):\n%s<<<END_RESPONSE\n", strlen(response), response);
+    fflush(stderr);
+    
+    int write_ret = SSL_write(ssl, response, strlen(response));
+    fprintf(stderr, ">>> SSL_write returned: %d\n", write_ret);
+    fflush(stderr);
 }
 
 static int ws_send_close(int fd, uint16_t code, const char *reason)
@@ -352,11 +368,19 @@ static int _init_server(int port)
 {
     struct sockaddr_in addr = {0};
     int sockfd;
+    int opt = 1;
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1)
     {
         perror("socket");
+        return ERROR;
+    }
+
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
+    {
+        perror("setsockopt(SO_REUSEADDR)");
+        close(sockfd);
         return ERROR;
     }
 
@@ -405,18 +429,43 @@ void on_handshake_done(int fd, SSL *ssl)
     char buf[4096] = {0};
     int ret;
 
+    fprintf(stderr, ">>> HANDSHAKE DONE CALLED (fd=%d)\n", fd);
+    fflush(stderr);
+    
     ret = ssl_table_add(fd, ssl);
-    if (ret == ERROR) goto error;
+    if (ret == ERROR) {
+        fprintf(stderr, ">>> FAILED: ssl_table_add returned ERROR\n");
+        fflush(stderr);
+        goto error;
+    }
 
+    fprintf(stderr, ">>> ATTEMPTING SSL_READ FOR HTTP REQUEST\n");
+    fflush(stderr);
     ret = SSL_read(ssl, buf, sizeof(buf) - 1);
-    if (ret <= 0) goto error;
+    fprintf(stderr, ">>> SSL_READ RETURNED: %d\n", ret);
+    fflush(stderr);
+    
+    if (ret > 0) {
+        fprintf(stderr, ">>> RECEIVED %d BYTES, FIRST 80: %.80s\n", ret, buf);
+        fflush(stderr);
+    }
+    
+    if (ret <= 0) {
+        fprintf(stderr, ">>> SSL_READ FAILED! SSL_ERROR: %d\n", SSL_get_error(ssl, ret));
+        fflush(stderr);
+        goto error;
+    }
 
+    fprintf(stderr, ">>> CALLING websocket_handshake\n");
+    fflush(stderr);
     websocket_handshake(ssl, buf);
 
     m_callback_success_SSL_accept(fd);
     return ;
 
 error:
+    fprintf(stderr, ">>> ON_HANDSHAKE_DONE ERROR, CLOSING FD %d\n", fd);
+    fflush(stderr);
     if (fd != -1)
     {
         close(fd);

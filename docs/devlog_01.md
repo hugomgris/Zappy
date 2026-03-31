@@ -157,3 +157,121 @@ First thing's first: project setup. Nothing strange or fancy, just a very defaul
 		- **Warn**: Recoverable problems (no allies nearby, retrying connection)
 		- **Error**: Fatal problems (connection failed, protocol violated)
 	- Also, this is **thread-safe**.
+
+Anyways, the logger itself is not that big of a deal, quite rudimental. The `bootstrapper`, on its hand, could use some devloggin'. As stated before, it is going to be a safegate for the client initialization process, which will undergo the sequential steps stated above.
+
+### 1.2.1 Argument Parsing
+No need to say too much about this. If you're reading this, I'm sure you've parsed dozens of arguments in a C/C++ context. Run of the mill: **check amount, capture content, validate data**. The usual first step in a program like this AI Client, that kick-starting action that sets things in montion and quickly returns something that compiles, does *something*, tests the output pipelines (debug, info, all the layers in the `Logger`), and is in itself targeteable for the automated test suite.
+
+### 1.2.2. Transport Layer Initialization
+Now we're talking. This second bootstrap step is going to need a triple attack combination:
+1. **TCP layer (Foundation)**
+	- Raw socket with connection/disconnection lifecycel
+	- Non-blocking I/O
+	- Read/Write buffers with proper backpressure handling
+	- Graceful reconnection logic with exponential backoff
+2. **TSL Layer (Security wrapper)**
+	- OpenSSL integratin wraps the TCP socket
+	- Handshake negotiation (happens once, post-connect)
+	- Endcrypted read/write that transforms plaintext buffers to/from ciphertext
+	- Certificate validation (or `--insecure` bypass for testing)
+	- Session reuse/resumption (ptional)
+3. **WebSocket Layer (Protocol Framing)**
+	- Sits on top of the TLS layer
+	- Handles frame encoding/decoding (RFC 6455 compliance)
+	- Implements ping/pong keepalive (prevents idle timeots)
+	- Manages connection upgrade (HTTP 101 Switching Protocols handshae)
+	- Handes close frames gracefully
+
+To build this, we're going to need `OpenSSL`, which means adding some flags to the building process in `Makefile`, and we could also use some external tools like **Base64 library** (for frame masking) and **SHA-1 hasher** (for handshake). The structure planned is the following:
+```
+┌─────────────────────────────────────────────┐
+│  WebSocket Frame Handler (public API)       │  Knows: frames, ping/pong, close
+│  - readFrame() → FrameData                  │
+│  - writeFrame(FrameData) → enqueue          │
+│  - isPingExpected() → bool                  │
+└────────────────────────┬────────────────────┘
+                         │
+┌─────────────────────────────────────────────┐
+│  TLS Wrapper (transparent encryption)       │  Knows: handshake, ciphers
+│  - tlsRead(buffer) → bytes_read             │
+│  - tlsWrite(buffer) → bytes_written         │
+│  - isHandshakeDone() → bool                 │
+└────────────────────────┬────────────────────┘
+                         │
+┌─────────────────────────────────────────────┐
+│  TCP Socket Manager (base I/O)              │  Knows: connect, FDs, buffers
+│  - connect(host, port, tls_mode)            │
+│  - read(buffer, max_bytes) → bytes_read     │
+│  - write(buffer, bytes) → bytes_written     │
+│  - close()                                  │
+│  - isConnected() → bool                     │
+└─────────────────────────────────────────────┘
+```
+> *The important key here: each layer exposes read/write ops and status queries, and lower layers don't know about upper layers*
+
+In a more specific way, as well as more helpful regarding how the hell to write this three layers, the main idea is:
+- TCP Baseline: low-level socket operations (creation, connection, binding, listening), with non-blocking flag set
+- TSL Wrapping: certificate handling and context creation, handshake management, encryption
+- Websocket Framing: encoding/decoding, ping/pong, frame handling, connection orchestration
+
+Before starting, though, my research tells me that some decisions need to be made regarding how the data is going to be sent through the transport layer, what's going to be the Ping interval, what reconnect strategy is going to be put inn place, and what OpenSSL version is going to be handled. This are the initial decisions, which might change down the development line:
+- **Deque based send queue**
+	- **Non-blocking I/O safety**: `send()` can fail with `EAGAIN`/`EWOULDBLOCK` if the OS buffer is full. A queue allows a retry without losing data.
+	- **Backpressure design**: A couple of milestones in a 10 in-flight commands maximum will be enforced. The queue will become the credit accounting mechanism, so that when a response arrives, the queue is popped and a credit is freed. If we start coding with this in mind we won't have to rework the architecture later (much more painfully).
+	- **Flow stability**: without a queue, the AI layer would block. With a queue, AI keeps producing commands, and the network layer handles timing independently.
+```
+AI Layer                  Network Layer
+   |                          |
+   +---> enqueue_frame() ---> [SendQueue: deque<Frame>]
+                               |
+                         tick() / flush()
+                               |
+                         WebSocket::write()
+                               |
+                         TLS::write()
+                               |
+                         TCP::send()
+```
+> The queue will be **internal to WebsocketClient**. Each `tick()` makes a `send()` happen.
+
+- **Ping Interval of 45 seconds** (configurable via class constant, maybe through config file)
+	- **30-60 seconds** is RFC guidance, so 45 is a safe middle ground
+	- **Sustain without spamming**, as many servers timeout idle connections at 60-120 seconds.
+	- **Configurable** by setting it up as a static constant in `WebsocketClient`.
+```cpp
+class WebsocketClient {
+    static constexpr int PING_INTERVAL_SECONDS = 45;
+    int64_t last_ping_time = 0;  // in milliseconds or ticks
+    
+    void tick(int64_t now_ms) {
+        if (now_ms - last_ping_time > PING_INTERVAL_SECONDS * 1000) {
+            sendPing();
+            last_ping_time = now_ms;
+        }
+    }
+};
+```
+
+- **Fail hard and stop for reconnections**
+	- Keeps things simple at this stage (and testable)
+	- After achieving 5+ minutes stability with a single client, a more complex reconnection pipeline is relegated to a later milestone
+	- This prevents an accidental "silent failure loop", i.e. a client silently retrying forever without logging
+```cpp
+Result WebsocketClient::connect(const std::string& host, int port) {
+    Result tcp_res = tcp_socket_.connect(host, port);
+    if (!tcp_res.ok()) {
+        Logger::error("TCP connect failed: " + tcp_res.message);
+        return tcp_res;  // Propagate to main, which exits
+    }
+    
+    // TLS handshake, WebSocket upgrade...
+    // If ANY step fails, return error and let main handle it
+}
+```
+> It seems quite important to correctly, clearly and thoroughly log any failure at this point (errno, TLS error code, etc).
+
+- **OpenSSL 3.x accepting APIs from 1.1.x**
+	- This is a compatiility shim that works on both old and new OpenSSL (and was already defined, so...)
+
+#### 1.2.2.1 Transmission Control Protocol

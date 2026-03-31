@@ -5,6 +5,7 @@
 enum class ErrorCode {
     Ok = 0,
     InvalidArgs,
+    MissingArgs,
     IoError,
     NetworkError,
     ProtocolError,

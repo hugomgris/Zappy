@@ -23,7 +23,7 @@
      - `@export var use_mock_server: bool = true`
      - `@export var server_ip: String = "127.0.0.1"`
      - `@export var server_port: int = 8674`
-     - `@export var team_name: String = "team1"`
+     - `@export var teamName: String = "team1"`
    - Removed messy `test_websocket_connection()` function
    - Clean initialization flow through IntegrationManager
 

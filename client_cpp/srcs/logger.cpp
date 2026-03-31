@@ -6,6 +6,7 @@
 #include <iostream>
 #include <mutex>
 
+
 namespace {
 LogLevel g_minLevel = LogLevel::Info;
 std::mutex g_logMutex;
@@ -47,5 +48,5 @@ void Logger::log(LogLevel level, const std::string &message) {
     const std::time_t nowTime = std::chrono::system_clock::to_time_t(now);
 
     std::cerr << "[" << std::put_time(std::localtime(&nowTime), "%F %T") << "] "
-              << "[" << toString(level) << "] " << message << '\n';
+              << "[" << toString(level) << "] " << message << std::endl;
 }

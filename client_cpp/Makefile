@@ -35,7 +35,9 @@ GTEST_MAIN_LIB  := $(GTEST_DIR)/build/lib/libgtest_main.a
 
 MAIN_SRC        := main.cpp
 CORE_SRC        := logger.cpp
-ALL_SRC         := $(MAIN_SRC) $(CORE_SRC)
+HELPER_SRC		:= helpers/Parser.cpp
+NET_SRC			:= net/FrameCodec.cpp net/SecureSocket.cpp net/TcpSocket.cpp net/TlsContext.cpp net/WebsocketClient.cpp
+ALL_SRC         := $(MAIN_SRC) $(CORE_SRC) $(HELPER_SRC) $(NET_SRC)
 
 SRCS            := $(addprefix $(SRCDIR)/, $(ALL_SRC))
 OBJS            := $(addprefix $(OBJDIR)/, $(ALL_SRC:.cpp=.o))
@@ -54,7 +56,7 @@ INCLUDES        := -I$(INCDIR) -I$(SRCDIR)
 DEPFLAGS        := -MMD -MP
 GTEST_INCLUDES  := -I$(GTEST_DIR)/googletest/include
 
-COMMON_CXXFLAGS := -std=c++20 -Wall -Wextra -Werror -pedantic $(INCLUDES)
+COMMON_CXXFLAGS := -std=c++20 -Wall -Wextra -Werror -pedantic $(INCLUDES) -DOPENSSL_API_COMPAT=30000
 DEBUG_CXXFLAGS  := -g3 -O0
 RELEASE_CXXFLAGS:= -g -O2 -DNDEBUG
 
@@ -66,10 +68,10 @@ else
     $(error Unknown PROFILE='$(PROFILE)'. Use PROFILE=debug or PROFILE=release)
 endif
 
-LDFLAGS         :=
+LDFLAGS         := -lssl -lcrypto -ldl
 ALL_LIBS        :=
 TEST_CXXFLAGS   := $(CXXFLAGS) $(GTEST_INCLUDES)
-TEST_LDFLAGS    := -lpthread
+TEST_LDFLAGS    := -lpthread -lssl -lcrypto -ldl
 
 # -=-=-=-=-    RULES -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 

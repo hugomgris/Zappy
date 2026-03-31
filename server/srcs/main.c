@@ -146,7 +146,7 @@ int main(int argc, char **argv)
     if (parse_config("config") == ERROR)
             goto error;
 
-    log_init(LOG_LEVEL_WARN);
+    log_init(LOG_LEVEL_DEBUG);
 
     log_msg(LOG_LEVEL_BOOT, "Randomized values:\n\tWidth='%d'\n\tHeight='%d'\n\tNb_clients='%d'\n\tTime_unit='%lu'\n",
            args.width, args.height, args.time_unit);
