@@ -11,7 +11,7 @@ public class PlayerTest {
     @Test
     public void testBroadcastCommandCreation() {
         Player player = new Player("team", 1);
-        Command command = player.broadcast("elevation", "call", "4", "3");
+        Command command = player.broadcastCmd("elevation", "call", 4, 3);
 
         // Assert command type
         assertEquals(CommandType.BROADCAST, command.getType());
@@ -20,14 +20,14 @@ public class PlayerTest {
         JsonObject json = JsonParser.parseString(command.getArgument()).getAsJsonObject();
         assertEquals("elevation", json.get("event").getAsString());
         assertEquals("call", json.get("status").getAsString());
-        assertEquals("4", json.get("level").getAsString());
-        assertEquals("3", json.get("players_needed").getAsString());
+        assertEquals(4, json.get("level").getAsInt());
+        assertEquals(3, json.get("players_needed").getAsInt());
     }
 
     @Test
     public void testBroadcastWithoutOptionalFields() {
         Player player = new Player("team", 1);
-        Command command = player.broadcast("elevation", "ko", null, null);
+        Command command = player.broadcastCmd("elevation", "ko", 0, 0);
 
         JsonObject json = JsonParser.parseString(command.getArgument()).getAsJsonObject();
         assertEquals("elevation", json.get("event").getAsString());

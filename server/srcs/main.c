@@ -141,7 +141,7 @@ int main(int argc, char **argv)
     // args.nb_teams = rand() % 14 + 1;
     args.nb_teams = 2;
     // args.time_unit = rand() % 1000 + 1;
-    args.time_unit = 100;
+    args.time_unit = 100; // Tick control 7 = 1 action per seconds
     
     if (parse_config("config") == ERROR)
             goto error;

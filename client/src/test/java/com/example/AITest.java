@@ -16,6 +16,8 @@ public class AITest {
     public void setUp() {
         mockPlayer = mock(Player.class);
         when(mockPlayer.getLevel()).thenReturn(1); // default level
+        when(mockPlayer.broadcastCmd(anyString(), anyString(), anyInt(), anyInt()))
+                .thenAnswer(invocation -> new Command(CommandType.BROADCAST, "{}"));
         ai = new AI(mockPlayer);
     }
 
@@ -136,10 +138,132 @@ public class AITest {
 
         List<Command> cmds = ai.doElevation();
 
-        assertEquals(2, cmds.size());
+        assertEquals(3, cmds.size());
         assertEquals(CommandType.POSE, cmds.get(0).getType());
         assertEquals("linemate", cmds.get(0).getArgument());
 
-        assertEquals(CommandType.INCANTATION, cmds.get(1).getType());
+        assertEquals(CommandType.BROADCAST, cmds.get(1).getType());
+        assertEquals(CommandType.INCANTATION, cmds.get(2).getType());
+    }
+
+    @Test
+    void testGoToElevationCall_DirectionFront_AddsMoveAndVision() {
+        List<Command> cmds = ai.goToElevationCall(1, 1, 2);
+
+        assertEquals(2, cmds.size());
+        assertEquals(CommandType.AVANCE, cmds.get(0).getType());
+        assertEquals(CommandType.VOIR, cmds.get(1).getType());
+    }
+
+    @Test
+    void testGoToElevationCall_SameTile_GroupNeeded_RefreshesVisionOnly() {
+        List<Command> cmds = ai.goToElevationCall(0, 1, 2);
+
+        assertEquals(1, cmds.size());
+        assertEquals(CommandType.VOIR, cmds.get(0).getType());
+    }
+
+    @Test
+    void testGuardedElevation_SoloBroadcastThenWait() {
+        when(mockPlayer.getLife()).thenReturn(3000);
+        when(mockPlayer.getNour()).thenReturn(200);
+        when(mockPlayer.getLevel()).thenReturn(2);
+        when(mockPlayer.getInventoryCount(Resource.LINEMATE)).thenReturn(1);
+        when(mockPlayer.getInventoryCount(Resource.DERAUMERE)).thenReturn(1);
+        when(mockPlayer.getInventoryCount(Resource.SIBUR)).thenReturn(1);
+
+        ai.setInventaireChecked(true);
+
+        List<List<String>> view = Arrays.asList(
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.emptyList()
+        );
+
+        List<Command> cmds = ai.decideNextMovesViewBased(view);
+        assertEquals(2, cmds.size());
+        assertEquals(CommandType.BROADCAST, cmds.get(0).getType());
+        assertEquals(CommandType.VOIR, cmds.get(1).getType());
+    }
+
+    @Test
+    void testGuardedElevation_BroadcastCooldownSuppressesSpam() {
+        when(mockPlayer.getLife()).thenReturn(3000);
+        when(mockPlayer.getNour()).thenReturn(200);
+        when(mockPlayer.getLevel()).thenReturn(2);
+        when(mockPlayer.getInventoryCount(Resource.LINEMATE)).thenReturn(1);
+        when(mockPlayer.getInventoryCount(Resource.DERAUMERE)).thenReturn(1);
+        when(mockPlayer.getInventoryCount(Resource.SIBUR)).thenReturn(1);
+
+        ai.setInventaireChecked(true);
+
+        List<List<String>> view = Arrays.asList(
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.emptyList()
+        );
+
+        List<Command> first = ai.decideNextMovesViewBased(view);
+        assertEquals(CommandType.BROADCAST, first.get(0).getType());
+
+        List<Command> second = ai.decideNextMovesViewBased(view);
+        assertEquals(1, second.size());
+        assertEquals(CommandType.VOIR, second.get(0).getType());
+    }
+
+    @Test
+    void testGuardedElevation_WithEnoughPlayers_StartsIncantationFlow() {
+        when(mockPlayer.getLife()).thenReturn(3000);
+        when(mockPlayer.getNour()).thenReturn(200);
+        when(mockPlayer.getLevel()).thenReturn(2);
+        when(mockPlayer.getInventoryCount(Resource.LINEMATE)).thenReturn(1);
+        when(mockPlayer.getInventoryCount(Resource.DERAUMERE)).thenReturn(1);
+        when(mockPlayer.getInventoryCount(Resource.SIBUR)).thenReturn(1);
+
+        ai.setInventaireChecked(true);
+
+        List<List<String>> view = Arrays.asList(
+                List.of("player"),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.emptyList()
+        );
+
+        List<Command> cmds = ai.decideNextMovesViewBased(view);
+        assertFalse(cmds.isEmpty());
+        assertEquals(CommandType.INCANTATION, cmds.get(cmds.size() - 1).getType());
+    }
+
+    @Test
+    void testGuardedElevation_CooldownAfterFailedIncantation() {
+        when(mockPlayer.getLife()).thenReturn(3000);
+        when(mockPlayer.getNour()).thenReturn(200);
+        when(mockPlayer.getLevel()).thenReturn(2);
+        when(mockPlayer.getInventoryCount(Resource.LINEMATE)).thenReturn(1);
+        when(mockPlayer.getInventoryCount(Resource.DERAUMERE)).thenReturn(1);
+        when(mockPlayer.getInventoryCount(Resource.SIBUR)).thenReturn(1);
+
+        ai.setInventaireChecked(true);
+        ai.onIncantationResult(false);
+
+        List<List<String>> view = Arrays.asList(
+                List.of("player"),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.emptyList()
+        );
+
+        List<Command> cooldownTick = ai.decideNextMovesViewBased(view);
+        assertEquals(1, cooldownTick.size());
+        assertEquals(CommandType.VOIR, cooldownTick.get(0).getType());
+
+        for (int i = 0; i < 6; i++) {
+            ai.decideNextMovesViewBased(view);
+        }
+
+        List<Command> afterCooldown = ai.decideNextMovesViewBased(view);
+        assertEquals(CommandType.INCANTATION, afterCooldown.get(afterCooldown.size() - 1).getType());
     }
 }

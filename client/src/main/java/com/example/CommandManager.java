@@ -21,6 +21,8 @@ public class CommandManager {
     private final Player player;
     private final AtomicInteger pendingResponses = new AtomicInteger(0);
     private final AtomicBoolean dead = new AtomicBoolean(false);
+    private static final int MAX_IN_FLIGHT_COMMANDS = 5;
+    private static final int MAX_QUEUE_SIZE = 30;
 
     public CommandManager(Consumer<String> sendFunction, Player player, Session session, int id) {
         this.sendToServerFunction = sendFunction;
@@ -67,7 +69,7 @@ public class CommandManager {
         }        
 
         // System.out.println("[CLIENT " + this.id + "] " + "BEFORE SENDING Pending responses: " + pendingResponses.get() + " command queue size: " + commandQueue.size());
-        while (!commandQueue.isEmpty() && pendingResponses.get() < 10) {
+        while (!commandQueue.isEmpty() && pendingResponses.get() < MAX_IN_FLIGHT_COMMANDS) {
             Command nextCommand = commandQueue.poll();
             sendCommand(nextCommand);
         }
@@ -161,11 +163,49 @@ public class CommandManager {
     /********** COMMAND FUNCTIONS **********/
 
     public void addCommand(Command command) {
+        if (command == null) {
+            return;
+        }
+
+        if (commandQueue.size() >= MAX_QUEUE_SIZE) {
+            return;
+        }
+
+        if (command.getType() == CommandType.VOIR && hasQueuedType(CommandType.VOIR)) {
+            return;
+        }
+
+        if (command.getType() == CommandType.BROADCAST && hasQueuedBroadcastWithSameArg(command.getArgument())) {
+            return;
+        }
+
         commandQueue.add(command);
         // if (pendingResponses == 0) {
         //     sendCommand(command);
         //     pendingResponses++;
         // }
+    }
+
+    private boolean hasQueuedType(CommandType type) {
+        for (Command queued : commandQueue) {
+            if (queued != null && queued.getType() == type) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasQueuedBroadcastWithSameArg(String arg) {
+        for (Command queued : commandQueue) {
+            if (queued == null || queued.getType() != CommandType.BROADCAST) {
+                continue;
+            }
+            String queuedArg = queued.getArgument();
+            if ((queuedArg == null && arg == null) || (queuedArg != null && queuedArg.equals(arg))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void sendCommand(Command command) {

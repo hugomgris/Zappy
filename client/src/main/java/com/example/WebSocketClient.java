@@ -8,6 +8,15 @@ import java.util.concurrent.*;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import java.io.IOException;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import org.glassfish.tyrus.client.ClientManager;
+import org.glassfish.tyrus.client.ClientProperties;
+import org.glassfish.tyrus.client.SslContextConfigurator;
+import org.glassfish.tyrus.client.SslEngineConfigurator;
 
 @ClientEndpoint
 public class WebSocketClient {
@@ -144,18 +153,46 @@ public class WebSocketClient {
     }
 
     public void startConnection() {
-        // Build the server URI
-        String scheme = this.useSecure ? "wss" : "ws";
+        // Keep websocket over TLS for this server; insecure mode only relaxes TLS validation.
+        String scheme = "wss";
         String serverUri = scheme + "://" + this.hostname + ":" + this.port;
-        // String serverUri = "wss://" + this.hostname + ":" + this.port;
         System.out.println("[CLIENT " + this.id + "] " + "Connecting to server: " + serverUri);
 
         try {
-            // Connect to the WebSocket server
-            WebSocketContainer container = ContainerProvider.getWebSocketContainer();
-            container.connectToServer(this, new URI(serverUri));
+            ClientManager client = ClientManager.createClient();
+
+            if (!this.useSecure) {
+                SSLContext insecureContext = createInsecureSslContext();
+                SslEngineConfigurator sslEngineConfigurator = new SslEngineConfigurator(insecureContext, true, false, false);
+                sslEngineConfigurator.setHostVerificationEnabled(false);
+                client.getProperties().put(ClientProperties.SSL_ENGINE_CONFIGURATOR, sslEngineConfigurator);
+            }
+
+            client.connectToServer(this, new URI(serverUri));
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private SSLContext createInsecureSslContext() throws Exception {
+        TrustManager[] trustAllManagers = new TrustManager[]{
+            new X509TrustManager() {
+                public X509Certificate[] getAcceptedIssuers() {
+                    return new X509Certificate[0];
+                }
+
+                public void checkClientTrusted(X509Certificate[] chain, String authType) {
+                    // Intentionally trust all client certificates in insecure mode.
+                }
+
+                public void checkServerTrusted(X509Certificate[] chain, String authType) {
+                    // Intentionally trust all server certificates in insecure mode.
+                }
+            }
+        };
+
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(null, trustAllManagers, new SecureRandom());
+        return sslContext;
     }
 }

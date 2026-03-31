@@ -218,11 +218,14 @@ public class Player {
         } else if (status.equals("Level up!")) {
             cmdManager.incrementPendingResponses();
             incrementLevel();
+            this.ai.onIncantationResult(true);
         } else if (status.equals("ok")) {
             System.out.println("[CLIENT " + this.id + "] " + "Incantation successful! and FINISHED :)");
             this.ai.setInventaireChecked(false);
+            this.ai.onIncantationResult(true);
         } else {
             System.out.println("[CLIENT " + this.id + "] " + "Incantation failed :(");
+            this.ai.onIncantationResult(false);
         }
     }
 
@@ -262,6 +265,11 @@ public class Player {
                 if (level == this.level.get()) {
                     System.out.println("[CLIENT " + this.id + "] Elevation call matches my level, preparing incantation ...");
                     List<Command> cmds = ai.goToElevationCall(dir, level, playersNeeded);
+                    if (cmds != null && !cmds.isEmpty()) {
+                        for (Command c : cmds) {
+                            cmdManager.addCommand(c);
+                        }
+                    }
                 } else {
                     System.out.println("[CLIENT " + this.id + "] Elevation call does not match my level, ignoring.");
                 }

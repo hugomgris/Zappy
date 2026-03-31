@@ -43,6 +43,23 @@ public class CommandManagerTest {
     }
 
     @Test
+    public void testAddCommandDeduplicatesVoir() {
+        manager.addCommand(new Command(CommandType.VOIR));
+        manager.addCommand(new Command(CommandType.VOIR));
+
+        assertEquals(1, manager.getCommandQueue().size());
+    }
+
+    @Test
+    public void testAddCommandDeduplicatesBroadcastByArgument() {
+        String msg = "{\"event\":\"elevation\",\"status\":\"call\",\"level\":2,\"players_needed\":2}";
+        manager.addCommand(new Command(CommandType.BROADCAST, msg));
+        manager.addCommand(new Command(CommandType.BROADCAST, msg));
+
+        assertEquals(1, manager.getCommandQueue().size());
+    }
+
+    @Test
     public void testSendMsgCallsSendFunction() {
         manager.sendMsg("test");
         verify(mockSendFunction, times(1)).accept("test");

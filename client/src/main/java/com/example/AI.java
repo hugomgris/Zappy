@@ -12,6 +12,14 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 
 public class AI {
+    private enum ElevationState {
+        IDLE,
+        GATHERING,
+        WAITING_ALLIES,
+        INCANTING,
+        COOLDOWN
+    }
+
     // private String teamName;
     private final Player player;
     private World world;
@@ -19,6 +27,11 @@ public class AI {
     private List<List<String>> curView = new ArrayList<>();
     // private int debugLevel = 1;
     private boolean inventaireChecked = false;
+    private int elevationBroadcastCooldown = 0;
+    private static final int ELEVATION_BROADCAST_COOLDOWN_TICKS = 4;
+    private ElevationState elevationState = ElevationState.IDLE;
+    private int elevationAttemptCooldown = 0;
+    private static final int ELEVATION_ATTEMPT_COOLDOWN_TICKS = 6;
 
     public AI(Player player) {
         this.player = player;
@@ -28,9 +41,11 @@ public class AI {
 
     public List<Command> decideNextMoves() {
         List<Command> commands = new ArrayList<>();
+        tickCooldowns();
 
+        updateElevationStateForReadiness();
         if (inventaireChecked && readyToElevate()) {
-            return doElevation();
+            return guardedElevationAttempt();
         }
         addRandomMove(commands);
         return commands;
@@ -38,6 +53,7 @@ public class AI {
 
     public List<Command> decideNextMovesViewBased(List<List<String>> viewData) {
         this.curView = viewData;
+        tickCooldowns();
         // List<Command> commands = new ArrayList<>();
         setTargets();
 
@@ -56,6 +72,7 @@ public class AI {
         // return decideNextMovesRandom();
 
         if (player.getLife() < 1500 || player.getNour() < 20) {
+            elevationState = ElevationState.GATHERING;
             System.out.println("[Client "+ player.getId() + "] I AM GOING FOR FOOD");
             return searchForFood();
         }
@@ -63,15 +80,17 @@ public class AI {
             setInventaireChecked(false);
         }
         if (!readyToElevate()) {
+            elevationState = ElevationState.GATHERING;
             System.out.println("[Client "+ player.getId() + "] I AM GOING FOR TARGET STONE");
             return searchForTarget();
         } else if (!inventaireChecked) {
+            elevationState = ElevationState.GATHERING;
             System.out.println("[Client "+ player.getId() + "] I AM GOING TO ELEVATE to level " + (player.getLevel() + 1) + ", CHECKING INVENTAIRE");
             return checkInventaire();
         }
         // player.setLevel(player.getLevel() + 1);
-        System.out.println("[Client "+ player.getId() + "] I AM READY TO ELEVATE! increasing level to " + player.getLevel() + 1);
-        return checkInventaire(); // doElevation();
+        System.out.println("[Client "+ player.getId() + "] I AM READY TO ELEVATE! increasing level to " + (player.getLevel() + 1));
+        return guardedElevationAttempt();
         
 
         // return commands();
@@ -123,6 +142,76 @@ public class AI {
         // add CommandType.INCANTATION
         commands.add(new Command(CommandType.INCANTATION));
         return commands;
+    }
+
+    private List<Command> guardedElevationAttempt() {
+        List<Command> commands = new ArrayList<>();
+        if (elevationAttemptCooldown > 0) {
+            elevationState = ElevationState.COOLDOWN;
+            commands.add(new Command(CommandType.VOIR));
+            return commands;
+        }
+
+        int level = player.getLevel();
+        ElevationRules.Rule rule = ElevationRules.getRule(level);
+        int playersNeeded = rule.getPlayers();
+
+        if (!hasEnoughPlayersOnCurrentTile(playersNeeded)) {
+            elevationState = ElevationState.WAITING_ALLIES;
+            if (elevationBroadcastCooldown <= 0) {
+                commands.add(player.broadcastCmd("elevation", "call", level, playersNeeded));
+                elevationBroadcastCooldown = ELEVATION_BROADCAST_COOLDOWN_TICKS;
+            }
+            // Keep refreshing local state while waiting for allies.
+            commands.add(new Command(CommandType.VOIR));
+            return commands;
+        }
+
+        elevationState = ElevationState.INCANTING;
+        elevationBroadcastCooldown = 0;
+        return doElevation();
+    }
+
+    private boolean hasEnoughPlayersOnCurrentTile(int playersNeeded) {
+        int nearbyPlayers = 0;
+
+        if (!curView.isEmpty()) {
+            List<String> tileZero = curView.get(0);
+            for (String token : tileZero) {
+                if ("player".equals(token) || "joueur".equals(token)) {
+                    nearbyPlayers++;
+                }
+            }
+        }
+
+        // Most protocol variants omit self from tile payload; include self explicitly.
+        int totalPlayersOnTile = nearbyPlayers + 1;
+        return totalPlayersOnTile >= playersNeeded;
+    }
+
+    private void tickCooldowns() {
+        if (elevationBroadcastCooldown > 0) {
+            elevationBroadcastCooldown--;
+        }
+        if (elevationAttemptCooldown > 0) {
+            elevationAttemptCooldown--;
+            if (elevationAttemptCooldown == 0 && elevationState == ElevationState.COOLDOWN) {
+                elevationState = ElevationState.IDLE;
+            }
+        }
+    }
+
+    private void updateElevationStateForReadiness() {
+        if (!readyToElevate() || !inventaireChecked) {
+            if (elevationState != ElevationState.GATHERING) {
+                elevationState = ElevationState.IDLE;
+            }
+            return;
+        }
+
+        if (elevationState == ElevationState.IDLE || elevationState == ElevationState.GATHERING) {
+            elevationState = ElevationState.WAITING_ALLIES;
+        }
     }
 
     private List<Command> searchForTarget() {
@@ -252,7 +341,52 @@ public class AI {
     public List<Command> goToElevationCall(int dir, int level, int playersNeeded) {
         List<Command> commands = new ArrayList<>();
 
+        // Direction semantics are server-defined (1..8 around the player, 0 = same tile).
+        // This minimal behavior converges toward the caller and refreshes vision.
+        if (dir == 0) {
+            // If we are already on the caller tile, avoid spamming incantation when group size > 1.
+            if (playersNeeded <= 1) {
+                elevationState = ElevationState.INCANTING;
+                commands.addAll(doElevation());
+            } else {
+                elevationState = ElevationState.WAITING_ALLIES;
+                commands.add(new Command(CommandType.VOIR));
+            }
+            return commands;
+        }
+
+        if (dir == 1 || dir == 2 || dir == 8) {
+            commands.add(new Command(CommandType.AVANCE));
+        } else if (dir == 3 || dir == 4) {
+            commands.add(new Command(CommandType.DROITE));
+            commands.add(new Command(CommandType.AVANCE));
+        } else if (dir == 5 || dir == 6) {
+            commands.add(new Command(CommandType.DROITE));
+            commands.add(new Command(CommandType.DROITE));
+            commands.add(new Command(CommandType.AVANCE));
+        } else if (dir == 7) {
+            commands.add(new Command(CommandType.GAUCHE));
+            commands.add(new Command(CommandType.AVANCE));
+        } else {
+            // Unknown direction hint, fall back to a world refresh.
+            commands.add(new Command(CommandType.VOIR));
+            return commands;
+        }
+
+        commands.add(new Command(CommandType.VOIR));
+        elevationState = ElevationState.WAITING_ALLIES;
+
         return commands;
+    }
+
+    public void onIncantationResult(boolean success) {
+        if (success) {
+            elevationState = ElevationState.IDLE;
+            elevationAttemptCooldown = 0;
+            return;
+        }
+        elevationState = ElevationState.COOLDOWN;
+        elevationAttemptCooldown = ELEVATION_ATTEMPT_COOLDOWN_TICKS;
     }
 
     /********** UTILS **********/
@@ -324,6 +458,9 @@ public class AI {
 
     public void setInventaireChecked(boolean inventaireChecked) {
         this.inventaireChecked = inventaireChecked;
+        if (!inventaireChecked && elevationState == ElevationState.INCANTING) {
+            elevationState = ElevationState.IDLE;
+        }
     }
 
     // public void setDebugLevel(int debugLevel) {
