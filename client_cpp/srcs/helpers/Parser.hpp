@@ -2,7 +2,7 @@
 
 #include "../../incs/result.hpp"
 #include "../../incs/DataStructs.hpp"
-#include "../../incs/logger.hpp"
+#include "Logger.hpp"
 
 #include <iostream>
 #include <vector>

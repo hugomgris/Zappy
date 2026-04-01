@@ -2,6 +2,8 @@
 
 ## Table of Contents
 1. [There and Back Again (In a Network Sense)](#11---there-and-back-again-in-a-network-sense)
+2. [A Small Step for Zappy, an Irrelevant Step for Humanity](#12---a-small-step-for-zappy-an-irrelevant-step-for-humanity)
+3. [Hello From the Client Side](#13-hello-from-the-client-side)
 
 
 <br>
@@ -274,4 +276,160 @@ Result WebsocketClient::connect(const std::string& host, int port) {
 - **OpenSSL 3.x accepting APIs from 1.1.x**
 	- This is a compatiility shim that works on both old and new OpenSSL (and was already defined, so...)
 
-#### 1.2.2.1 Transmission Control Protocol
+Aaaand... At this point we should pump the breaks, take a deep breath and sit down for a while so that we can lay down how to correctly build a network client like the one we need. A 101, if you like, or if you're in the same out-of-your-lane situation as I am right now. Down the line, the needs and building objectives are clear, we'll need to have a main entry point, a bootstrapper and some type of runner class that manages the read/write communication between client and server (with sub managers regarding command sending, response processing, etc.). But between us and that point, all the net related code needs some careful logging so that all this process doesn't get lost in the turbulent torrents of the day to day battles.
+
+<br>
+<br>
+
+## 1.3. Hello From The Client Side
+Well, lets see. Following everything written before in this document, the first stape in our net code should be the regular `TcpSocket` class, which will be the bottom-most layer in charge of the *basic* state and status tracking, as well as the low level actions like connections, polls, state checks, read/write operations and error status retrieval.
+
+This is the layer in which the `TcpState` and `NetStatus` are enumerated and tracked, so we need enum classes in that regard, some way of organizing the possibility range of both issues.
+- For the `TcpState`, we'll need entry states for `Disconnected`, `Connecting`, `Connected`, `Closed`, all the possible states in which a TCP connection can be in.
+- For the `NetStatus`, what we need is a way of classifying the state in which an established connection is in, which can be roughly collected in `Ok`, `WouldBlock`, `Connecting`, `ConnectionClosed`, `Timeout`, `InvalidState` and `NetworkError`.
+
+Alongiside this, we'll also need a way to store te result of an I/O operation, a small data package that stores the net status, the message written or read, its raw bytes size and the possibility of an error state. Alltogether, we can base this in a simple struct:
+```cpp
+struct IoResult {
+	NetStatus	status = NetStatus::Ok;
+	std::size_t	bytes = 0;
+	std::string	message;
+	int			sysErrno = 0;
+};
+```
+
+Pretty straight forward up until this point. The next thing is functionality. What does the `TcpSocket` need to manage in concrete actions?
+- Create and start a socket connection and set it to non blocking
+- Finalize connection states and set possible last errors
+- Connect through the socket and track its state (connected, open)
+- Poll the opened connection
+- Read and write to the socket
+- Store and track the socket fd
+
+All in all, the `TcpSocket` could look like this:
+```cpp
+enum class TcpState {
+	Disconnected,
+	Connecting,
+	Connected,
+	Closed
+};
+
+enum class NetStatus {
+	Ok,
+	WouldBlock,
+	Connecting,
+	ConnectionClosed,
+	Timeout,
+	InvalidState,
+	NetworkError
+};
+
+struct IoResult {
+	NetStatus	status = NetStatus::Ok;
+	std::size_t	bytes = 0;
+	std::string	message;
+	int			sysErrno = 0;
+};
+
+class TcpSocket {
+	private:
+		int			_fd = -1;
+		TcpState	_state = TcpState::Disconnected;
+		std::string	_host;
+		int			_port = -1;
+		int			_lastErrno = 0;
+		std::string	_lastError;
+
+	private:
+		Result	createSocketAndStartConnect(const std::string& host, int port);
+		Result	setNonBlocking(int socketFd);
+		Result	finalizeConnectState();
+		void	setLastError(int err, const std::string& msg);
+
+	public:
+		TcpSocket() = default;
+		~TcpSocket();
+
+		TcpSocket(const TcpSocket&) = delete;
+		TcpSocket& operator=(const TcpSocket&) = delete;
+
+		Result	connectTo(const std::string& host, int port);
+		Result	pollConnect(int timeoutMs);
+		void	close();
+
+		bool	isConnected() const;
+		bool	isConnecting() const;
+		bool	isOpen() const;
+
+		int			fd() const;
+		TcpState	state() const;
+
+		IoResult	readSome(std::vector<std::uint8_t>& out, std::size_t maxBytes);
+		IoResult	writeSome(const std::vector<std::uint8_t>& data, std::size_t offset);
+
+		std::string	lastErrorString() const;
+		int			lastErrno() const;
+};
+```
+Most of the net related code is based in library functions and macros, and follows a standard setup. What's most important here and constitutes the core of the class is the socke creation and connection, which is laid out like this:
+```cpp
+Result TcpSocket::createSocketAndStartConnect(const std::string& host, int port) {
+	addrinfo hints{};
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+
+	addrinfo* head = nullptr;
+	const std::string portStr = std::to_string(port);
+
+	const int gai = ::getaddrinfo(host.c_str(), portStr.c_str(), &hints, &head);
+	if (gai != 0) {
+		setLastError(0, std::string("getaddrinfo failed: ") + ::gai_strerror(gai));
+		return Result::failure(ErrorCode::NetworkError, _lastError);
+	}
+
+	Result finalRes = Result::failure(ErrorCode::NetworkError, "No valid address for connection");
+
+	for (addrinfo* ai = head; ai != nullptr; ai = ai->ai_next) {
+		const int fd = ::socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+		if (fd < 0) {
+			setLastError(errno, std::string("socket() failed: ") + std::strerror(errno));
+			continue;
+		}
+
+		const Result nbRes = setNonBlocking(fd);
+		if (!nbRes.ok()) {
+			::close(fd);
+			continue;
+		}
+
+		const int rc = ::connect(fd, ai->ai_addr, ai->ai_addrlen);
+		if (rc == 0) {
+			_fd = fd;
+			_state = TcpState::Connected;
+			_lastErrno = 0;
+			_lastError.clear();
+			finalRes = Result::success();
+			break;
+		}
+
+		const int err = errno;
+		if (err == EINPROGRESS || err == EWOULDBLOCK) {
+			_fd = fd;
+			_state = TcpState::Connecting;
+			_lastErrno = 0;
+			_lastError.clear();
+			finalRes = Result::success();
+			break;
+		}
+
+		setLastError(err, std::string("connect() failed: ") + std::strerror(err));
+		::close(fd);
+		finalRes = Result::failure(ErrorCode::NetworkError, _lastError);
+	}
+
+	::freeaddrinfo(head);
+	return finalRes;
+}
+```

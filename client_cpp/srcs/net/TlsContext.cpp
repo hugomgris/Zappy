@@ -1,6 +1,6 @@
 #include "TlsContext.hpp"
 
-#include "../../incs/logger.hpp"
+#include "../helpers/Logger.hpp"
 #include "../../incs/result.hpp"
 #include <openssl/err.h>
 #include <openssl/x509.h>

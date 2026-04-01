@@ -1,6 +1,6 @@
 #include "WebsocketClient.hpp"
 
-#include "../../incs/logger.hpp"
+#include "../helpers/Logger.hpp"
 #include <openssl/sha.h>
 #include <cstring>
 #include <sstream>
@@ -121,11 +121,10 @@ Result WebsocketClient::tick(int64_t now_ms) {
     }
 
     // Read incoming data
-    std::vector<std::uint8_t> tmp_buf(4096);
+    std::vector<std::uint8_t> tmp_buf;
     IoResult read_res = _secure_socket->tlsRead(tmp_buf, 4096);
 
     if (read_res.status == NetStatus::Ok && read_res.bytes > 0) {
-        tmp_buf.resize(read_res.bytes);
         _read_buffer.insert(_read_buffer.end(), tmp_buf.begin(), tmp_buf.end());
     } else if (read_res.status == NetStatus::ConnectionClosed) {
         _state = WsState::Closed;

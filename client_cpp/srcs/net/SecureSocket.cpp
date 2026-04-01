@@ -1,7 +1,7 @@
 #include "SecureSocket.hpp"
 #include "TlsContext.hpp"
 
-#include "../../incs/logger.hpp"
+#include "../helpers/Logger.hpp"
 #include <openssl/err.h>
 #include <cstring>
 

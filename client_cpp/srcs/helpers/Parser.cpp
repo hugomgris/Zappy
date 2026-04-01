@@ -1,38 +1,43 @@
 #include "Parser.hpp"
 
 Result Parser::parseArguments(char** argv, Arguments& parsedArguments) {
-	std::vector<std::string> args = {};
-
+	std::vector<std::string> args;
 	for (int i = 1; argv[i]; ++i) {
 		args.push_back(std::string(argv[i]));
 	}
 
-	if (args.size() < 8 || args.size() > 10 || args.size() == 9) {
-		// Double check, just in case
+	if (args.size() < 4) {
 		return Result::failure(ErrorCode::InvalidArgs, "Error: Invalid arguments");
 	}
 
-	for (int i = 0; i < 8; ++i) {
-		if (args[i][0] == '-') {
-			if (args[i][1] == 'n') {
-				parsedArguments.teamName = args[i + 1];
-			} else if (args[i][1] == 'p') {
-				parsedArguments.port = std::stoi(args[i + 1]);
-			} else if (args[i][1] == 'h') {
-				parsedArguments.hostname = args[i + 1];
-			} else if (args[i][1] == 'c') {
-				parsedArguments.clientCount = std::stoi(args[i + 1]);
-			} else {
-				return Result::failure(ErrorCode::InvalidArgs, "Error: Unrecognized argument: " + args[i]);
+	for (size_t i = 0; i < args.size(); ++i) {
+		const std::string& arg = args[i];
+		if (arg == "-n" || arg == "-p" || arg == "-h" || arg == "-c" || arg == "--insecure") {
+			if (i + 1 >= args.size()) {
+				return Result::failure(ErrorCode::InvalidArgs, "Error: Missing value for argument: " + arg);
 			}
+			const std::string& value = args[i + 1];
+			if (arg == "-n") {
+				parsedArguments.teamName = value;
+			} else if (arg == "-p") {
+				parsedArguments.port = std::stoi(value);
+			} else if (arg == "-h") {
+				parsedArguments.hostname = value;
+			} else if (arg == "-c") {
+				parsedArguments.clientCount = std::stoi(value);
+			} else if (arg == "--insecure") {
+				parsedArguments.insecure = (value == "true");
+			}
+			++i;
+			continue;
 		}
-	}
 
-	if (args.size() == 10) {
-		if (args[8] != "--insecure") {
-			return Result::failure(ErrorCode::InvalidArgs, "Error: Unrecognized argument: " + args[9]);
+		if (arg == "--loop") {
+			parsedArguments.loopMode = true;
+			continue;
 		}
-		parsedArguments.insecure = (args[9] == "true") ? true : false;
+
+		return Result::failure(ErrorCode::InvalidArgs, "Error: Unrecognized argument: " + arg);
 	}
 
 	return Result::success();
@@ -55,12 +60,15 @@ void Parser::printParsedArguments(Arguments& parsedArguments) {
 	Logger::debug("hostname: " + parsedArguments.hostname);
 	Logger::debug("client count: " + std::to_string(parsedArguments.clientCount));
 	Logger::debug(std::string("insecure: ") + (parsedArguments.insecure ? "true" : "false"));
+	Logger::debug(std::string("loop mode: ") + (parsedArguments.loopMode ? "true" : "false"));
 }
 
 void Parser::printUsage() {
-	std::cout << "Usage: ./client -n <team> -p <port> [-h <hostname>]" << std::endl
+	std::cout << "Usage: ./client -n <team> -p <port> [-h <hostname>] [-c <count>] [--insecure true|false] [--loop]" << std::endl
 				<< "-n <teamName>  : Name of the team (required)" << std::endl
 				<< "-p <port>       : Port number (required)" << std::endl
 				<< "-h <hostname>   : Hostname (default: localhost)" << std::endl
-				<< "-c <client_cnt> : Number of clients to run (default: 1)" << std::endl;
+				<< "-c <client_cnt> : Number of clients to run (default: 1)" << std::endl
+				<< "--insecure <bool> : Disable TLS cert verification (test only)" << std::endl
+				<< "--loop            : Keep connected and send periodic voir commands" << std::endl;
 }

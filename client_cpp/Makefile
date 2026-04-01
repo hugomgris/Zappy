@@ -34,10 +34,10 @@ GTEST_MAIN_LIB  := $(GTEST_DIR)/build/lib/libgtest_main.a
 # -=-=-=-=-    SOURCES -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 
 MAIN_SRC        := main.cpp
-CORE_SRC        := logger.cpp
-HELPER_SRC		:= helpers/Parser.cpp
+HELPER_SRC		:= helpers/Parser.cpp helpers/Logger.cpp
+APP_SRC			:= app/ClientBootstrap.cpp app/ClientRunner.cpp app/CommandSender.cpp
 NET_SRC			:= net/FrameCodec.cpp net/SecureSocket.cpp net/TcpSocket.cpp net/TlsContext.cpp net/WebsocketClient.cpp
-ALL_SRC         := $(MAIN_SRC) $(CORE_SRC) $(HELPER_SRC) $(NET_SRC)
+ALL_SRC         := $(MAIN_SRC) $(CORE_SRC) $(HELPER_SRC) $(APP_SRC) $(NET_SRC)
 
 SRCS            := $(addprefix $(SRCDIR)/, $(ALL_SRC))
 OBJS            := $(addprefix $(OBJDIR)/, $(ALL_SRC:.cpp=.o))
