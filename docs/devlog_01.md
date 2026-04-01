@@ -433,3 +433,142 @@ Result TcpSocket::createSocketAndStartConnect(const std::string& host, int port)
 	return finalRes;
 }
 ```
+
+### 1.3.1 What Actually Happens During Non-Blocking Connect
+If we zoom in on the sequence above, the order matters more than anything:
+
+1. `getaddrinfo()` resolves host + port into candidate socket addresses.
+2. For each candidate:
+	- Create fd with `socket()`.
+	- Set fd non-blocking via `fcntl()`.
+	- Call `connect()` once.
+3. `connect()` can return in 3 meaningful ways:
+	- `0`: connection established immediately.
+	- `-1` + `EINPROGRESS`/`EWOULDBLOCK`: expected for non-blocking mode, connection is in progress.
+	- `-1` + other errno: hard failure for that candidate.
+4. If connection is in progress, `pollConnect()` is then responsible for final confirmation (`poll()` + `getsockopt(SO_ERROR)`).
+
+The key point is that in non-blocking mode, `connect()` is not the finish line. It is the start signal.
+
+Also, a small language detail worth keeping in mind: calls like `::socket`, `::connect`, `::close` explicitly target global POSIX functions. This avoids ambiguity with class methods (for example, `TcpSocket::close()` vs global `::close(int)`).
+
+### 1.3.2 Read/Write Contract and Why It Saves You Later
+The `IoResult` shape is a tiny but very important design decision. It gives all higher layers the same contract:
+
+- `status`: what happened (`Ok`, `WouldBlock`, `ConnectionClosed`, etc.)
+- `bytes`: how much was consumed/produced
+- `message`: human-readable context for logs
+- `sysErrno`: raw error code for diagnostics
+
+This contract lets TLS and WebSocket wrappers stay deterministic:
+
+- If lower layer says `WouldBlock`, upper layer retries in next tick.
+- If lower layer says `ConnectionClosed`, upper layer stops trying to push traffic.
+- If lower layer says `NetworkError`, upper layer bubbles up and exits cleanly.
+
+No guessing, no hidden side effects, no silent loops.
+
+### 1.3.3 TLS Layer: Same Contract, Encrypted Transport
+Once TCP is reliable, TLS should only add encryption and handshake management, not new architecture chaos.
+
+TLS wrapper responsibilities:
+
+1. Create SSL context and per-connection SSL session.
+2. Bind SSL session to existing TCP fd.
+3. Run handshake incrementally (non-blocking friendly).
+4. Expose `readSome`/`writeSome`-style operations that map SSL errors back to the same `IoResult` model.
+
+Practical rule: TLS should feel like a filtered socket, not like a second transport stack.
+
+### 1.3.4 WebSocket Layer: Protocol Framing and Session Semantics
+With TLS in place, WebSocket is the final transport adapter for project JSON mode.
+
+Order of operations:
+
+1. Send HTTP Upgrade request (`GET`, `Upgrade: websocket`, key headers).
+2. Read response until `\r\n\r\n`.
+3. Validate status code `101 Switching Protocols`.
+4. Switch to framed mode:
+	- Outbound: encode frame headers and payload.
+	- Inbound: decode complete frames from stream buffer.
+5. Maintain liveness (`ping`/`pong`) and graceful close behavior.
+
+The send queue belongs here because this layer knows about frame boundaries and backpressure.
+
+### 1.3.5 App Layer: Bootstrap, Runner, Command Sender
+After transport exists, application structure should avoid the old giant-main trap.
+
+Current clean split:
+
+- `ClientBootstrap`: parse and validate arguments.
+- `ClientRunner`: execute runtime flow and ticking.
+- `CommandSender`: centralize command emission (`login`, `voir`, `inventaire`, `prend nourriture`, etc.).
+
+This gives a practical separation of concerns:
+
+- Bootstrap decides whether startup is valid.
+- Runner decides when actions happen.
+- Command sender decides how commands are serialized and queued.
+
+### 1.3.6 End-to-End Runtime Timeline (Current JSON Path)
+This is the exact order a healthy run follows:
+
+1. Parse CLI arguments.
+2. Connect TCP (non-blocking).
+3. Complete TLS handshake.
+4. Complete WebSocket upgrade.
+5. Receive optional initial `bienvenue` frame.
+6. Send `login` payload.
+7. Receive `welcome` or `error`.
+8. Send initial `voir`.
+9. Receive first `voir` reply.
+10. If loop mode enabled:
+	- periodic `voir`
+	- periodic `inventaire`
+	- conditional `prend nourriture` on low food
+	- exit gracefully on `die` event
+
+The runner is therefore a deterministic state progression even before introducing a formal state machine class.
+
+### 1.3.7 If Building This From Scratch Again (Recommended Implementation Order)
+If I had to restart from an empty directory tomorrow, this is the order I would follow:
+
+1. Define shared result/error model (`Result`, `IoResult`, enums).
+2. Implement `TcpSocket` with non-blocking connect + poll finalize.
+3. Add `TlsContext` + `SecureSocket` over existing fd contract.
+4. Add WebSocket handshake + frame codec + send queue.
+5. Build smoke app that only connects and exchanges one known command.
+6. Introduce bootstrap/runner separation.
+7. Introduce command sender intermediary.
+8. Add loop scheduling and survival heuristics.
+9. Add explicit state machine once flow is stable and observable.
+
+This sequence minimizes moving parts at each step and keeps failures local and explainable.
+
+### 1.3.8 Logging Strategy for Network Layers (The Difference Between Guessing and Knowing)
+For this kind of client, logs are not decoration. They are the debugger.
+
+Recommended minimum events to log:
+
+- Connect attempts and selected endpoint
+- TLS handshake start/success/failure
+- WebSocket upgrade request + status validation
+- Every state transition in runner
+- Command enqueue/send events (at least debug level)
+- Frame receive summary (type/cmd/status)
+- Shutdown reason (normal exit, server close, protocol error, timeout)
+
+If these are present, postmortems are usually minutes, not hours.
+
+### 1.3.9 Closing Note for This Stage
+At this stage, the objective is not to be clever. The objective is to be explicit.
+
+The whole networking stack becomes manageable when each layer answers one question clearly:
+
+- TCP: can bytes move between endpoints?
+- TLS: can those bytes move securely?
+- WebSocket: can those bytes be framed as messages?
+- Runner: can messages be exchanged in valid order?
+- Command sender: can intent be serialized consistently?
+
+Once those answers are stable, then (and only then) it is worth moving into a full protocol state machine and AI strategy complexity.
