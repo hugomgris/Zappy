@@ -1,25 +1,25 @@
-#pragma once
+        #pragma once
 
-#include "../../incs/result.hpp"
-#include <openssl/ssl.h>
-#include <memory>
+        #include "../../incs/result.hpp"
+        #include <openssl/ssl.h>
+        #include <memory>
 
-class TlsContext {
-public:
-    ~TlsContext();
+        class TlsContext {
+        public:
+            ~TlsContext();
 
-    TlsContext(const TlsContext&) = delete;
-    TlsContext& operator=(const TlsContext&) = delete;
+            TlsContext(const TlsContext&) = delete;
+            TlsContext& operator=(const TlsContext&) = delete;
 
-    static TlsContext& instance();
+            static TlsContext& instance();
 
-    Result initialize(bool insecureMode = false);
-    SSL_CTX* getCtx() const;
-    bool isInitialized() const;
+            Result initialize(bool insecureMode = false);
+            SSL_CTX* getCtx() const;
+            bool isInitialized() const;
 
-private:
-    TlsContext() = default;
+        private:
+            TlsContext() = default;
 
-    SSL_CTX* _ctx = nullptr;
-    bool _initialized = false;
-};
+            SSL_CTX* _ctx = nullptr;
+            bool _initialized = false;
+        };

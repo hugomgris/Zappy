@@ -47,7 +47,6 @@ static std::string sha1Hash(const std::string& input) {
     return base64Encode(hash_vec);
 }
 
-// Constructor / Destructor
 WebsocketClient::WebsocketClient()
     : _secure_socket(std::make_unique<SecureSocket>()) {
 }
@@ -56,7 +55,6 @@ WebsocketClient::~WebsocketClient() {
     close();
 }
 
-// Public Lifecycle
 Result WebsocketClient::connect(const std::string& host, int port, bool insecure) {
     if (host.empty() || port <= 0 || port > 65535) {
         return Result::failure(ErrorCode::InvalidArgs, "Invalid host or port");
@@ -68,7 +66,7 @@ Result WebsocketClient::connect(const std::string& host, int port, bool insecure
     _state = WsState::Connecting;
     _last_ping_time_ms = 0;
 
-    // Start TLS connection
+    // this is where the TLS connection gets started
     Result res = _secure_socket->connectTo(host, port, insecure);
     if (!res.ok()) {
         _state = WsState::Disconnected;
@@ -85,7 +83,7 @@ Result WebsocketClient::tick(int64_t now_ms) {
         return Result::failure(ErrorCode::InternalError, "WebSocket not connected");
     }
 
-    // Poll TCP/TLS connection if still connecting
+    // this is were a connecting status is polled to finish connectiona ttempts
     if (_state == WsState::Connecting) {
         Result res = _secure_socket->pollConnect(0);
         if (!res.ok()) {
@@ -94,7 +92,7 @@ Result WebsocketClient::tick(int64_t now_ms) {
         }
 
         if (_secure_socket->isConnected()) {
-            // TLS handshake is complete, proceed to WebSocket HTTP upgrade
+            // if this point is reached, TSL handshake succedded and the scoket goes to HTTP upgrade
             _state = WsState::Handshaking;
         }
 
@@ -113,14 +111,13 @@ Result WebsocketClient::tick(int64_t now_ms) {
         return Result::success();
     }
 
-    // Flush pending sends
     Result flush_res = flushSendQueue();
     if (!flush_res.ok()) {
         _state = WsState::Closed;
         return flush_res;
     }
 
-    // Read incoming data
+    // read
     std::vector<std::uint8_t> tmp_buf;
     IoResult read_res = _secure_socket->tlsRead(tmp_buf, 4096);
 
@@ -135,7 +132,7 @@ Result WebsocketClient::tick(int64_t now_ms) {
         return Result::failure(ErrorCode::NetworkError, read_res.message);
     }
 
-    // Ping keepalive
+    // ping
     updatePingTimer(now_ms);
     if (shouldSendPing(now_ms)) {
         sendPing();
@@ -156,7 +153,6 @@ void WebsocketClient::close() {
     _state = WsState::Closed;
 }
 
-// Public Status
 bool WebsocketClient::isConnected() const {
     return _state == WsState::Connected;
 }
@@ -169,7 +165,6 @@ bool WebsocketClient::isOpen() const {
     return _state != WsState::Disconnected && _state != WsState::Closed;
 }
 
-// Public Send/Receive
 IoResult WebsocketClient::sendText(const std::string& text) {
     IoResult res{};
 
@@ -262,7 +257,7 @@ IoResult WebsocketClient::recvFrame(WebSocketFrame& out_frame) {
     Result decode_res = FrameCodec::decodeFrame(_read_buffer, _frame_parse_offset, out_frame);
 
     if (!decode_res.ok()) {
-        // Check if it's a "need more data" situation
+        // need more data typa check
         if (decode_res.message.find("Not enough data") != std::string::npos ||
             decode_res.message.find("Incomplete") != std::string::npos) {
             res.status = NetStatus::WouldBlock;
@@ -275,8 +270,8 @@ IoResult WebsocketClient::recvFrame(WebSocketFrame& out_frame) {
         return res;
     }
 
-    // Successfully decoded a frame
-    // Clean up read buffer if we've consumed some data
+    // When this point is reached, a frame has been successfully decoded
+    // buffer needs to be cleaned
     if (_frame_parse_offset > 0) {
         _read_buffer.erase(_read_buffer.begin(), _read_buffer.begin() + _frame_parse_offset);
         _frame_parse_offset = 0;
@@ -288,7 +283,6 @@ IoResult WebsocketClient::recvFrame(WebSocketFrame& out_frame) {
     return res;
 }
 
-// Query
 std::string WebsocketClient::lastErrorString() const {
     return _last_error;
 }
@@ -301,13 +295,12 @@ std::size_t WebsocketClient::sendQueueSize() const {
     return _send_queue.size();
 }
 
-// Private Helpers
 Result WebsocketClient::performHandshake() {
     if (!_secure_socket || !_secure_socket->isConnected()) {
         return Result::failure(ErrorCode::InternalError, "SecureSocket not connected");
     }
 
-    // Generate random key for handshake
+    // random key for handshake
     std::random_device rd;
     std::vector<uint8_t> random_bytes(16);
     for (auto& byte : random_bytes) {
@@ -315,7 +308,7 @@ Result WebsocketClient::performHandshake() {
     }
     std::string ws_key = base64Encode(random_bytes);
 
-    // Build HTTP upgrade request
+    // HTTP upgrade request
     std::ostringstream oss;
     oss << "GET / HTTP/1.1\r\n"
         << "Host: " << _host << ":" << _port << "\r\n"
@@ -329,7 +322,6 @@ Result WebsocketClient::performHandshake() {
     std::string request = oss.str();
     std::vector<std::uint8_t> request_bytes(request.begin(), request.end());
 
-    // Send HTTP upgrade request
     Logger::debug("WebSocket: Sending HTTP upgrade request (" + std::to_string(request_bytes.size()) + " bytes)");
     IoResult write_res = _secure_socket->tlsWrite(request_bytes, 0);
     if (write_res.status != NetStatus::Ok) {
@@ -337,35 +329,31 @@ Result WebsocketClient::performHandshake() {
     }
     Logger::debug("WebSocket: HTTP upgrade request sent successfully");
 
-    // Receive HTTP response
+    // HTTP response recieve
     Logger::debug("WebSocket: Waiting for HTTP 101 response...");
     std::vector<std::uint8_t> response_buf;
     for (int attempt = 0; attempt < 100; ++attempt) {
-        std::vector<std::uint8_t> tmp;  // Start EMPTY, not with 1024 zeros!
+        std::vector<std::uint8_t> tmp;
         IoResult read_res = _secure_socket->tlsRead(tmp, 1024);
 
         if (read_res.status == NetStatus::Ok && read_res.bytes > 0) {
-            // tmp now contains the data read (APPENDED by tlsRead)
             response_buf.insert(response_buf.end(), tmp.begin(), tmp.end());
             Logger::debug("WebSocket: Attempt " + std::to_string(attempt) + " read " + std::to_string(read_res.bytes) + " bytes, total: " + std::to_string(response_buf.size()));
 
-            // Check if we have the full HTTP response (ends with \r\n\r\n)
             std::string response_str(response_buf.begin(), response_buf.end());
             size_t term_pos = response_str.find("\r\n\r\n");
             Logger::debug("WebSocket: Searching for terminator in " + std::to_string(response_str.size()) + " bytes, found at: " + (term_pos == std::string::npos ? "npos" : std::to_string(term_pos)));
             
             if (term_pos != std::string::npos) {
-                // Found terminator, trim buffer
-                size_t header_end = term_pos + 4;  // Include the \r\n\r\n
+                size_t header_end = term_pos + 4;
                 Logger::debug("WebSocket: Found terminator! Trimming from " + std::to_string(response_buf.size()) + " to " + std::to_string(header_end) + " bytes");
                 response_buf.resize(header_end);
-                break;  // Got full header
+                break;  // full header
             }
         } else if (read_res.status == NetStatus::ConnectionClosed) {
             Logger::debug("WebSocket: Connection closed on attempt " + std::to_string(attempt));
             return Result::failure(ErrorCode::NetworkError, "Peer closed during handshake");
         } else if (read_res.status == NetStatus::WouldBlock) {
-            // Logger::debug("WebSocket: WouldBlock on attempt " + std::to_string(attempt));
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         } else {
             Logger::debug("WebSocket: Read error on attempt " + std::to_string(attempt) + ": " + read_res.message);
@@ -374,11 +362,11 @@ Result WebsocketClient::performHandshake() {
     }
     Logger::debug("WebSocket: Response reading loop completed, buffer size: " + std::to_string(response_buf.size()));
 
-    // Validate HTTP 101 response
+    // HTTP 101 response validation
     std::string response_str(response_buf.begin(), response_buf.end());
     Logger::debug("WebSocket: HTTP response received (" + std::to_string(response_buf.size()) + " bytes)");
     
-    // Raw byte dump for debugging
+    // debugging raw byte dump
     std::ostringstream byte_dump;
     for (size_t i = 0; i < std::min(response_buf.size(), size_t(140)); ++i) {
         uint8_t b = response_buf[i];
@@ -399,7 +387,7 @@ Result WebsocketClient::performHandshake() {
         return Result::failure(ErrorCode::ProtocolError, "Server did not respond with HTTP 101");
     }
 
-    // Calculate expected Sec-WebSocket-Accept
+    // Sec-Websocket-Accpet
     std::string challenge = ws_key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
     std::string expected_accept = sha1Hash(challenge);
 
@@ -415,20 +403,15 @@ Result WebsocketClient::flushSendQueue() {
     while (!_send_queue.empty()) {
         const auto& frame_bytes = _send_queue.front();
         
-        // Try to send the frame
-        // For simplicity, send all at once; real impl would handle partial sends
         IoResult write_res = _secure_socket->tlsWrite(frame_bytes, 0);
 
         if (write_res.status == NetStatus::Ok && write_res.bytes > 0) {
             if (write_res.bytes == frame_bytes.size()) {
-                // Fully sent
                 _send_queue.pop_front();
             } else {
-                // Partial send - would need to track offset, but for now bail
                 return Result::failure(ErrorCode::InternalError, "Partial frame send not yet supported");
             }
         } else if (write_res.status == NetStatus::WouldBlock) {
-            // Can't send more right now, try again later
             break;
         } else if (write_res.status == NetStatus::ConnectionClosed) {
             return Result::failure(ErrorCode::NetworkError, "Connection closed while sending");
@@ -459,4 +442,3 @@ bool WebsocketClient::shouldSendPing(int64_t now_ms) {
 
     return false;
 }
-
