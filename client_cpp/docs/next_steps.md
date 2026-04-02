@@ -1,135 +1,174 @@
-# C++ Client - Next Steps
+# Next Phase Plan: Command Management
 
-## Status: Transport Layer Complete ✅
+## 1) Goal of this phase
 
-The WebSocket transport layer is **production-ready**. All TLS handshake, HTTP upgrade, and secure bidirectional communication is validated and working.
+Move from direct command sends in `ClientRunner` to a real command-management layer that:
 
-## Immediate Next Steps
+- decides what to send and when,
+- tracks in-flight commands and expected replies,
+- handles timeouts/retries/failures cleanly,
+- exposes a stable API for the future AI decision layer.
 
-### 1. **Resolve Bootstrap Protocol Sequencing**
-**Current Issue:** Bootstrap code expects server's initial "welcome" message, but server doesn't send one until login is received.
+Transport is already validated (unit + integration), so this phase focuses on orchestration and protocol behavior above transport.
 
-**Options:**
-- **Option A (Recommended):** Modify `runTransportSmoke()` in `main.cpp` to skip waiting for initial frame and send login immediately
-- **Option B:** Modify server to send initial welcome frame after WebSocket upgrade completes
+## 2) Current baseline (already in code)
 
-**Location:** `client_cpp/srcs/main.cpp`, function `runTransportSmoke()` (lines ~65-90)
+- `CommandSender` can serialize/send: login, voir, inventaire, prend nourriture.
+- `ClientRunner` currently owns command cadence and response handling logic.
+- Periodic behavior exists (`voir`, `inventaire`, low-food pickup) but is tightly coupled to runner flow.
+- No explicit in-flight registry, command IDs, timeout policy, or retry policy yet.
 
-```cpp
-// Current: Waits for server's first message
-std::string firstServerMsg;
-Result recvRes = tickUntilTextFrame(ws, 3000, firstServerMsg);
+## 3) Target architecture for this phase
 
-// Suggested: Send login immediately without waiting
-// Then wait for login reply
-```
+Keep responsibilities explicit:
 
-### 2. **Integrate with Game Loop**
-The bootstrap sequence is currently blocking and standalone. To integrate with the Godot GUI:
+- `WebsocketClient`: transport only (already done).
+- `CommandSender`: payload formatting + enqueue to websocket.
+- `CommandManager` (new): command lifecycle and policy.
+- `ClientRunner`: high-level app loop, delegates command orchestration to `CommandManager`.
 
-**Files to Update:**
-- Wrap `runTransportSmoke()` calls in async task or background thread
-- Move connection logic from `main()` to a proper initialization system
-- Implement reconnection logic for network failures
+### Proposed `CommandManager` responsibilities
 
-**Suggested Architecture:**
-- Create `ConnectionManager` class to handle connection state
-- Emit signals/events when connection succeeds/fails
-- Implement automatic reconnection with exponential backoff
+- Maintain command queue with priorities.
+- Maintain at-most-one or bounded in-flight command set (start simple: one in-flight).
+- Attach metadata per command:
+	- command type,
+	- enqueue timestamp,
+	- timeout deadline,
+	- retry count,
+	- expected reply matcher.
+- Accept server frames and resolve/reject matching in-flight commands.
+- Emit typed outcomes for upper layers (success, timeout, protocol-error, server-error).
+- Apply backoff/retry policy for transient failures.
 
-### 3. **Remove Diagnostic Logging**
-For production builds, remove or conditionally disable debug logs:
+## 4) Execution plan by milestones
 
-**Files to Clean:**
-- `client_cpp/srcs/net/WebsocketClient.cpp` - Remove "WebSocket: Attempt X" debug logs
-- `client_cpp/srcs/net/SecureSocket.cpp` - Uncomment diagnostic fprintf debugging (currently commented)
-- `server/srcs/server/ssl_al.c` - Replace fprintf diagnostics with log_msg() or remove
+## Milestone A: Command domain model
 
-**Suggested:** Create `NDEBUG` conditional compilation around diagnostic output
+Deliverables:
 
-### 4. **Test with GUI**
-Once protocol sequencing is fixed:
+- Add command metadata types:
+	- `CommandType` enum,
+	- `CommandSpec` (timeoutMs, maxRetries, expectsReply),
+	- `CommandRequest`,
+	- `CommandStatus`/`CommandResult`.
+- Add reply-matching helpers (start with robust JSON substring matching, later parser-backed).
 
-**Test Plan:**
-1. Start server on port 8674
-2. Run Godot GUI and attempt to connect
-3. Verify full login → game spawn sequence works
-4. Test reconnection after server restart
-5. Test error handling (connection refused, timeout, etc.)
+Exit criteria:
 
-**Expected Flow:**
-- Client connects via TLS WebSocket
-- Sends login with team name
-- Receives server welcome/game state
-- Renders game board in Godot
+- Unit tests cover command construction and timeout computation.
+- No behavior change in runtime path yet.
 
-### 5. **Add Reconnection Logic**
-Implement graceful reconnection for game robustness:
+## Milestone B: First `CommandManager` implementation
 
-```cpp
-// Pseudocode
-while (playing) {
-  if (!connected) {
-    if (canReconnect()) {
-      connect();  // Uses exponential backoff
-    } else {
-      showErrorUI("Connection lost");
-      break;
-    }
-  }
-  
-  tick();  // Process incoming frames
-  handleUserInput();
-}
-```
+Deliverables:
 
-## Known Limitations & TODOs
+- Implement `CommandManager` with APIs similar to:
+	- `enqueue(CommandRequest)`,
+	- `tick(int64_t nowMs)`,
+	- `onTextFrame(const std::string&)`,
+	- `hasPendingWork()`.
+- Start with single in-flight command to reduce complexity.
+- Support core commands:
+	- login,
+	- voir,
+	- inventaire,
+	- prend nourriture.
 
-- [ ] Partial frame reassembly not yet implemented (current frames must fit in single packet)
-- [ ] No ping/pong keepalive logic (prepare for 45-second silence handling)
-- [ ] Buffer overflow protection on frame payloads (add max size checks)
-- [ ] No frame fragmentation support (RFC 6455 section 5.4)
-- [ ] Error recovery: connection closed mid-frame leaves state inconsistent
+Exit criteria:
 
-## Code Quality for Production
+- Unit tests verify queue -> send -> in-flight -> completion.
+- Timeout transitions are deterministic.
+- Retry behavior respects max retries.
 
-Before final submission:
+## Milestone C: Integrate into `ClientRunner`
 
-- [ ] Run with `-fsanitize=address` to catch memory errors
-- [ ] Run with `-Werror -Wall -Wextra` to catch all compiler warnings
-- [ ] Add unit tests for frame codec with edge cases (empty frames, max size, etc.)
-- [ ] Profile TLS handshake overhead (goal: <200ms)
-- [ ] Validate certificate chain handling in non-insecure mode
+Deliverables:
 
-## Files Modified This Session
+- Move periodic scheduling logic from `ClientRunner` to manager-driven scheduling hooks.
+- `ClientRunner` forwards incoming frames to manager instead of directly parsing each command response path.
+- Preserve existing observable behavior in loop mode.
 
-**Client Side:**
-- `client_cpp/srcs/net/TlsContext.cpp` - X509 certificate callback
-- `client_cpp/srcs/net/WebsocketClient.cpp` - HTTP upgrade and frame handling
-- `client_cpp/srcs/main.cpp` - Bootstrap smoke test (diagnostic logging)
+Exit criteria:
 
-**Server Side:**
-- `server/srcs/server/ssl_al.c` - Diagnostic output
-- `server/srcs/main.c` - Log level for debugging
+- Existing transport flow still works.
+- Existing command cadence is preserved or intentionally improved.
+- No regressions in connection stability.
 
-## Testing Checklist
+## Milestone D: Reliability and protocol hardening
 
-- [x] TLS handshake with self-signed certificate
-- [x] HTTP 101 Switching Protocols response
-- [x] WebSocket frame encoding/decoding
-- [ ] Login message transmission
-- [ ] Server state reception
-- [ ] Multi-player synchronization
-- [ ] Reconnection after disconnect
-- [ ] Error messages on network failure
-- [ ] Performance under high message rate
-- [ ] Memory stability (24h+ uptime)
+Deliverables:
 
-## Contact / Blockers
+- Add explicit error classes for:
+	- timeout,
+	- malformed reply,
+	- unexpected reply type,
+	- server error payload.
+- Add dead-command cleanup and stale in-flight protection.
+- Add guardrails to prevent queue flooding.
 
-If stuck on integration:
-1. Check server logs for protocol errors
-2. Enable `LOG_LEVEL_DEBUG` in server to see handshake details
-3. Add `fprintf(stderr, "...")` diagnostics to client WebSocket code
-4. Verify DNS resolution: `nslookup localhost` or `getent hosts localhost`
-5. Check firewall: `netstat -ln | grep 8674` to see listening ports
+Exit criteria:
+
+- Soak-style loop test for several minutes without command-state leaks.
+- Clear log messages for every command lifecycle transition.
+
+## Milestone E: AI-facing API (bridge to next phase)
+
+Deliverables:
+
+- Expose a clean API for decision layer:
+	- submit intent (`RequestVoir`, `RequestTake("nourriture")`, etc.),
+	- receive command outcomes/events.
+- Keep strategy logic outside manager; manager remains deterministic infra.
+
+Exit criteria:
+
+- Decision layer can trigger commands without touching transport details.
+
+## 5) Test plan for this phase
+
+## Unit tests
+
+- `CommandManagerTest`:
+	- enqueue order and priority behavior,
+	- one in-flight policy,
+	- timeout transitions,
+	- retry exhaustion,
+	- unexpected reply handling.
+- `CommandReplyMatcherTest`:
+	- success/error frame matching,
+	- malformed frame behavior.
+
+## Integration tests
+
+- Extend TLS/WebSocket loopback test setup to include command-level scenarios:
+	- successful login -> voir round trip,
+	- delayed response triggers timeout,
+	- wrong response type does not complete unrelated command,
+	- retry eventually succeeds.
+
+## Regression tests
+
+- Keep existing transport tests untouched and green.
+- Add at least one end-to-end loop-mode test with multiple command cycles.
+
+## 6) Suggested implementation order (PR-friendly)
+
+1. Add command domain types + unit tests (no runtime wiring).
+2. Add `CommandManager` core + unit tests.
+3. Wire into `ClientRunner` behind a small compatibility layer.
+4. Add integration command scenarios using existing loopback server test pattern.
+5. Add AI-facing API surface and prepare handoff to strategy/decision phase.
+
+## 7) Definition of done for command-management phase
+
+- Command lifecycle is explicit and test-covered.
+- `ClientRunner` no longer owns low-level command orchestration rules.
+- Failures are classified (timeout/protocol/server/network) with actionable logs.
+- Existing transport suite remains green.
+- New command-manager unit/integration suites are green.
+- API is ready for the next phase: command selection strategy / behavior tree / planner.
+
+## 8) Immediate next action
+
+Start with Milestone A by creating command domain types and tests before moving runtime logic.
