@@ -24,10 +24,10 @@ As always, right in that very moment before taking the dreaded first step, writi
 	- Optional bonus flags (right now I don't know which, so, yeah). Some possibilities: --ws, --wss, --insecure, --protocol text|json
 		- *At this point, the usage behavior should mirror the task expectation for required flags*
 2. **Transport Layer**
-	- TCP + TLS + Websocket client implementation
+	- TCP + TLS + WebSocket client implementation
 	- Frame read/write, ping/pong, close handling
 	- Backpressure-safe send queue.
-		- *At this point, the client should connect and complete the JSON login flow in project mode, as well as handling websocket command/response stream without blocking or active wait*
+		- *At this point, the client should connect and complete the JSON login flow in project mode, as well as handling WebSocket command/response stream without blocking or active wait*
 3. **Protocol Layer**
 	- JSON codec for login, cmd, response, message, event.
 	- Strong validation and unknown-field tolerance.
@@ -79,7 +79,7 @@ As always, right in that very moment before taking the dreaded first step, writi
 	- Full runbook for server +1, +3, +6, +10, +50 clients
 	- Troubleshooting matrix
 	- Performance and stability checklist
-		- *ATP, there should be reproducible runs from clean environment follwing docs only*
+		- *ATP, there should be reproducible runs from a clean environment following the docs only*
 
 That was intense, phew. Now, because I've been in the situation of waiting almost until the project reaches a production status to write test suites (bad), a from-the-beginning automated test-writing protocol should also be set in place. I'll base it on what I know, GTest, and target these suites:
 
@@ -98,7 +98,7 @@ That was intense, phew. Now, because I've been in the situation of waiting almos
 	- pending_count <= 10 always
 	- no infinite tight loop without outgoing I/O or state change
 
-> *If down the line the compilation times of the test suites starts going out of control, I'll consider alternative tools lke Catch2 or doctest*
+> *If down the line the compilation times of the test suites start going out of control, I'll consider alternative tools like Catch2 or doctest*
 
 Besides all of this, some general considerations regarding the technical baseline of the project:
 - C++20
@@ -118,7 +118,7 @@ All of which will rest on these modules:
 - `app/`
 	- main entrypoint, CLI parsing, lifecycle
 - `net/`
-	- socket, TLS, websocket, reconnect/session wrappers
+	- socket, TLS, WebSocket, reconnect/session wrappers
 - `protocol/`
 	- serializer/deserializer interfaces
 	- json_protocol
@@ -147,12 +147,12 @@ And we're ready to start. L E T ' S  G O ! ! !
 First thing's first: project setup. Nothing strange or fancy, just a very default-y Makefile with profiles, test rules and a bootstrapper with a basic logger. These two latter items being somewhat new to my usual project entryway, so let's talk about them. A concrete bootstrap step at the doors of `main()`, wired to a logger, is needed in this project due to its nature: **an autonomous networked client**.
 - The **bootstrap** will act as a safety gate. If you're unfamiliar with the concept, just take it as an **initialization phase** that runs once when the client starts, before anything else happens, a kind of *startup ritual* where the runtime environment is prepared.
 	- The command-line arguments are parsed
-	- The transport layer is inizialized (socket, TLS, WebSocket)
+	- The transport layer is initialized (socket, TLS, WebSocket)
 	- The configuration is laoded and validated
 	- The command queue and State Machine are set up
 	- There is an early return if anything fails (fail-fast approach)
-- The **logger** is critical because there is no interactive debugging. I'm not going to be able to easily set a breakpoint or step through code when the client is running because of its assynchronous nature, while waiting for network responses or scheduling timed events. a text ouput is going to be needed to understand what happens during executions
-	- Also, this will give the project a reproducible failure diagnosis. When something goes wrong along a run with several coordinated clients, the need for a complete trace of every decision, netweork event, and state transitions will set itself as a MUST. The logger will we our sword and our shield in that regard.
+- The **logger** is critical because there is no interactive debugging. I'm not going to be able to easily set a breakpoint or step through code when the client is running because of its asynchronous nature, while waiting for network responses or scheduling timed events. A text output is going to be needed to understand what happens during executions
+	- Also, this will give the project a reproducible failure diagnosis. When something goes wrong along a run with several coordinated clients, the need for a complete trace of every decision, network event, and state transitions will set itself as a MUST. The logger will be our sword and our shield in that regard.
 	- With several levels, verbosity will be controlled:
 		- **Debug**: Every tiny decision (currently exploring tile 5, checking inventory, etc)
 		- **Info**: Major state changes (login successful, elevation attempt started)
@@ -181,9 +181,9 @@ Now we're talking. This second bootstrap step is going to need a triple attack c
 3. **WebSocket Layer (Protocol Framing)**
 	- Sits on top of the TLS layer
 	- Handles frame encoding/decoding (RFC 6455 compliance)
-	- Implements ping/pong keepalive (prevents idle timeots)
-	- Manages connection upgrade (HTTP 101 Switching Protocols handshae)
-	- Handes close frames gracefully
+	- Implements ping/pong keepalive (prevents idle timeouts)
+	- Manages connection upgrade (HTTP 101 Switching Protocols handshake)
+	- Handles close frames gracefully
 
 To build this, we're going to need `OpenSSL`, which means adding some flags to the build process in `Makefile`, and we could also use some external tools like a **Base64 encoder** (for frame masking) and a **SHA-1 hasher** (for the handshake). The structure planned is the following:
 ```
@@ -274,7 +274,7 @@ Result WebsocketClient::connect(const std::string& host, int port) {
 > It seems quite important to correctly, clearly and thoroughly log any failure at this point (errno, TLS error code, etc.).
 
 - **OpenSSL 3.x accepting APIs from 1.1.x**
-	- This is a compatiility shim that works on both old and new OpenSSL (and was already defined, so...)
+	- This is a compatibility shim that works on both old and new OpenSSL (and was already defined, so...)
 
 Aaaand... At this point we should pump the breaks, take a deep breath and sit down for a while so that we can lay down how to correctly build a network client like the one we need. A 101, if you like, or if you're in the same out-of-your-lane situation as I am right now. Down the line, the needs and building objectives are clear, we'll need to have a main entry point, a bootstrapper and some type of runner class that manages the read/write communication between client and server (with sub managers regarding command sending, response processing, etc.). But between us and that point, all the net related code needs some careful logging so that all this process doesn't get lost in the turbulent torrents of the day to day battles.
 
@@ -469,7 +469,7 @@ This contract lets TLS and WebSocket wrappers stay deterministic, and avoid gues
 - If lower layer says `NetworkError`, upper layer bubbles up and exits cleanly.
 
 ### 1.3.2. TLSing Our Secrets Into the Server's Hands
-With a reliabble TCP layer taking care of the low level connection responsibilities, the second, in-between layer of the net sandwhich should only add encryption and handshake management, all while avoiding new architecture chaos. The `TlsContext` (TLS as in `T`ransport `L`ayer `S`ecurity, as in the standard cryptographic protocol in computer network, as in what comprises the core of `HTTPS`, as in the succesor of `SSL`) has less responsabilities than the TCP lower layer, but they're quite specific:
+With a reliable TCP layer taking care of the low-level connection responsibilities, the second, in-between layer of the net sandwich should only add encryption and handshake management, all while avoiding new architecture chaos. The `TlsContext` (TLS as in `T`ransport `L`ayer `S`ecurity, as in the standard cryptographic protocol in computer networks, as in what comprises the core of `HTTPS`, as in the successor of `SSL`) has fewer responsibilities than the TCP lower layer, but they're quite specific:
 
 1. Create SSL context and per-connection SSL session.
 2. Bind SSL session to existing TCP fd.
@@ -560,7 +560,7 @@ static int insecure_mode_verify_callback(int ok, X509_STORE_CTX* ctx) {
 ```
 
 ### 1.3.3 WebSocket Layer: Protocol Framing and Session Semantics
-With TLS in place, WebSocket becomes the final transport adapter for project JSON mode. This is the layer that turns a secure byte stream into message-oriented communication, which is the whole reason the client can speak in `login`, `cmd`, `response`, `event` and `broadcast` payloads without caring about raw socket edges. If I had to describe this layer in one sentence, I would say this: **WebSocket is the protocol boundary that sits between encrypted bytes and application messages**. This means the layer is responsible for:
+With TLS in place, WebSocket becomes the final transport adapter for project JSON mode. This layer turns a secure byte stream into message-oriented communication, which is the whole reason the client can speak in `login`, `cmd`, `response`, `event` and `broadcast` payloads without caring about raw socket edges. If I had to describe this layer in one sentence, I would say this: **WebSocket is the protocol boundary that sits between encrypted bytes and application messages**. This means the layer is responsible for:
 
 - Performing the HTTP upgrade handshake.
 - Turning outgoing text into WebSocket frames.
@@ -569,12 +569,12 @@ With TLS in place, WebSocket becomes the final transport adapter for project JSO
 - Handling graceful close and shutdown semantics.
 - Respecting backpressure through an internal send queue.
 
-> INSERT GLOSSARY HERE: websocket frame, payload, backpressure, shutdown semantics, mask
+> See the glossary in section 1.4 for the recurring transport terms used in this section.
 
 This is also the point where the client stops thinking in terms of "send bytes" and starts thinking in terms of "send frames". That distinction matters a lot, because a WebSocket connection is not a plain stream anymore once the upgrade completes.
 
 #### 1.3.3.1 Build Order
-Because it might not be obvious: **the WebSocket layer should not be written first**. It only makes sense once the lower layers are already stable, and should be stored in your C O D I N G  M I N D as the last step in the process of building a network client like the one we've been fighting with. Just in case, and risking extenuant repetition, the sane order is:
+Because it might not be obvious: **the WebSocket layer should not be written first**. It only makes sense once the lower layers are already stable, and should be kept in mind as the last step in the process of building a network client like the one we've been fighting with. Just in case, and risking repetition, the sane order is:
 
 1. `TcpSocket`: create a non-blocking TCP connection and make sure connect/poll works.
 2. `TlsContext` and `SecureSocket`: wrap the TCP socket with TLS and make `read`/`write` work securely.
@@ -582,9 +582,9 @@ Because it might not be obvious: **the WebSocket layer should not be written fir
 4. `WebsocketClient`: glue the handshake, frame codec, send queue and tick loop together.
 5. Higher layers: command pipeline, JSON protocol, AI loop.
 
-> *Notice that a `FrameCodec` layer has stealthily creeped up on us. Don't fret, it's just a in-between necessity for the byte->frame translations, in order to have the Transport Layer speak Websocket at its top-most layer*
+> *Notice that a `FrameCodec` layer has quietly crept up on us. Don't fret, it's just an in-between necessity for the byte-to-frame translations, in order to have the transport layer speak WebSocket at its top-most layer.*
 
-> *The labeled "Higher layers" are just the client logic pieces, i.e. what the client DOES through its connection communication, i.e. how its going to interact with the server, i.e. how its going to play the zappy game*
+> *The labeled "Higher layers" are just the client logic pieces, i.e. what the client does through its connection, i.e. how it is going to interact with the server, i.e. how it is going to play the Zappy game.*
 
 #### 1.3.3.2 Handshake Responsibilities
 The handshake is the moment where the client asks the server to stop speaking raw TLS data and start speaking WebSocket. The client sends an HTTP request like this:
@@ -607,7 +607,7 @@ Then the client waits for the server response and checks the minimum upgrade con
 - `Sec-WebSocket-Accept` validation.
 - End of headers marker `\r\n\r\n`.
 
-In the current implementation, that work lives inside `WebsocketClient::performHandshake()` in [client_cpp/srcs/net/WebsocketClient.cpp](client_cpp/srcs/net/WebsocketClient.cpp). For more specific information and code, follow the link! (Don't want to add even more clutter to this log; *says at line 610*).
+In the current implementation, that work lives inside `WebsocketClient::performHandshake()` in [client_cpp/srcs/net/WebsocketClient.cpp](client_cpp/srcs/net/WebsocketClient.cpp). For more specific information and code, follow the link. I do not want to add even more clutter to this log.
 
 #### 1.3.3.3 What `SecureSocket` Is Responsible For
 `SecureSocket` is not the WebSocket layer itself. It is the TLS wrapper that WebSocket depends on. Its job is narrower and cleaner:
@@ -650,7 +650,7 @@ If `SecureSocket` is the secure pipe, `FrameCodec` is the thing that knows how W
 - Recover frames from a stream buffer.
 - Create helper frames for text, ping, pong and close.
 
-Because of its very specific, translation-related job, `FrameCodec` should stay completely unaware of sockets, TLS, AI state or command queues. Focused on its responsabilities and occupying its place in the net sandwich, it works on bytes only, encoding and decoding, bridging around the following relevant contract:
+Because of its very specific, translation-related job, `FrameCodec` should stay completely unaware of sockets, TLS, AI state or command queues. Focused on its responsibilities and occupying its place in the net sandwich, it works on bytes only, encoding and decoding, bridging around the following relevant contract:
 
 ```cpp
 class FrameCodec {
@@ -673,7 +673,7 @@ static void applyMask(std::vector<std::uint8_t>& data, const std::uint8_t* mask)
 ```
 
 #### 1.3.3.5 Frame Flow in the Current Client
-Once the handshake completes, the logic becomes a two-direction frame pipeline. Outbound, the process can be boiled down to: create a command string, convert it into a Websocket frame, serialize it (byte-i-fy it), enqueue, send, flush. Cleanly ordered:
+Once the handshake completes, the logic becomes a two-direction frame pipeline. Outbound, the process can be boiled down to: create a command string, convert it into a WebSocket frame, serialize it, enqueue, send, flush. Cleanly ordered:
 
 1. AI or command layer produces a command string.
 2. `WebsocketClient` turns it into a `WebSocketFrame`.
@@ -681,18 +681,18 @@ Once the handshake completes, the logic becomes a two-direction frame pipeline. 
 4. The encoded frame is pushed to the send queue.
 5. `tick()` flushes the queue through `SecureSocket::tlsWrite()`.
 
-The Inbound path is somewhat the inverse process: read the raw, encrypted bytes received, buffer the content, rebuild a frame, process the content. Again, ordered:
+The inbound path is the inverse process: read the raw, encrypted bytes received, buffer the content, rebuild a frame, process the content. Again, ordered:
 
 1. `WebsocketClient::tick()` reads encrypted bytes through `SecureSocket::tlsRead()`.
 2. The raw bytes are appended to the read buffer.
 3. `FrameCodec::decodeFrame()` extracts one complete frame at a time.
 4. The resulting text payload is handed to the higher protocol layer.
 
-THe goal of this design is to keep sanity, as I think I've stressed a handful of times at this point. Every component of the structure (THE NET SANDWICH) is constricted to its specific job and/or responsibility, with the clearest bounds possible: transport stays transport, framing stays framing, and commands stay commands. Mixed logic MUST be avoided, both across classes and across layers, and I think that the current net code finely achieves that goal. (BUt you tell me!)
+The goal of this design is to keep sanity, as I think I've stressed a handful of times at this point. Every component of the structure (the net sandwich) is constrained to its specific job and responsibility, with the clearest bounds possible: transport stays transport, framing stays framing, and commands stay commands. Mixed logic MUST be avoided, both across classes and across layers, and I think that the current net code finely achieves that goal. (But you tell me!)
 
-One last note in this regard: **The send queue is part of the WebSocket layer because this is the first place where the notion of a discrete message exists**. If the socket would block, the frame must not be lost. If the TLS layer only accepts part of the write, the frame must remain queued. If the queue were owned by the AI logic instead, the AI would start mixing strategy with transport retry policy, which I've read is exactly the kind of coupling that makes network clients miserable to debug. In other words, **the send queue must be the closest it can be to the point were its contents are actually being sent**, not were they are ordered, built, written, masked, whatever, just at the point of server communication. Which in itself means that the building, writing, masking, whatever processes are isolated and bound to their own completion before a frame is trully prepared to be enqueued and subsequently sent.
+One last note in this regard: **the send queue is part of the WebSocket layer because this is the first place where the notion of a discrete message exists**. If the socket would block, the frame must not be lost. If the TLS layer only accepts part of the write, the frame must remain queued. If the queue were owned by the AI logic instead, the AI would start mixing strategy with transport retry policy, which is exactly the kind of coupling that makes network clients miserable to debug. In other words, **the send queue must be as close as possible to the point where its contents are actually being sent**, not where they are ordered, built, written or masked. Which in itself means that the building, writing and masking steps are isolated and bound to their own completion before a frame is truly prepared to be enqueued and subsequently sent.
 
-Alongisde this, in the current implementation, the queue is flushed in `WebsocketClient::flushSendQueue()` and the important rule is simple: **do not treat a command as sent until the complete encoded frame has actually been written**. In human: the send action is what signals the end of the pipeline and triggers its cleanup.
+Alongside this, in the current implementation, the queue is flushed in `WebsocketClient::flushSendQueue()` and the important rule is simple: **do not treat a command as sent until the complete encoded frame has actually been written**. In human terms: the send action is what signals the end of the pipeline and triggers its cleanup.
 
 #### 1.3.3.6 Ping, Pong and Close
 Once the connection is running, the layer also becomes responsible for connection health.
@@ -701,7 +701,7 @@ Once the connection is running, the layer also becomes responsible for connectio
 - `pong` is the server response and liveness confirmation.
 - `close` is the graceful shutdown path.
 
-Those are not application commands. They are protocol maintenance frames, so they belong here and nowhere else. They are not related to the connection set up, they have nothing to do with security and encryption, they are just tools to maintain the opened Websocket connection alive. Their respective functions in the current code are exposed directly through helpers like:
+Those are not application commands. They are protocol maintenance frames, so they belong here and nowhere else. They are not related to connection setup, they have nothing to do with security and encryption, they are just tools to keep the open WebSocket connection alive. Their respective functions in the current code are exposed directly through helpers like:
 
 ```cpp
 WebSocketFrame FrameCodec::createPingFrame();
@@ -709,10 +709,10 @@ WebSocketFrame FrameCodec::createPongFrame();
 WebSocketFrame FrameCodec::createCloseFrame(uint16_t code, const std::string& reason);
 ```
 
-Besides the specifics, checkeable in the code, the idea here is to build correct frames for these specific messages. Think of them as very specific, non-game related commands sent to the server, which target it, not the game logic it manages. The server just receives them, notices that it itself is the addressee, and acts accordingly (assuming the frames are correctly built and written, obviously).
+Besides the specifics, checkable in the code, the idea here is to build correct frames for these specific messages. Think of them as very specific, non-game-related commands sent to the server, which target it, not the game logic it manages. The server just receives them, notices that it is the addressee, and acts accordingly, assuming the frames are correctly built and written.
 
 #### 1.3.3.7 What The Layer Should Never Do
-Just for the sake of underlying what this Websocket layer is and does, and even more what it *isn't* and it *doesn't*, it should never:
+Just for the sake of underlining what this WebSocket layer is and does, and even more what it *isn't* and it *doesn't*, it should never:
 
 - Decide AI behavior.
 - Parse game strategy rules.
@@ -720,12 +720,12 @@ Just for the sake of underlying what this Websocket layer is and does, and even 
 - Implement command scheduling policy.
 - Guess application meaning from protocol payloads beyond framing.
 
-It should only answer the question: can the client and server exchange framed messages reliably, securely and without blocking? And from there, serve as the bridge for I/O communication: how the frames trigger this or that behavior both in client and server side is someone elses job, its meaningless here and would only mud the gears.
+It should only answer the question: can the client and server exchange framed messages reliably, securely and without blocking? From there, it serves as the bridge for I/O communication: how the frames trigger this or that behavior on the client and server side is someone else's job, and bringing that logic here would only muddy the gears.
 
-In sum, a ver important constriction, because if this layer is solid, the rest of the client can assume a reliable message stream and focus on higher-level concerns like inventory, vision, leveling and team coordination (which menas that *I* can focus on writing that high-level related code and build the command managament operator and start having a game playing agent). If it is weak, every later bug becomes ambiguous because you cannot tell whether a failure came from the AI or from the transport stack. So yes, the WebSocket layer is "just transport", but it is also the point where the client starts behaving like a real networked agent instead of a socket placeholding demo that just enables connection without a true communication protocol.
+In sum, a very important construction, because if this layer is solid, the rest of the client can assume a reliable message stream and focus on higher-level concerns like inventory, vision, leveling and team coordination, which means I can focus on the command management layer and start having a game-playing agent. If it is weak, every later bug becomes ambiguous because you cannot tell whether a failure came from the AI or from the transport stack. So yes, the WebSocket layer is "just transport", but it is also the point where the client starts behaving like a real networked agent instead of a socket placeholder demo that only enables connection without a true communication protocol.
 
 #### 1.3.3.7 App Layer Addendum: Bootstrap, Runner, Command Sender
-After transport exists, application structure should avoid the old giant-main trap. Well, this might be a me-problem disguised in generalization, as I was having a progressively more monstruous main file that was becoming hard to read, manage and debug. Therefore, a clean split was necessary:
+After transport exists, application structure should avoid the old giant-main trap. Well, this might be a me-problem disguised as generalization, because I was ending up with a progressively more monstrous main file that was becoming hard to read, manage and debug. Therefore, a clean split was necessary:
 
 - `ClientBootstrap`: parse and validate arguments.
 - `ClientRunner`: execute runtime flow and ticking.
@@ -758,7 +758,7 @@ For the sake of having a concise logged entry about how the client is set up and
 The runner is therefore a deterministic state progression even before introducing a formal state machine class.
 
 ### 1.3.5 If Building This From Scratch Again (Or For You, Dear Reader, Who Are Reading This to Learn How To Write Your Own Client)
-If I had to restart from an empty directory tomorrow, this is the order I would follow, to minize moving parts at each step and keep failures as local and explainable as possible:
+If I had to restart from an empty directory tomorrow, this is the order I would follow, to minimize moving parts at each step and keep failures as local and explainable as possible:
 
 1. Define shared result/error model (`Result`, `IoResult`, enums).
 2. Implement `TcpSocket` with non-blocking connect + poll finalize.
@@ -779,3 +779,26 @@ And while doing so, an important, constant self-reminder must be kept in sight: 
 - Command enqueue/send events (at least debug level)
 - Frame receive summary (type/cmd/status)
 - Shutdown reason (normal exit, server close, protocol error, timeout)
+
+### 1.4 - Glossary of Weird Net Related Words
+
+This section collects the recurring terms used throughout the networking notes above, which were (and still are) alien terms to my game-dev little brain.
+
+- `backpressure`: the condition where the writer cannot immediately accept more data, so the sender must queue or retry later instead of dropping work.
+- `frame`: the smallest message unit in WebSocket; it wraps payload data with protocol metadata like opcode, masking and length.
+- `handshake`: the connection negotiation step that upgrades the secure HTTP/TLS stream into a WebSocket session.
+- `mask`: the client-side XOR transform required by the WebSocket protocol for outgoing frames.
+- `payload`: the actual message content carried inside a frame after protocol headers are stripped away.
+- `ping` / `pong`: protocol-level keepalive frames used to verify that the remote peer is still responsive.
+- `secure pipe`: a useful mental model for `SecureSocket`; it is a TLS-protected byte channel, not a WebSocket-aware component.
+- `send queue`: the internal buffer that stores encoded outbound frames until they can be written completely.
+- `shutdown semantics`: the graceful close path that lets both peers stop using the connection without treating it as a crash.
+- `WebSocket upgrade`: the HTTP `101 Switching Protocols` transition from raw HTTP/TLS transport into framed WebSocket messaging.
+
+And some extra terms worth keeping in mind for this project:
+
+- `non-blocking I/O`: socket operations that may return immediately with `WouldBlock` rather than stalling the whole client.
+- `round trip`: one command sent and one matching response received.
+- `state machine`: the explicit set of client modes that decides what the next legal action is.
+- `in-flight command`: a command that was sent but has not yet been acknowledged by the server.
+- `heartbeat`: the periodic liveness check that prevents idle disconnections.

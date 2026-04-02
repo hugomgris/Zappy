@@ -20,6 +20,8 @@ OBJDIR          := .obj/$(PROFILE)
 DEPDIR          := .dep/$(PROFILE)
 INCDIR          := incs
 
+OPENSSL_DIR     := ../server/third_party/openssl_build
+
 TEST_DIR        := tests
 TEST_OBJDIR     := .test_obj/$(PROFILE)
 TEST_DEPDIR     := .test_dep/$(PROFILE)
@@ -52,7 +54,7 @@ TESTABLE_OBJS   := $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR)/%.o,$(TESTABLE_SRCS))
 
 # -=-=-=-=-    FLAGS -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 
-INCLUDES        := -I$(INCDIR) -I$(SRCDIR)
+INCLUDES        := -I$(INCDIR) -I$(SRCDIR) -I$(OPENSSL_DIR)/include
 DEPFLAGS        := -MMD -MP
 GTEST_INCLUDES  := -I$(GTEST_DIR)/googletest/include
 
@@ -68,10 +70,10 @@ else
     $(error Unknown PROFILE='$(PROFILE)'. Use PROFILE=debug or PROFILE=release)
 endif
 
-LDFLAGS         := -lssl -lcrypto -ldl
+LDFLAGS         := -L$(OPENSSL_DIR)/lib -lssl -lcrypto -ldl -lm -lpthread
 ALL_LIBS        :=
 TEST_CXXFLAGS   := $(CXXFLAGS) $(GTEST_INCLUDES)
-TEST_LDFLAGS    := -lpthread -lssl -lcrypto -ldl
+TEST_LDFLAGS    := -L$(OPENSSL_DIR)/lib -lpthread -lssl -lcrypto -ldl -lm
 
 # -=-=-=-=-    RULES -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 
