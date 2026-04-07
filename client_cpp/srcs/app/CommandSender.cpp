@@ -19,8 +19,12 @@ Result CommandSender::sendInventaire() {
 	return sendCommand("inventaire");
 }
 
+Result CommandSender::sendPrend(ResourceType resource) {
+	return sendCommand("prend", toProtocolString(resource));
+}
+
 Result CommandSender::sendPrendNourriture() {
-	return sendCommand("prend", "nourriture");
+	return sendPrend(ResourceType::Nourriture);
 }
 
 Result CommandSender::sendCommand(const std::string& cmd, const std::string& arg) {

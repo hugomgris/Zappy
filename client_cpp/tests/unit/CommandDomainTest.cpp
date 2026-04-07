@@ -11,12 +11,12 @@ TEST(CommandDomainTest, ComputesDeadlineFromSpec) {
 }
 
 TEST(CommandDomainTest, RetryStartsAtZero) {
-	CommandRequest req = CommandRequest::make(1, CommandType::PrendNourriture, 1234);
+	CommandRequest req = CommandRequest::make(1, CommandType::Prend, 1234);
 
 	EXPECT_EQ(req.retryCount, 0);
 }
 
-TEST(CommandDomainTest, PrendNourritureHasRetries) {
-	CommandRequest req = CommandRequest::make(7, CommandType::PrendNourriture, 0);
+TEST(CommandDomainTest, PrendHasRetries) {
+	CommandRequest req = CommandRequest::make(7, CommandType::Prend, 0);
 	EXPECT_GE(req.spec.maxRetries, 1);
 }

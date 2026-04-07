@@ -11,7 +11,9 @@ enum class CommandStatus {
 	ProtocolError,
 	ServerError,
 	NetworkError,
-	Retrying
+	Retrying,
+	MalformedReply,
+	UnexpectedReply
 };
 
 struct CommandResult {
