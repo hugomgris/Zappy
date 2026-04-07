@@ -137,6 +137,19 @@ TEST_F(CommandReplyMatcherTest, PrendAcceptsOkReplyWithSpacing) {
 	EXPECT_EQ(result.status, CommandStatus::Success);
 }
 
+TEST_F(CommandReplyMatcherTest, PrendAcceptsPrettyPrintedReplyWithVariableWhitespace) {
+	const std::string frame =
+		"{\n"
+		"\t\"type\": \"response\",\n"
+		"\t\"cmd\":  \"prend\",\n"
+		"\t\"arg\":\t\"ok\",\n"
+		"\t\"status\":\t\"ok\"\n"
+		"}";
+	MatchResult result = CommandReplyMatcher::validateReply(CommandType::Prend, frame);
+	EXPECT_TRUE(result.isMatch);
+	EXPECT_EQ(result.status, CommandStatus::Success);
+}
+
 TEST_F(CommandReplyMatcherTest, PrendRejectsKoReply) {
 	const std::string frame = R"({"cmd":"prend","arg":"ko"})";
 	MatchResult result = CommandReplyMatcher::validateReply(CommandType::Prend, frame);
@@ -248,6 +261,17 @@ TEST_F(CommandReplyMatcherTest, MixedSpacingAccepted) {
 	MatchResult result = CommandReplyMatcher::validateReply(CommandType::Voir, frame);
 	EXPECT_TRUE(result.isMatch);
 	EXPECT_EQ(result.status, CommandStatus::Success);
+}
+
+TEST_F(CommandReplyMatcherTest, ErrorFrameWithExtraWhitespaceClassifiedAsServerError) {
+	const std::string frame =
+		"{\n"
+		"  \"type\"  :   \"error\",\n"
+		"  \"message\":  \"invalid\"\n"
+		"}";
+	MatchResult result = CommandReplyMatcher::validateReply(CommandType::Voir, frame);
+	EXPECT_FALSE(result.isMatch);
+	EXPECT_EQ(result.status, CommandStatus::ServerError);
 }
 
 TEST_F(CommandReplyMatcherTest, UnknownCommandTypeRejected) {

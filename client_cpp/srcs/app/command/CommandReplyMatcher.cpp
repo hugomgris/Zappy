@@ -4,29 +4,37 @@
 #include <cctype>
 
 namespace {
-	// Helper to find a substring handling both compact and spaced JSON variants
-	bool containsEitherSpacing(const std::string& text, const std::string& compact, const std::string& spaced) {
-		return text.find(compact) != std::string::npos || text.find(spaced) != std::string::npos;
-	}
-
 	// Helper to extract quoted string value from JSON
 	std::optional<std::string> extractQuotedValue(const std::string& text, const std::string& fieldName) {
-		// Try both spacing variants: "field":"value" and "field": "value"
-		std::string patterns[] = {
-			fieldName + "\":\"",
-			fieldName + "\": \""
-		};
-
-		for (const auto& pattern : patterns) {
-			size_t pos = text.find(pattern);
-			if (pos != std::string::npos) {
-				size_t endPos = pos + pattern.length();
-				size_t closePos = text.find("\"", endPos);
-				if (closePos != std::string::npos) {
-					return text.substr(endPos, closePos - endPos);
-				}
-			}
+		const std::string keyToken = "\"" + fieldName + "\"";
+		size_t keyPos = text.find(keyToken);
+		if (keyPos == std::string::npos) {
+			return std::nullopt;
 		}
+
+		size_t colonPos = text.find(':', keyPos + keyToken.length());
+		if (colonPos == std::string::npos) {
+			return std::nullopt;
+		}
+
+		size_t valuePos = colonPos + 1;
+		while (valuePos < text.size() && std::isspace(static_cast<unsigned char>(text[valuePos]))) {
+			++valuePos;
+		}
+
+		if (valuePos >= text.size() || text[valuePos] != '"') {
+			return std::nullopt;
+		}
+
+		++valuePos;
+		size_t closePos = valuePos;
+		while (closePos < text.size()) {
+			if (text[closePos] == '"' && (closePos == valuePos || text[closePos - 1] != '\\')) {
+				return text.substr(valuePos, closePos - valuePos);
+			}
+			++closePos;
+		}
+
 		return std::nullopt;
 	}
 }
@@ -62,7 +70,7 @@ MatchResult CommandReplyMatcher::validateReply(CommandType expectedCmd, const st
 }
 
 std::optional<std::string> CommandReplyMatcher::extractJsonField(const std::string& text, const std::string& fieldName) {
-	return extractQuotedValue(text, "\"" + fieldName);
+	return extractQuotedValue(text, fieldName);
 }
 
 bool CommandReplyMatcher::isValidJsonStructure(const std::string& text) {
@@ -77,11 +85,13 @@ bool CommandReplyMatcher::isValidJsonStructure(const std::string& text) {
 }
 
 bool CommandReplyMatcher::isErrorFrame(const std::string& text) {
-	return containsEitherSpacing(text, "\"type\":\"error\"", "\"type\": \"error\"");
+	auto type = extractJsonField(text, "type");
+	return type && *type == "error";
 }
 
 bool CommandReplyMatcher::isKoFrame(const std::string& text) {
-	return containsEitherSpacing(text, "\"arg\":\"ko\"", "\"arg\": \"ko\"");
+	auto arg = extractJsonField(text, "arg");
+	return arg && *arg == "ko";
 }
 
 MatchResult CommandReplyMatcher::matchLoginReply(const std::string& text) {

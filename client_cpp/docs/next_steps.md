@@ -175,9 +175,9 @@ The command management infrastructure is now feature-complete:
 - ✓ Protocol validation and safety hardening (D)
 - ✓ Intent abstraction and event notification (E)
 
-**Test Status**: 83/83 passing.
+**Test Status**: 85/85 passing.
 
-## 6) Recommended Next Batch: Milestones F–H
+## 6) Recommended Next Batch: Milestones F-I
 
 ### Milestone F: Policy Layer Integration with Intent Submission
 
@@ -271,13 +271,92 @@ The command management infrastructure is now feature-complete:
 
 ---
 
-## 7) Session Summary
+### Milestone I: Gameplay AI Policy (Real Bot Behavior)
+
+**Priority: High (after F)** — This is where the client starts to actually play the game intelligently.
+
+#### I1) World Model + Memory
+- Add an internal world-state model updated from voir/inventaire/broadcast events:
+  - Known resources by tile and freshness timestamp
+  - Last known player position/orientation
+  - Teammate sightings and inferred goals
+- Keep confidence decay for stale observations (map intelligence expires over time).
+
+**Acceptance**:
+- Bot can answer from state: "where am I", "what do I carry", "where was food seen recently"
+- Decisions use stored state, not only immediate last frame
+
+#### I2) Navigation + Local Planning
+- Implement movement planner for target acquisition:
+  - Select target tile from world model
+  - Convert target into movement sequence (turn + avance)
+  - Re-plan when new voir contradicts old assumptions
+- Add fallback exploration policy when no good target exists.
+
+**Acceptance**:
+- Bot can repeatedly navigate to chosen targets without getting stuck in simple loops
+- Planner recovers when path assumptions are invalidated by fresh observations
+
+#### I3) Resource Strategy
+- Implement priority system for pickups by game phase:
+  - Survival-first food thresholds
+  - Level-up resource sets for next incantation
+  - Ignore low-value resources when inventory pressure is high
+- Add drop policy for incantation preparation tiles.
+
+**Acceptance**:
+- Bot maintains food above configured emergency threshold in normal conditions
+- Bot actively gathers required stones for next level instead of random picks
+
+#### I4) Incantation Readiness and Timing
+- Add rule engine for ascension decisions:
+  - Check level-specific resource requirements
+  - Check nearby teammate count (or summon via broadcast)
+  - Trigger incantation only when preconditions hold
+- Add abort/defer policy if risk is high (low food, hostile situation, missing teammates).
+
+**Acceptance**:
+- Bot attempts incantation only when requirements are met
+- Failed/incapable incantation attempts produce clear recovery actions
+
+#### I5) Team Coordination via Broadcast
+- Implement lightweight team protocol:
+  - Broadcast requests for help/resources
+  - Broadcast role intent (scout, gatherer, assembler)
+  - Resolve conflicting goals with simple priority rules
+- Parse teammate broadcasts into actionable intents.
+
+**Acceptance**:
+- Bot emits and reacts to team messages for at least one cooperative scenario
+- Coordination decisions are visible in logs (why message was sent/acted on)
+
+#### I6) Gameplay Validation Harness
+- Add scenario-driven integration tests (mocked frame sequences):
+  - starvation prevention under sparse food
+  - gather and stage resources for an incantation
+  - reroute after stale/incorrect world assumptions
+- Add long-run simulation (1000+ ticks) with invariant checks.
+
+**Acceptance**:
+- No deadloops in policy cycle over extended runs
+- Decision invariants hold (e.g., never ignore critical food threshold)
+
+---
+
+## 7) Delivery Order Recommendation
+
+1. Complete Milestone F (intent submission + event-driven loop)
+2. Implement Milestone I1-I3 (state, planning, resource policy)
+3. Implement Milestone I4-I5 (ascension logic + team coordination)
+4. Validate with Milestone I6, then move to G/H polish as needed
+
+## 8) Session Summary
 
 **This Session Achievements:**
 
 - ✅ Completed Milestone D (Reliability Hardening) with protocol validation, queue guardrails, stale detection, comprehensive logging
 - ✅ Completed Milestone E (AI-Facing API Bridge) with Intent abstraction layer (7 types) and event notification system
-- ✅ All tests passing: **83/83**
+- ✅ All tests passing: **85/85**
 - ✅ Documentation updated with architectural diagrams and implementation narrative
 
 **Handoff State:**
