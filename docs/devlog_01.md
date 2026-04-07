@@ -802,3 +802,5 @@ And some extra terms worth keeping in mind for this project:
 - `state machine`: the explicit set of client modes that decides what the next legal action is.
 - `in-flight command`: a command that was sent but has not yet been acknowledged by the server.
 - `heartbeat`: the periodic liveness check that prevents idle disconnections.
+
+> *Next episode: building a proper command manager!*
