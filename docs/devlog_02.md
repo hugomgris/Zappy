@@ -12,6 +12,7 @@
 9. [Navigation and Local Planning](#29---navigation-and-local-planning)
 10. [Incantation Readiness and Timing](#210---incantation-readiness-and-timing)
 11. [Team Coordination via Broadcast](#211---team-coordination-via-broadcast)
+12. [Gameplay Validation Harness](#212---gameplay-validation-harness)
 
 
 <br>
@@ -474,3 +475,28 @@ Coverage for this milestone includes:
 - `ClientRunnerTeamMessageIntegrationTest` for end-to-end unsolicited-message routing from frame to follow-up intent dispatch.
 
 With this in place, coordination decisions are now visible in logs and deterministic tests, and the policy can participate in at least one cooperative scenario without introducing transport-level coupling.
+
+<br>
+<br>
+
+# 2.12 - Gameplay Validation Harness
+
+With I5 in place, the next step was to validate behavior over realistic sequences rather than only isolated unit checks. This milestone focused on scenario-driven integration tests and a long-run invariant loop.
+
+The new `WorldModelPolicyScenarioIntegrationTest` suite adds four high-value cases:
+
+- **Starvation prevention under sparse food**:
+	- when food is low and no food is visible, policy explores;
+	- when food appears on current tile, policy immediately prioritizes `RequestTake(nourriture)`.
+- **Gather and prepare for incantation**:
+	- policy gathers missing incantation resources from vision,
+	- then triggers `RequestIncantation` once inventory and player preconditions are satisfied.
+- **Reroute after stale/incorrect assumptions**:
+	- policy starts from an initial travel plan,
+	- then clears/replans immediately when fresh `voir` contradicts old assumptions.
+- **Long-run loop validation (1200 ticks)**:
+	- simulated command/event feedback over extended runtime,
+	- verifies no deadloop behavior,
+	- enforces food-priority invariant when emergency conditions and visible food coincide.
+
+This closes I6 acceptance with deterministic coverage and keeps regression confidence high for the next polish milestones.

@@ -21,3 +21,20 @@ cambios cliente -> mvn compile.
 
 cliente -> './client -n team2 -p 8674'
 opcion '-c' lanzas n clientes
+
+## Full Session Launcher
+
+For a no-GUI match run from the repo root:
+
+```bash
+./run_session.sh
+```
+
+The launcher starts the server first, then the client processes, and finally calls `server/run.sh` to resume the time API. It watches client logs for the `player level advanced to 8` marker and stops the session when a winner is detected.
+
+Useful environment variables:
+
+- `ZAPPY_TEAM_ONE_CLIENTS` and `ZAPPY_TEAM_TWO_CLIENTS` (defaults to the server's full per-team capacity)
+- `ZAPPY_TEAM_ONE_NAME` and `ZAPPY_TEAM_TWO_NAME`
+- `ZAPPY_MAX_SECONDS`
+- `ZAPPY_LOG_DIR`
