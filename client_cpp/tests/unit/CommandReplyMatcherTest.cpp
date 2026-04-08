@@ -150,6 +150,20 @@ TEST_F(CommandReplyMatcherTest, PrendAcceptsPrettyPrintedReplyWithVariableWhites
 	EXPECT_EQ(result.status, CommandStatus::Success);
 }
 
+TEST_F(CommandReplyMatcherTest, PrendAcceptsStatusOkWithResourceArg) {
+	const std::string frame = R"({"type":"response","cmd":"prend","arg":"nourriture","status":"ok"})";
+	MatchResult result = CommandReplyMatcher::validateReply(CommandType::Prend, frame);
+	EXPECT_TRUE(result.isMatch);
+	EXPECT_EQ(result.status, CommandStatus::Success);
+}
+
+TEST_F(CommandReplyMatcherTest, PrendRejectsStatusKoWithResourceArg) {
+	const std::string frame = R"({"type":"response","cmd":"prend","arg":"nourriture","status":"ko"})";
+	MatchResult result = CommandReplyMatcher::validateReply(CommandType::Prend, frame);
+	EXPECT_FALSE(result.isMatch);
+	EXPECT_EQ(result.status, CommandStatus::ServerError);
+}
+
 TEST_F(CommandReplyMatcherTest, PrendRejectsKoReply) {
 	const std::string frame = R"({"cmd":"prend","arg":"ko"})";
 	MatchResult result = CommandReplyMatcher::validateReply(CommandType::Prend, frame);
@@ -206,6 +220,34 @@ TEST_F(CommandReplyMatcherTest, AvanceAcceptsMatchingReply) {
 TEST_F(CommandReplyMatcherTest, BroadcastRejectsWrongCommandReply) {
 	const std::string frame = R"({"type":"response","cmd":"expulse","arg":"ok"})";
 	MatchResult result = CommandReplyMatcher::validateReply(CommandType::Broadcast, frame);
+	EXPECT_FALSE(result.isMatch);
+	EXPECT_EQ(result.status, CommandStatus::UnexpectedReply);
+}
+
+TEST_F(CommandReplyMatcherTest, BroadcastAcceptsMessageStyleReply) {
+	const std::string frame = R"({"type":"message","arg":"team:role:gatherer","status":0})";
+	MatchResult result = CommandReplyMatcher::validateReply(CommandType::Broadcast, frame);
+	EXPECT_TRUE(result.isMatch);
+	EXPECT_EQ(result.status, CommandStatus::Success);
+}
+
+TEST_F(CommandReplyMatcherTest, BroadcastRejectsMessageStyleReplyWithoutArg) {
+	const std::string frame = R"({"type":"message","status":0})";
+	MatchResult result = CommandReplyMatcher::validateReply(CommandType::Broadcast, frame);
+	EXPECT_FALSE(result.isMatch);
+	EXPECT_EQ(result.status, CommandStatus::MalformedReply);
+}
+
+TEST_F(CommandReplyMatcherTest, VoirTreatsMessageStyleFrameAsUnexpectedReply) {
+	const std::string frame = R"({"type":"message","arg":"team:role:gatherer","status":0})";
+	MatchResult result = CommandReplyMatcher::validateReply(CommandType::Voir, frame);
+	EXPECT_FALSE(result.isMatch);
+	EXPECT_EQ(result.status, CommandStatus::UnexpectedReply);
+}
+
+TEST_F(CommandReplyMatcherTest, PrendTreatsMessageStyleFrameAsUnexpectedReply) {
+	const std::string frame = R"({"type":"message","arg":"team:role:gatherer","status":0})";
+	MatchResult result = CommandReplyMatcher::validateReply(CommandType::Prend, frame);
 	EXPECT_FALSE(result.isMatch);
 	EXPECT_EQ(result.status, CommandStatus::UnexpectedReply);
 }

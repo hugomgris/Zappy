@@ -40,6 +40,8 @@ class WorldState {
 		std::int64_t _lastInventoryAtMs;
 		std::int64_t _lastBroadcastAtMs;
 		std::int64_t _lastPoseAtMs;
+		std::int64_t _lastLevelUpAtMs;
+		int _playerLevel;
 
 	private:
 		static std::optional<int> parseResourceCount(const std::string& payload, const std::string& resourceName);
@@ -61,6 +63,7 @@ class WorldState {
 		void recordTurnLeft(std::int64_t nowMs);
 		void recordTurnRight(std::int64_t nowMs);
 		void recordForward(std::int64_t nowMs);
+		int recordLevelUp(std::int64_t nowMs);
 
 		bool hasVision() const;
 		bool hasInventory() const;
@@ -74,7 +77,9 @@ class WorldState {
 		std::optional<std::int64_t> lastInventoryAt() const;
 		std::optional<std::int64_t> lastBroadcastAt() const;
 		std::optional<std::int64_t> lastPoseAt() const;
+		std::optional<std::int64_t> lastLevelUpAt() const;
 		std::optional<Pose> pose() const;
+		int playerLevel() const;
 
 		const std::string& lastVisionPayload() const;
 		const std::string& lastInventoryPayload() const;
@@ -83,6 +88,7 @@ class WorldState {
 		std::optional<int> inventoryCount(ResourceType resource) const;
 		const std::map<ResourceType, int>& inventoryCounts() const;
 		const std::vector<VisionTile>& visionTiles() const;
+		bool currentTileHasResource(ResourceType resource) const;
 		std::optional<VisionTile> nearestVisionTileWith(ResourceType resource) const;
 		int currentTilePlayerCount() const;
 };

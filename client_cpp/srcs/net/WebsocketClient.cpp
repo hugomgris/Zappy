@@ -132,11 +132,7 @@ Result WebsocketClient::tick(int64_t now_ms) {
         return Result::failure(ErrorCode::NetworkError, read_res.message);
     }
 
-    // ping
-    updatePingTimer(now_ms);
-    if (shouldSendPing(now_ms)) {
-        sendPing();
-    }
+    (void)now_ms;
 
     return Result::success();
 }
@@ -424,21 +420,10 @@ Result WebsocketClient::flushSendQueue() {
 }
 
 void WebsocketClient::updatePingTimer(int64_t now_ms) {
-    if (_last_ping_time_ms == 0) {
-        _last_ping_time_ms = now_ms;
-    }
+    (void)now_ms;
 }
 
 bool WebsocketClient::shouldSendPing(int64_t now_ms) {
-    if (_last_ping_time_ms == 0) {
-        return false;
-    }
-
-    int64_t elapsed_ms = now_ms - _last_ping_time_ms;
-    if (elapsed_ms > PING_INTERVAL_SECONDS * 1000) {
-        _last_ping_time_ms = now_ms;
-        return true;
-    }
-
+    (void)now_ms;
     return false;
 }

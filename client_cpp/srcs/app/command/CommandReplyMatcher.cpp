@@ -41,6 +41,11 @@ namespace {
 	MatchResult matchReplyByCmd(const std::string& text, const std::string& expectedCmd) {
 		auto cmd = extractQuotedValue(text, "cmd");
 		if (!cmd) {
+			auto type = extractQuotedValue(text, "type");
+			if (type && *type == "message") {
+				return MatchResult(false, CommandStatus::UnexpectedReply,
+					"Received unsolicited message frame while waiting for '" + expectedCmd + "' reply");
+			}
 			return MatchResult(false, CommandStatus::MalformedReply,
 				"Missing 'cmd' field in " + expectedCmd + " reply");
 		}
@@ -158,6 +163,11 @@ MatchResult CommandReplyMatcher::matchInventaireReply(const std::string& text) {
 MatchResult CommandReplyMatcher::matchPrendReply(const std::string& text) {
 	auto cmd = extractJsonField(text, "cmd");
 	if (!cmd) {
+		auto type = extractJsonField(text, "type");
+		if (type && *type == "message") {
+			return MatchResult(false, CommandStatus::UnexpectedReply,
+				"Received unsolicited message frame while waiting for 'prend' reply");
+		}
 		return MatchResult(false, CommandStatus::MalformedReply, "Missing 'cmd' field in prend reply");
 	}
 
@@ -166,7 +176,20 @@ MatchResult CommandReplyMatcher::matchPrendReply(const std::string& text) {
 		return MatchResult(false, CommandStatus::UnexpectedReply, "Expected 'prend' command, got '" + *cmd + "'");
 	}
 
-	// For prend, also check that arg is "ok" (not "ko")
+	// Some servers encode result in status (arg can be resource name), others use arg directly.
+	auto status = extractJsonField(text, "status");
+	if (status) {
+		if (*status == "ok") {
+			return MatchResult(true, CommandStatus::Success, text);
+		}
+		if (*status == "ko") {
+			return MatchResult(false, CommandStatus::ServerError, text);
+		}
+		return MatchResult(false, CommandStatus::UnexpectedReply,
+			"Expected status 'ok'/'ko' in prend reply, got '" + *status + "'");
+	}
+
+	// Backward-compatible fallback for arg-based replies.
 	auto arg = extractJsonField(text, "arg");
 	if (!arg) {
 		return MatchResult(false, CommandStatus::MalformedReply, "Missing 'arg' field in prend reply");
@@ -187,6 +210,11 @@ MatchResult CommandReplyMatcher::matchPrendReply(const std::string& text) {
 MatchResult CommandReplyMatcher::matchPoseReply(const std::string& text) {
 	auto cmd = extractJsonField(text, "cmd");
 	if (!cmd) {
+		auto type = extractJsonField(text, "type");
+		if (type && *type == "message") {
+			return MatchResult(false, CommandStatus::UnexpectedReply,
+				"Received unsolicited message frame while waiting for 'pose' reply");
+		}
 		return MatchResult(false, CommandStatus::MalformedReply, "Missing 'cmd' field in pose reply");
 	}
 
@@ -227,7 +255,32 @@ MatchResult CommandReplyMatcher::matchExpulseReply(const std::string& text) {
 }
 
 MatchResult CommandReplyMatcher::matchBroadcastReply(const std::string& text) {
-	return matchReplyByCmd(text, "broadcast");
+	const std::optional<std::string> cmd = extractJsonField(text, "cmd");
+	if (cmd.has_value()) {
+		if (*cmd != "broadcast") {
+			return MatchResult(false, CommandStatus::UnexpectedReply,
+				"Expected 'broadcast' command, got '" + *cmd + "'");
+		}
+		return MatchResult(true, CommandStatus::Success, text);
+	}
+
+	const std::optional<std::string> type = extractJsonField(text, "type");
+	if (!type.has_value()) {
+		return MatchResult(false, CommandStatus::MalformedReply,
+			"Missing 'cmd' or 'type' field in broadcast reply");
+	}
+
+	if (*type == "message") {
+		const std::optional<std::string> arg = extractJsonField(text, "arg");
+		if (!arg.has_value()) {
+			return MatchResult(false, CommandStatus::MalformedReply,
+				"Missing 'arg' field in message-style broadcast reply");
+		}
+		return MatchResult(true, CommandStatus::Success, text);
+	}
+
+	return MatchResult(false, CommandStatus::UnexpectedReply,
+		"Expected broadcast cmd or message-type reply, got type='" + *type + "'");
 }
 
 MatchResult CommandReplyMatcher::matchIncantationReply(const std::string& text) {

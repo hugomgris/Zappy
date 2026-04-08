@@ -7,6 +7,7 @@
 #include "app/intent/Intent.hpp"
 #include "app/policy/DecisionPolicy.hpp"
 #include "app/policy/PeriodicScanPolicy.hpp"
+#include "app/policy/WorldModelPolicy.hpp"
 #include "../helpers/Logger.hpp"
 #include "net/WebsocketClient.hpp"
 
@@ -109,6 +110,33 @@ namespace {
 		}
 
 		return extractJsonStringField(text, "arg");
+	}
+
+	bool isServerEventFrame(const std::string& text) {
+		const std::optional<std::string> type = extractJsonStringField(text, "type");
+		return type.has_value() && *type == "event";
+	}
+
+	bool isElevationInProgressFrame(const std::string& text) {
+		const std::optional<std::string> event = extractJsonStringField(text, "event");
+		const std::optional<std::string> status = extractJsonStringField(text, "status");
+		return isServerEventFrame(text)
+			&& event.has_value() && *event == "elevation"
+			&& status.has_value() && *status == "in_progress";
+	}
+
+	bool isElevationCompletionFrame(const std::string& text) {
+		const std::optional<std::string> status = extractJsonStringField(text, "status");
+		if (!isServerEventFrame(text) || !status.has_value()) {
+			return false;
+		}
+
+		if (*status == "Level up!") {
+			return true;
+		}
+
+		const std::optional<std::string> event = extractJsonStringField(text, "event");
+		return event.has_value() && *event == "elevation" && *status == "ok";
 	}
 }
 
@@ -369,22 +397,27 @@ Result ClientRunner::tickCommandLayer(int64_t nowMs) {
 		return Result::success();
 	}
 
-	if (_policy) {
+	const Result managerTickRes = _manager->tick(nowMs);
+	if (!managerTickRes.ok()) {
+		return managerTickRes;
+	}
+
+	const std::size_t backlog = _manager->queuedCount() + (_manager->hasInFlight() ? 1u : 0u);
+	if (_policy && backlog < 8u) {
+		const std::size_t budget = 8u - backlog;
+		std::size_t submitted = 0;
 		std::vector<std::shared_ptr<IntentRequest>> intents = _policy->onTick(nowMs);
 		for (const std::shared_ptr<IntentRequest>& intent : intents) {
-			if (!intent) {
+			if (!intent || submitted >= budget) {
 				continue;
 			}
 			const std::uint64_t id = submitIntentAt(*intent, nowMs);
 			if (id == 0) {
 				Logger::warn("Policy intent submission declined: " + intent->description());
+				continue;
 			}
+			submitted += 1;
 		}
-	}
-
-	const Result managerTickRes = _manager->tick(nowMs);
-	if (!managerTickRes.ok()) {
-		return managerTickRes;
 	}
 
 	return handleCompletedCommands(nowMs);
@@ -393,6 +426,48 @@ Result ClientRunner::tickCommandLayer(int64_t nowMs) {
 Result ClientRunner::processManagedTextFrame(const std::string& text, int64_t nowMs) {
 	if (!_manager) {
 		return Result::success();
+	}
+
+	if (isServerEventFrame(text)) {
+		if (isElevationInProgressFrame(text)) {
+			Logger::info("ClientRunner: elevation in progress event: " + text);
+			return handleCompletedCommands(nowMs);
+		}
+
+		if (isElevationCompletionFrame(text)) {
+			Logger::info("ClientRunner: elevation completion event: " + text);
+			if (_policy) {
+				CommandEvent event;
+				event.commandId = 0;
+				event.commandType = CommandType::Incantation;
+				event.status = CommandStatus::Success;
+				event.details = text;
+
+				std::vector<std::shared_ptr<IntentRequest>> followUps = _policy->onCommandEvent(nowMs, event, std::nullopt);
+				const std::size_t backlog = _manager->queuedCount() + (_manager->hasInFlight() ? 1u : 0u);
+				const std::size_t budget = (backlog >= 8u) ? 0u : (8u - backlog);
+				std::size_t submitted = 0;
+				for (const std::shared_ptr<IntentRequest>& followUp : followUps) {
+					if (!followUp) {
+						continue;
+					}
+					if (submitted >= budget) {
+						break;
+					}
+					const std::uint64_t id = submitIntentAt(*followUp, nowMs);
+					if (id == 0) {
+						Logger::warn("Policy follow-up intent declined: " + followUp->description());
+						continue;
+					}
+					submitted += 1;
+				}
+			}
+
+			return handleCompletedCommands(nowMs);
+		}
+
+		Logger::info("ClientRunner: ignoring server event frame: " + text);
+		return handleCompletedCommands(nowMs);
 	}
 
 	const bool consumedByManager = _manager->onServerTextFrame(text);
@@ -407,14 +482,22 @@ Result ClientRunner::processManagedTextFrame(const std::string& text, int64_t no
 			event.details = *incomingBroadcast;
 
 			std::vector<std::shared_ptr<IntentRequest>> followUps = _policy->onCommandEvent(nowMs, event, std::nullopt);
+			const std::size_t backlog = _manager->queuedCount() + (_manager->hasInFlight() ? 1u : 0u);
+			const std::size_t budget = (backlog >= 8u) ? 0u : (8u - backlog);
+			std::size_t submitted = 0;
 			for (const std::shared_ptr<IntentRequest>& followUp : followUps) {
 				if (!followUp) {
 					continue;
 				}
+				if (submitted >= budget) {
+					break;
+				}
 				const std::uint64_t id = submitIntentAt(*followUp, nowMs);
 				if (id == 0) {
 					Logger::warn("Policy follow-up intent declined: " + followUp->description());
+					continue;
 				}
+				submitted += 1;
 			}
 		}
 	}
@@ -465,20 +548,29 @@ Result ClientRunner::handleCompletedCommands(int64_t nowMs) {
 		if (_policy) {
 			std::optional<IntentResult> optIntent = hasTrackedIntent ? std::optional<IntentResult>(intentResult) : std::nullopt;
 			std::vector<std::shared_ptr<IntentRequest>> followUps = _policy->onCommandEvent(nowMs, event, optIntent);
+			const std::size_t backlog = _manager->queuedCount() + (_manager->hasInFlight() ? 1u : 0u);
+			const std::size_t budget = (backlog >= 8u) ? 0u : (8u - backlog);
+			std::size_t submitted = 0;
 			for (const std::shared_ptr<IntentRequest>& followUp : followUps) {
 				if (!followUp) {
 					continue;
 				}
+				if (submitted >= budget) {
+					break;
+				}
 				const std::uint64_t id = submitIntentAt(*followUp, nowMs);
 				if (id == 0) {
 					Logger::warn("Policy follow-up intent declined: " + followUp->description());
+					continue;
 				}
+				submitted += 1;
 			}
 		}
 
 		if (completed.status != CommandStatus::Success) {
-			if (completed.status == CommandStatus::ServerError && completed.type == CommandType::Prend) {
-				Logger::warn("Prend failed: " + completed.details);
+			if (completed.status == CommandStatus::ServerError) {
+				Logger::warn("Command rejected by server (continuing): " + commandTypeName(completed.type)
+					+ " -> " + completed.details);
 				continue;
 			}
 
@@ -518,7 +610,7 @@ Result ClientRunner::handleLoopTextFrame(const std::string& text, int64_t now) {
 Result ClientRunner::runPersistentLoop(int intervalMs) {
 	_sawDieEvent = false;
 	if (!_policy) {
-		_policy = std::make_unique<PeriodicScanPolicy>(intervalMs, 2000, 7000);
+		_policy = std::make_unique<WorldModelPolicy>(intervalMs, 2000);
 	}
 
 	while (true) {

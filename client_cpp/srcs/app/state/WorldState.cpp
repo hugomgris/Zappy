@@ -42,7 +42,8 @@ namespace {
 }
 
 WorldState::WorldState()
-	: _pose{}, _hasPose(false), _lastVisionAtMs(-1), _lastInventoryAtMs(-1), _lastBroadcastAtMs(-1), _lastPoseAtMs(-1) {}
+	: _pose{}, _hasPose(false), _lastVisionAtMs(-1), _lastInventoryAtMs(-1), _lastBroadcastAtMs(-1), _lastPoseAtMs(-1),
+	  _lastLevelUpAtMs(-1), _playerLevel(1) {}
 
 bool WorldState::VisionTile::hasResource(ResourceType resource) const {
 	for (ResourceType current : resources) {
@@ -66,6 +67,8 @@ void WorldState::clear() {
 	_lastInventoryAtMs = -1;
 	_lastBroadcastAtMs = -1;
 	_lastPoseAtMs = -1;
+	_lastLevelUpAtMs = -1;
+	_playerLevel = 1;
 }
 
 void WorldState::recordVision(std::int64_t nowMs, const std::string& payload) {
@@ -147,6 +150,12 @@ void WorldState::recordForward(std::int64_t nowMs) {
 	_lastPoseAtMs = nowMs;
 }
 
+int WorldState::recordLevelUp(std::int64_t nowMs) {
+	_lastLevelUpAtMs = nowMs;
+	++_playerLevel;
+	return _playerLevel;
+}
+
 bool WorldState::hasVision() const {
 	return _lastVisionAtMs >= 0;
 }
@@ -203,11 +212,22 @@ std::optional<std::int64_t> WorldState::lastPoseAt() const {
 	return _lastPoseAtMs;
 }
 
+std::optional<std::int64_t> WorldState::lastLevelUpAt() const {
+	if (_lastLevelUpAtMs < 0) {
+		return std::nullopt;
+	}
+	return _lastLevelUpAtMs;
+}
+
 std::optional<WorldState::Pose> WorldState::pose() const {
 	if (!hasPose()) {
 		return std::nullopt;
 	}
 	return _pose;
+}
+
+int WorldState::playerLevel() const {
+	return _playerLevel;
 }
 
 const std::string& WorldState::lastVisionPayload() const {
@@ -236,6 +256,16 @@ const std::map<ResourceType, int>& WorldState::inventoryCounts() const {
 
 const std::vector<WorldState::VisionTile>& WorldState::visionTiles() const {
 	return _visionTiles;
+}
+
+bool WorldState::currentTileHasResource(ResourceType resource) const {
+	for (const VisionTile& tile : _visionTiles) {
+		if (tile.index == 0) {
+			return tile.hasResource(resource);
+		}
+	}
+
+	return false;
 }
 
 std::optional<WorldState::VisionTile> WorldState::nearestVisionTileWith(ResourceType resource) const {

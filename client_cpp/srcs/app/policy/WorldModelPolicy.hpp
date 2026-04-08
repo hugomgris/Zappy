@@ -37,10 +37,10 @@ class WorldModelPolicy : public DecisionPolicy {
 		explicit WorldModelPolicy(
 			std::int64_t visionRefreshMs = 5000,
 			std::int64_t inventoryRefreshMs = 7000,
-			std::int64_t incantationRetryDelayMs = 8000,
+			std::int64_t incantationRetryDelayMs = 1000,
 			std::int64_t summonCooldownMs = 5000,
-			int incantationMinFood = 10,
-			int incantationMinPlayers = 1,
+			int incantationMinFood = 2,
+			int incantationMinPlayers = 2,
 			std::int64_t teamResponseCooldownMs = 4000,
 			std::int64_t roleBroadcastIntervalMs = 30000,
 			int assistFoodThreshold = 10,

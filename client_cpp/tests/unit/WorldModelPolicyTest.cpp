@@ -144,6 +144,23 @@ TEST(WorldModelPolicyTest, EmitsIncantationWhenReadinessIsMet) {
 	EXPECT_EQ(intents[0]->description(), "RequestIncantation");
 }
 
+TEST(WorldModelPolicyTest, IncantationSuccessAdvancesPlayerLevel) {
+	WorldModelPolicy policy(5000, 7000, 8000, 5000, 10, 1);
+
+	CommandEvent incantationEvent;
+	incantationEvent.commandType = CommandType::Incantation;
+	incantationEvent.status = CommandStatus::Success;
+	incantationEvent.details = R"({"type":"response","cmd":"incantation","arg":"ok"})";
+
+	EXPECT_TRUE(policy.onCommandEvent(100, incantationEvent, std::nullopt).empty());
+	EXPECT_EQ(policy.state().playerLevel(), 2);
+	EXPECT_EQ(policy.state().lastLevelUpAt(), 100);
+
+	EXPECT_TRUE(policy.onCommandEvent(200, incantationEvent, std::nullopt).empty());
+	EXPECT_EQ(policy.state().playerLevel(), 3);
+	EXPECT_EQ(policy.state().lastLevelUpAt(), 200);
+}
+
 TEST(WorldModelPolicyTest, EmitsSummonBroadcastWhenResourcesReadyButPlayersMissing) {
 	WorldModelPolicy policy(5000, 7000, 8000, 5000, 10, 1);
 

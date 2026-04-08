@@ -20,7 +20,7 @@ Major progress landed since this plan was first drafted.
 ### Test Delta
 
 - Previous baseline: **85/85 passing**.
-- Current baseline: **125/125 passing**.
+- Current baseline: **129/129 passing**.
 - Added:
   - `ClientRunnerIntentIntegrationTest` (intent -> dispatch -> frame -> completion correlation)
   - `PeriodicScanPolicyTest` (policy cadence behavior)
@@ -33,6 +33,7 @@ Major progress landed since this plan was first drafted.
   - `IncantationStrategyTest` (readiness decisions: none/summon/incantate)
   - `TeamBroadcastProtocolTest` (team message parsing and legacy compatibility)
   - `ClientRunnerTeamMessageIntegrationTest` (unsolicited message routing to policy)
+  - `WorldModelPolicyScenarioIntegrationTest` (I6 scenario harness + 1200-tick invariants)
 
 ### Remaining for Milestone F
 
@@ -76,7 +77,7 @@ Completed:
   - Added `IncantationStrategy` (food/resources/player-count readiness) ✓
   - `WorldModelPolicy` now emits summon broadcast or incantation with anti-spam cooldowns ✓
   - `WorldState` now tracks `player` counts per visible tile (including current tile) ✓
-- Baseline tests: **125/125 passing**.
+- Baseline tests: **129/129 passing**.
 
 Not done yet (optional enhancements):
 
@@ -240,7 +241,7 @@ The command management infrastructure is now feature-complete:
 - ✓ Intent abstraction and event notification (E)
 - ✓ Intent submission + policy seam integration (F1/F2)
 
-**Test Status**: 118/118 passing.
+**Test Status**: 129/129 passing.
 
 ## 6) Recommended Next Batch: Milestones G-I
 
@@ -364,16 +365,18 @@ Status: **COMPLETE**
 - Add long-run simulation (1000+ ticks) with invariant checks.
 
 **Acceptance**:
-- No deadloops in policy cycle over extended runs
-- Decision invariants hold (e.g., never ignore critical food threshold)
+- No deadloops in policy cycle over extended runs ✓
+- Decision invariants hold (e.g., never ignore critical food threshold) ✓
+
+Status: **COMPLETE**
 
 ---
 
 ## 7) Delivery Order Recommendation
 
-1. Validate with Milestone I6 gameplay harness
-2. Move to G/H polish as needed
-3. Move to G/H polish as needed
+1. Move to G/H polish as needed
+2. Run targeted long-duration stress suites as needed
+3. Revisit I6 scenarios as new policy behaviors land
 
 ## 8) Session Summary
 
@@ -393,7 +396,8 @@ Status: **COMPLETE**
 - ✅ Added resource strategy tests
 - ✅ Added incantation strategy tests
 - ✅ Completed Milestone I5 team coordination via broadcast protocol
-- ✅ All tests passing: **125/125**
+- ✅ Completed Milestone I6 gameplay validation harness
+- ✅ All tests passing: **129/129**
 - ✅ Documentation updated with architectural diagrams and implementation narrative
 
 **Handoff State:**
@@ -406,9 +410,9 @@ Status: **COMPLETE**
 - Navigation planning now uses strategy-injected priorities from `WorldState` inventory + vision
 - Incantation decisions now use readiness checks + summon fallback in `WorldModelPolicy`
 - Makefile updated with policy sources
-- Next session can immediately start on I6 gameplay validation harness
+- Next session can immediately start on Milestone G/H polish or deeper long-run stress validation
 
-Now that I4 is complete, the next useful tranche is I5 team coordination via broadcast.
+Now that I6 is complete, the next useful tranche is Milestone G/H polish and targeted stress validation.
 
 **Debugging/Reference Notes:**
 

@@ -3,6 +3,59 @@
 #include "app/command/CommandType.hpp"
 #include "helpers/Logger.hpp"
 
+#include <cctype>
+#include <optional>
+
+namespace {
+	std::optional<std::string> extractJsonStringField(const std::string& text, const std::string& fieldName) {
+		const std::string keyToken = "\"" + fieldName + "\"";
+		const std::size_t keyPos = text.find(keyToken);
+		if (keyPos == std::string::npos) {
+			return std::nullopt;
+		}
+
+		const std::size_t colonPos = text.find(':', keyPos + keyToken.size());
+		if (colonPos == std::string::npos) {
+			return std::nullopt;
+		}
+
+		std::size_t valuePos = colonPos + 1;
+		while (valuePos < text.size() && std::isspace(static_cast<unsigned char>(text[valuePos]))) {
+			++valuePos;
+		}
+
+		if (valuePos >= text.size() || text[valuePos] != '"') {
+			return std::nullopt;
+		}
+
+		++valuePos;
+		std::size_t closePos = valuePos;
+		while (closePos < text.size()) {
+			if (text[closePos] == '"' && (closePos == valuePos || text[closePos - 1] != '\\')) {
+				return text.substr(valuePos, closePos - valuePos);
+			}
+			++closePos;
+		}
+
+		return std::nullopt;
+	}
+
+	bool isLevelUpEvent(const std::string& payload) {
+		const std::optional<std::string> type = extractJsonStringField(payload, "type");
+		if (!type.has_value() || *type != "event") {
+			return false;
+		}
+
+		const std::optional<std::string> status = extractJsonStringField(payload, "status");
+		if (status.has_value() && *status == "Level up!") {
+			return true;
+		}
+
+		const std::optional<std::string> event = extractJsonStringField(payload, "event");
+		return event.has_value() && *event == "elevation" && status.has_value() && *status == "ok";
+	}
+}
+
 WorldModelPolicy::WorldModelPolicy(
 	std::int64_t visionRefreshMs,
 	std::int64_t inventoryRefreshMs,
@@ -15,7 +68,8 @@ WorldModelPolicy::WorldModelPolicy(
 	int assistFoodThreshold,
 	int shareFoodThreshold
 )
-	: _incantationStrategy(incantationMinFood, incantationMinPlayers),
+	: _resourceStrategy(2, 4),
+	  _incantationStrategy(incantationMinFood, incantationMinPlayers),
 	  _visionRefreshMs(visionRefreshMs),
 	  _inventoryRefreshMs(inventoryRefreshMs),
 	  _incantationRetryDelayMs(incantationRetryDelayMs),
@@ -40,6 +94,37 @@ std::vector<std::shared_ptr<IntentRequest>> WorldModelPolicy::onTick(std::int64_
 		return intents;
 	}
 
+	const IncantationAction action = _incantationStrategy.decide(_state);
+	if (
+		action == IncantationAction::Incantate
+	) {
+		if (!(_lastIncantationAtMs < 0 || (nowMs - _lastIncantationAtMs) >= _incantationRetryDelayMs)) {
+			Logger::debug("WorldModelPolicy: incantation ready but cooling down, elapsed="
+				+ std::to_string(nowMs - _lastIncantationAtMs)
+				+ "ms < retryDelay=" + std::to_string(_incantationRetryDelayMs));
+		} else {
+		Logger::info("WorldModelPolicy: aggressive incantation attempt requested");
+		intents.push_back(std::make_shared<RequestIncantation>());
+		_lastIncantationAtMs = nowMs;
+		return intents;
+		}
+	}
+
+	if (
+		action == IncantationAction::Summon
+	) {
+		if (!(_lastSummonAtMs < 0 || (nowMs - _lastSummonAtMs) >= _summonCooldownMs)) {
+			Logger::debug("WorldModelPolicy: summon ready but cooling down, elapsed="
+				+ std::to_string(nowMs - _lastSummonAtMs)
+				+ "ms < cooldown=" + std::to_string(_summonCooldownMs));
+		} else {
+		Logger::info("WorldModelPolicy: aggressive summon request for incantation support");
+		intents.push_back(std::make_shared<RequestBroadcast>("need_players_for_incantation"));
+		_lastSummonAtMs = nowMs;
+		return intents;
+		}
+	}
+
 	if (!_state.hasRecentVision(nowMs, _visionRefreshMs)) {
 		intents.push_back(std::make_shared<RequestVoir>());
 	}
@@ -59,25 +144,6 @@ std::vector<std::shared_ptr<IntentRequest>> WorldModelPolicy::onTick(std::int64_
 		Logger::info("WorldModelPolicy: broadcasting role intent team:role:gatherer");
 		intents.push_back(std::make_shared<RequestBroadcast>("team:role:gatherer"));
 		_lastRoleBroadcastAtMs = nowMs;
-		return intents;
-	}
-
-	const IncantationAction action = _incantationStrategy.decide(_state);
-	if (
-		action == IncantationAction::Incantate
-		&& (_lastIncantationAtMs < 0 || (nowMs - _lastIncantationAtMs) >= _incantationRetryDelayMs)
-	) {
-		intents.push_back(std::make_shared<RequestIncantation>());
-		_lastIncantationAtMs = nowMs;
-		return intents;
-	}
-
-	if (
-		action == IncantationAction::Summon
-		&& (_lastSummonAtMs < 0 || (nowMs - _lastSummonAtMs) >= _summonCooldownMs)
-	) {
-		intents.push_back(std::make_shared<RequestBroadcast>("need_players_for_incantation"));
-		_lastSummonAtMs = nowMs;
 		return intents;
 	}
 
@@ -124,6 +190,19 @@ std::vector<std::shared_ptr<IntentRequest>> WorldModelPolicy::onCommandEvent(
 		case CommandType::Avance:
 			_state.recordForward(nowMs);
 			break;
+
+		case CommandType::Incantation: {
+			if (isLevelUpEvent(event.details)) {
+				const int playerLevel = _state.recordLevelUp(nowMs);
+				Logger::info("WorldModelPolicy: player level advanced to " + std::to_string(playerLevel));
+				if (playerLevel >= 8) {
+					Logger::info("WorldModelPolicy: victory threshold reached");
+				}
+			} else {
+				Logger::info("WorldModelPolicy: incantation acknowledged, awaiting level-up event");
+			}
+			break;
+		}
 
 		case CommandType::Broadcast:
 			if (intentResult.has_value()) {

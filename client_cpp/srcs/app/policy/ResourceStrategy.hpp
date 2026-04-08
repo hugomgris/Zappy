@@ -14,8 +14,8 @@ class ResourceStrategy {
 
 	public:
 		explicit ResourceStrategy(
-			int foodEmergencyThreshold = 6,
-			int foodComfortTarget = 12
+			int foodEmergencyThreshold = 2,
+			int foodComfortTarget = 4
 		);
 
 		std::vector<ResourceType> buildPriority(const WorldState& state) const;

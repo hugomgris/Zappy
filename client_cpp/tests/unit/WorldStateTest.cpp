@@ -22,6 +22,24 @@ TEST(WorldStateTest, RecordsVisionInventoryAndBroadcastPayloads) {
 	EXPECT_EQ(state.inventoryCount(ResourceType::Nourriture), 7);
 	EXPECT_EQ(state.inventoryCount(ResourceType::Linemate), 3);
 	EXPECT_EQ(state.inventoryCount(ResourceType::Sibur), 1);
+	EXPECT_EQ(state.playerLevel(), 1);
+}
+
+TEST(WorldStateTest, TracksIncantationLevelProgression) {
+	WorldState state;
+
+	EXPECT_EQ(state.playerLevel(), 1);
+	EXPECT_FALSE(state.lastLevelUpAt().has_value());
+	EXPECT_EQ(state.recordIncantationSuccess(400), 2);
+	EXPECT_EQ(state.playerLevel(), 2);
+	EXPECT_EQ(state.lastLevelUpAt(), 400);
+	EXPECT_EQ(state.recordIncantationSuccess(500), 3);
+	EXPECT_EQ(state.playerLevel(), 3);
+	EXPECT_EQ(state.lastLevelUpAt(), 500);
+
+	state.clear();
+	EXPECT_EQ(state.playerLevel(), 1);
+	EXPECT_FALSE(state.lastLevelUpAt().has_value());
 }
 
 TEST(WorldStateTest, RecentChecksRespectAgeThresholds) {
@@ -90,4 +108,5 @@ TEST(WorldStateTest, ClearResetsStoredState) {
 	EXPECT_TRUE(state.inventoryCounts().empty());
 	EXPECT_TRUE(state.visionTiles().empty());
 	EXPECT_FALSE(state.pose().has_value());
+	EXPECT_EQ(state.playerLevel(), 1);
 }
