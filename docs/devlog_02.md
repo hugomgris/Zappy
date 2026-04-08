@@ -215,19 +215,17 @@ From a milestone perspective, this closes the integration target for the command
 
 # 2.4 - Hardening the Protocol
 
-## D1: Reply Matching Hardening - COMPLETE
-
 With the manager framework in place and working, the next immediate priority was to replace the fragile string-substring matching with parser-backed validation. The issue was that the old `matchesInFlightReply()` method used simple substring checks, which meant:
 
 - A malformed JSON frame wouldn't be caught until matching failed
-- An unexpected frame (e.g., a voir reply when prend is in-flight) wouldn't be clearly identified
+- An unexpected frame (a voir reply when prend is in-flight, for example) wouldn't be clearly identified
 - Protocol errors and structural issues weren't distinguished from command mismatches
 
 The solution was to create a new **`CommandReplyMatcher`** utility class that:
 
-1. **Validates JSON structure** — Ensures frames have basic `{...}` syntax before attempting extraction
-2. **Extracts fields carefully** — Parses `"cmd"` and `"arg"` fields with handling for spacing variants (`"cmd":"verb"` vs `"cmd": "verb"`)
-3. **Type-specific matching** — Each command type has its own validation logic:
+1. **Validates JSON structure**, ensuring frames have basic `{...}` syntax before attempting extraction
+2. **Extracts fields carefully**, parsing `"cmd"` and `"arg"` fields with handling for spacing variants (`"cmd":"verb"` vs `"cmd": "verb"`; needed because of how the server formats is JSON messages)
+3. **Type-specific matching**, with each command type having its own validation logic:
    - `Login`: Accepts any structurally valid frame (no `cmd` field expected)
    - `Voir`: Requires `"cmd": "voir"` field match
    - `Inventaire`: Requires `"cmd": "inventaire"` field match
@@ -237,15 +235,11 @@ The solution was to create a new **`CommandReplyMatcher`** utility class that:
    - `status`: Success, MalformedReply, UnexpectedReply, or ServerError
    - `details`: Diagnostic message (e.g., "Expected 'voir' command, got 'inventaire'")
 
-### New Enum Values
-
-Added to `CommandStatus`:
+To achieve these, new enums needed to be added to `CommandStatus`:
 - `MalformedReply` — Invalid JSON structure or missing required fields
 - `UnexpectedReply` — Valid JSON but wrong command type in reply
 
-### Integration into CommandManager
-
-The `onServerTextFrame()` method now:
+And the `onServerTextFrame()` method now:
 1. Calls `CommandReplyMatcher::validateReply()` with in-flight command type
 2. Handles each status accordingly:
    - `Success` → Completes with success
@@ -253,82 +247,12 @@ The `onServerTextFrame()` method now:
    - `UnexpectedReply` → Ignores frame (doesn't consume; next frame may match)
    - `ServerError` → Completes as server failure (error or ko frame)
 
-### Test Coverage
-
-Created `CommandReplyMatcherTest` suite with **32 tests** covering:
-- **Valid replies**: Login, Voir, Inventaire, Prend (with spacing variants)
-- **Error frames**: Proper ko/error handling
-- **Malformed JSON**: Missing fields, incomplete braces, invalid structure
-- **Cross-command rejection**: Voir frame doesn't match Prend in-flight
-- **Edge cases**: Empty frames, partial JSON, extra fields, field reordering
-
-**Result**: 78/78 tests passing (32 new matcher tests + 46 existing).
-
-This completes Milestone D1. The next step (D2) addresses queue guardrails and additional error taxonomy to prevent protocol-level issues from cascading.
-
-<br>
-
-## D2: Error Taxonomy + Cleanup Safety - COMPLETE
-
-D2 focused on adding safety guardrails and comprehensive logging to prevent resource exhaustion and silent failures:
-
-### Queue Guardrails
-
-Added `MAX_PENDING_COMMANDS = 32` constant to `CommandManager`. The `enqueue()` method now:
-- Rejects new commands if queue reaches capacity
-- Returns 0 ID on failure (distinguishable from valid command IDs starting at 1)
-- Logs a warning when overflow is prevented
-- Added public `isFull()` method for callers to check capacity before enqueuing
-
-### Stale In-Flight Protection
-
-Added `STALE_INFLIGHT_MS = 300000` (5 minute) threshold. A new `checkStaleFlight()` method is called each tick and:
-- Detects commands that were enqueued more than 5 minutes ago and still in flight
-- Force-completes them as Timeout with diagnostic message
-- Logs error with time information
-- Prevents scenarios where a command hangs forever due to dropped connections or server issues
-
-### Enhanced Error Diagnostics
-
-Completion details now include operational context:
-- **Retry context**: "Exhausted retries (X)" shows actual retry limit
-- **Dispatch failures**: "Dispatch failed on retry: [specific error]" explains when/why retry failed
-- **Unexpected replies**: "Expected 'voir' command, got 'inventaire'" clarifies mismatch
-- **Stale timeout**: "Stale command (no response for 300000ms)" indicates protective timeout
-
-### Lifecycle Logging
-
-Every command state transition is now logged with full context:
-```
-[INFO] CommandManager: Enqueued command 42 (type=5), queue size=8
-[INFO] CommandManager: Dispatched command 42
-[INFO] CommandManager: Retrying command 42 (attempt 1/2)
-[INFO] CommandManager: Command 42 succeeded
-[INFO] CommandManager: Command 42 completed with status=0
-```
-
-Or on failure:
-```
-[WARN] CommandManager: Queue overflow prevented. Max pending (32) reached.
-[WARN] CommandManager: Command 42 received server error: {"type":"error",...}
-[ERROR] CommandManager: Detected stale in-flight command 42 (enqueued 305000ms ago).
-```
-
-This provides full observability for debugging command lifecycle issues and validating that no commands are silently dropped.
-
-**Result**: All 78 tests passing (32 new matcher tests + 46 existing tests).
-
-
 <br>
 <br>
 
-# 2.5 - AI-Facing API Bridge
+# 2.5 - AI vs API Bridge
 
-With protocol validation and reliability hardening complete (Milestone D), we now shift focus to the **decision layer abstraction** (Milestone E). The CommandManager provides a robust low-level interface, but higher-level features—like policy-driven decision making and event notification—need a cleaner abstraction. 
-
-## E1: Intent Abstraction Layer
-
-Commands are excellent for transport correctness, but they're low-level primitives. The decision layer needs to think in terms of **intentions** ("Pick up this resource") rather than protocols ("Send PREND command with argument FOO"). We introduce `IntentRequest` as a high-level abstraction:
+With protocol validation and reliability hardening complete, focus needs to be switched now to the **decision layer abstraction**. The CommandManager provides a robust low-level interface, but higher-level features—like policy-driven decision making and event notification—need a cleaner abstraction. This is because commands are excellent for transport correctness, but they're low-level primitives. The decision layer needs to think in terms of **intentions** ("Pick up this resource") rather than protocols ("Send PREND command with argument FOO"). To this aim, we introduce `IntentRequest` as a high-level abstraction, around which the specific command-related implementations are built:
 
 ```cpp
 class IntentRequest {
@@ -359,9 +283,7 @@ struct IntentResult {
 };
 ```
 
-## E2: Event/Outcome Notification Surface
-
-Commands complete silently into the `_completed` queue, requiring polling. For a responsive decision layer, we introduce **event notifications**—a callback-based observer pattern:
+From here, due to commands completing silently into the `_completed` queue, and requiring polling,in order to achieve a responsive decision layer, we introduce **event notifications**, a callback-based observer pattern:
 
 ```cpp
 struct CommandEvent {
@@ -388,7 +310,9 @@ void CommandManager::notifyCompletion(const CommandEvent& event) {
 }
 ```
 
-### Integration Flow
+### Current Integration Flow
+
+Just to not get lost in our own sauce, I think its a good idea if we stop, make an ordered list of the current flow steps of the client and resituate ourselves in regards to what should be done next.
 
 1. **Policy layer** registers event callback: `manager.setEventHandler([this](const CommandEvent& e){ handleOutcome(e); })`
 2. **Policy layer** submits intention: `manager.enqueue(CommandType::Voir, nowMs)` (after translating intent)
@@ -398,35 +322,21 @@ void CommandManager::notifyCompletion(const CommandEvent& event) {
 6. **Manager** invokes callback: `_eventHandler(commandEvent)`
 7. **Policy layer** reacts to outcome via handler callback
 
-This decouples decision logic from command polling, enabling responsive behavior-driven decision making.
-
-### Testing E1/E2
-
-Five integration tests validate the intent-to-event workflow:
-- `EventHandlerIsCalledOnCommandCompletion`: Handler receives success events
-- `EventHandlerReceivesFailureStatus`: Handler receives failure events on dispatch errors
-- `EventHandlerReceivesMultipleEvents`: Sequential command completions trigger sequential callbacks
-- `IntentTypesConvertToReadableDescriptions`: Intent polymorphism preserves semantic context
-- `CommandEventConvenienceMethodsReturnCorrectStatus`: Event status classification works correctly
-
-**Result**: 83/83 tests passing (5 new intent flow tests + 78 from D-phase).
-
-### Milestone E Architecture
 
 ```
 ┌─────────────────────────────────────────┐
-│ Decision Layer (ClientRunner/AI Policy)  │
-│  - Uses Intent types, reacts to Events   │
+│ Decision Layer (ClientRunner/AI Policy) │
+│  - Uses Intent types, reacts to Events  │
 └──────────────────┬──────────────────────┘
                    │
      (enqueue + setEventHandler)
                    │
                    ▼
 ┌──────────────────────────────────────────┐
-│  CommandManager (E2 Event Bridge)         │
+│  CommandManager (E2 Event Bridge)        │
 │  - Maintains _eventHandler callback      │
 │  - Emits CommandEvent on completion      │
-└──────────────────┬──────────────────────┘
+└──────────────────┬───────────────────────┘
                    │
         (internal flow: validate/complete)
                    │                 
@@ -436,10 +346,3 @@ Five integration tests validate the intent-to-event workflow:
           │ (validation)   │  │ (callback)  │
           └────────────────┘  └─────────────┘
 ```
-
-This completes Milestones E1 and E2: intent abstraction and event notification surfaces are now wired into the CommandManager, ready for AI/policy-driven decision layer integration.
-
-**Test Summary**: 83/83 passing.
-
-
-This completes Milestone D (reliability hardening). The final step (D3) would add formal observability patterns, but the current logging is sufficient for practical debugging and monitoring.

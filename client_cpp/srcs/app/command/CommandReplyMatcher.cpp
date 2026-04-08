@@ -37,6 +37,21 @@ namespace {
 
 		return std::nullopt;
 	}
+
+	MatchResult matchReplyByCmd(const std::string& text, const std::string& expectedCmd) {
+		auto cmd = extractQuotedValue(text, "cmd");
+		if (!cmd) {
+			return MatchResult(false, CommandStatus::MalformedReply,
+				"Missing 'cmd' field in " + expectedCmd + " reply");
+		}
+
+		if (*cmd != expectedCmd) {
+			return MatchResult(false, CommandStatus::UnexpectedReply,
+				"Expected '" + expectedCmd + "' command, got '" + *cmd + "'");
+		}
+
+		return MatchResult(true, CommandStatus::Success, text);
+	}
 }
 
 MatchResult CommandReplyMatcher::validateReply(CommandType expectedCmd, const std::string& text) {
@@ -63,6 +78,33 @@ MatchResult CommandReplyMatcher::validateReply(CommandType expectedCmd, const st
 
 		case CommandType::Prend:
 			return matchPrendReply(text);
+
+		case CommandType::Pose:
+			return matchPoseReply(text);
+
+		case CommandType::Avance:
+			return matchAvanceReply(text);
+
+		case CommandType::Droite:
+			return matchDroiteReply(text);
+
+		case CommandType::Gauche:
+			return matchGaucheReply(text);
+
+		case CommandType::Expulse:
+			return matchExpulseReply(text);
+
+		case CommandType::Broadcast:
+			return matchBroadcastReply(text);
+
+		case CommandType::Incantation:
+			return matchIncantationReply(text);
+
+		case CommandType::Fork:
+			return matchForkReply(text);
+
+		case CommandType::ConnectNbr:
+			return matchConnectNbrReply(text);
 
 		default:
 			return MatchResult(false, CommandStatus::UnexpectedReply, "Unknown command type");
@@ -106,31 +148,11 @@ MatchResult CommandReplyMatcher::matchLoginReply(const std::string& text) {
 }
 
 MatchResult CommandReplyMatcher::matchVoirReply(const std::string& text) {
-	auto cmd = extractJsonField(text, "cmd");
-	if (!cmd) {
-		return MatchResult(false, CommandStatus::MalformedReply, "Missing 'cmd' field in voir reply");
-	}
-
-	if (*cmd != "voir") {
-		// This is a frame for a different command
-		return MatchResult(false, CommandStatus::UnexpectedReply, "Expected 'voir' command, got '" + *cmd + "'");
-	}
-
-	return MatchResult(true, CommandStatus::Success, text);
+	return matchReplyByCmd(text, "voir");
 }
 
 MatchResult CommandReplyMatcher::matchInventaireReply(const std::string& text) {
-	auto cmd = extractJsonField(text, "cmd");
-	if (!cmd) {
-		return MatchResult(false, CommandStatus::MalformedReply, "Missing 'cmd' field in inventaire reply");
-	}
-
-	if (*cmd != "inventaire") {
-		// This is a frame for a different command
-		return MatchResult(false, CommandStatus::UnexpectedReply, "Expected 'inventaire' command, got '" + *cmd + "'");
-	}
-
-	return MatchResult(true, CommandStatus::Success, text);
+	return matchReplyByCmd(text, "inventaire");
 }
 
 MatchResult CommandReplyMatcher::matchPrendReply(const std::string& text) {
@@ -160,4 +182,62 @@ MatchResult CommandReplyMatcher::matchPrendReply(const std::string& text) {
 	}
 
 	return MatchResult(true, CommandStatus::Success, text);
+}
+
+MatchResult CommandReplyMatcher::matchPoseReply(const std::string& text) {
+	auto cmd = extractJsonField(text, "cmd");
+	if (!cmd) {
+		return MatchResult(false, CommandStatus::MalformedReply, "Missing 'cmd' field in pose reply");
+	}
+
+	if (*cmd != "pose") {
+		return MatchResult(false, CommandStatus::UnexpectedReply, "Expected 'pose' command, got '" + *cmd + "'");
+	}
+
+	auto arg = extractJsonField(text, "arg");
+	if (!arg) {
+		return MatchResult(false, CommandStatus::MalformedReply, "Missing 'arg' field in pose reply");
+	}
+
+	if (*arg == "ko") {
+		return MatchResult(false, CommandStatus::ServerError, text);
+	}
+
+	if (*arg != "ok") {
+		return MatchResult(false, CommandStatus::UnexpectedReply, "Expected 'ok' in pose reply, got '" + *arg + "'");
+	}
+
+	return MatchResult(true, CommandStatus::Success, text);
+}
+
+MatchResult CommandReplyMatcher::matchAvanceReply(const std::string& text) {
+	return matchReplyByCmd(text, "avance");
+}
+
+MatchResult CommandReplyMatcher::matchDroiteReply(const std::string& text) {
+	return matchReplyByCmd(text, "droite");
+}
+
+MatchResult CommandReplyMatcher::matchGaucheReply(const std::string& text) {
+	return matchReplyByCmd(text, "gauche");
+}
+
+MatchResult CommandReplyMatcher::matchExpulseReply(const std::string& text) {
+	return matchReplyByCmd(text, "expulse");
+}
+
+MatchResult CommandReplyMatcher::matchBroadcastReply(const std::string& text) {
+	return matchReplyByCmd(text, "broadcast");
+}
+
+MatchResult CommandReplyMatcher::matchIncantationReply(const std::string& text) {
+	return matchReplyByCmd(text, "incantation");
+}
+
+MatchResult CommandReplyMatcher::matchForkReply(const std::string& text) {
+	return matchReplyByCmd(text, "fork");
+}
+
+MatchResult CommandReplyMatcher::matchConnectNbrReply(const std::string& text) {
+	return matchReplyByCmd(text, "connect_nbr");
 }

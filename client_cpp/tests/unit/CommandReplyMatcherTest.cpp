@@ -193,6 +193,38 @@ TEST_F(CommandReplyMatcherTest, PrendRejectsErrorFrame) {
 }
 
 // ============================================================================
+// ADDITIONAL COMMAND TESTS
+// ============================================================================
+
+TEST_F(CommandReplyMatcherTest, AvanceAcceptsMatchingReply) {
+	const std::string frame = R"({"type":"response","cmd":"avance","arg":"ok"})";
+	MatchResult result = CommandReplyMatcher::validateReply(CommandType::Avance, frame);
+	EXPECT_TRUE(result.isMatch);
+	EXPECT_EQ(result.status, CommandStatus::Success);
+}
+
+TEST_F(CommandReplyMatcherTest, BroadcastRejectsWrongCommandReply) {
+	const std::string frame = R"({"type":"response","cmd":"expulse","arg":"ok"})";
+	MatchResult result = CommandReplyMatcher::validateReply(CommandType::Broadcast, frame);
+	EXPECT_FALSE(result.isMatch);
+	EXPECT_EQ(result.status, CommandStatus::UnexpectedReply);
+}
+
+TEST_F(CommandReplyMatcherTest, PoseAcceptsOkReply) {
+	const std::string frame = R"({"cmd":"pose","arg":"ok"})";
+	MatchResult result = CommandReplyMatcher::validateReply(CommandType::Pose, frame);
+	EXPECT_TRUE(result.isMatch);
+	EXPECT_EQ(result.status, CommandStatus::Success);
+}
+
+TEST_F(CommandReplyMatcherTest, PoseRejectsNonOkReply) {
+	const std::string frame = R"({"cmd":"pose","arg":"invalid"})";
+	MatchResult result = CommandReplyMatcher::validateReply(CommandType::Pose, frame);
+	EXPECT_FALSE(result.isMatch);
+	EXPECT_EQ(result.status, CommandStatus::UnexpectedReply);
+}
+
+// ============================================================================
 // CROSS-COMMAND REJECTION TESTS
 // ============================================================================
 

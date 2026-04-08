@@ -4,13 +4,16 @@
 #include "app/CommandSender.hpp"
 #include "app/command/CommandType.hpp"
 #include "app/command/ResourceType.hpp"
+#include "app/intent/Intent.hpp"
+#include "app/policy/DecisionPolicy.hpp"
+#include "app/policy/PeriodicScanPolicy.hpp"
 #include "../helpers/Logger.hpp"
 #include "net/WebsocketClient.hpp"
 
 #include <openssl/opensslv.h>
 #include <chrono>
 #include <memory>
-#include <regex>
+#include <optional>
 #include <thread>
 
 namespace {
@@ -45,14 +48,44 @@ namespace {
 		}
 		return false;
 	}
+
+	std::string commandTypeName(CommandType type) {
+		switch (type) {
+			case CommandType::Login: return "Login";
+			case CommandType::Avance: return "Avance";
+			case CommandType::Droite: return "Droite";
+			case CommandType::Gauche: return "Gauche";
+			case CommandType::Voir: return "Voir";
+			case CommandType::Inventaire: return "Inventaire";
+			case CommandType::Prend: return "Prend";
+			case CommandType::Pose: return "Pose";
+			case CommandType::Expulse: return "Expulse";
+			case CommandType::Broadcast: return "Broadcast";
+			case CommandType::Incantation: return "Incantation";
+			case CommandType::Fork: return "Fork";
+			case CommandType::ConnectNbr: return "ConnectNbr";
+			default: return "Unknown";
+		}
+	}
 }
 
 ClientRunner::ClientRunner(const Arguments& args)
 	: _args(args), _ws(std::make_unique<WebsocketClient>()), _commands(std::make_unique<CommandSender>(*_ws)),
-	  _manager(std::make_unique<CommandManager>([this](const CommandRequest& req) { return dispatchManagedCommand(req); })), _sawDieEvent(false),
-	  _nextVoirAt(0), _nextInventoryAt(0), _nextFoodPickupEarliestAt(0) {}
+	  _manager(std::make_unique<CommandManager>([this](const CommandRequest& req) { return dispatchManagedCommand(req); })), _sawDieEvent(false) {}
+
+ClientRunner::ClientRunner(const Arguments& args, std::function<Result(const CommandRequest&)> testDispatch)
+	: _args(args), _ws(std::make_unique<WebsocketClient>()), _commands(std::make_unique<CommandSender>(*_ws)),
+	  _manager(std::make_unique<CommandManager>(std::move(testDispatch))), _sawDieEvent(false) {}
 
 ClientRunner::~ClientRunner() = default;
+
+void ClientRunner::setDecisionPolicy(std::unique_ptr<DecisionPolicy> policy) {
+	_policy = std::move(policy);
+}
+
+void ClientRunner::setIntentCompletionHandler(IntentCompletionHandler handler) {
+	_intentCompletionHandler = std::move(handler);
+}
 
 int64_t ClientRunner::nowMs() {
 	const auto now = std::chrono::steady_clock::now().time_since_epoch();
@@ -167,6 +200,15 @@ Result ClientRunner::dispatchManagedCommand(const CommandRequest& req) {
 		case CommandType::Login:
 			return _commands->sendLogin(_args);
 
+		case CommandType::Avance:
+			return _commands->sendAvance();
+
+		case CommandType::Droite:
+			return _commands->sendDroite();
+
+		case CommandType::Gauche:
+			return _commands->sendGauche();
+
 		case CommandType::Voir:
 			return _commands->sendVoir();
 
@@ -181,9 +223,142 @@ Result ClientRunner::dispatchManagedCommand(const CommandRequest& req) {
 			return _commands->sendPrend(resource);
 		}
 
+		case CommandType::Pose: {
+			ResourceType resource;
+			if (!parseResourceType(req.arg, resource)) {
+				return Result::failure(ErrorCode::InvalidArgs, "Unsupported pose resource: '" + req.arg + "'");
+			}
+			return _commands->sendPose(resource);
+		}
+
+		case CommandType::Expulse:
+			return _commands->sendExpulse();
+
+		case CommandType::Broadcast:
+			return _commands->sendBroadcast(req.arg);
+
+		case CommandType::Incantation:
+			return _commands->sendIncantation();
+
+		case CommandType::Fork:
+			return _commands->sendFork();
+
+		case CommandType::ConnectNbr:
+			return _commands->sendConnectNbr();
+
 		default:
 			return Result::failure(ErrorCode::InvalidArgs, "Command type not implemented in dispatch adapter");
 	}
+}
+
+std::uint64_t ClientRunner::submitIntentAt(const IntentRequest& intent, std::int64_t nowMs) {
+	if (!_manager) {
+		Logger::warn("submitIntentAt called without initialized command manager");
+		return 0;
+	}
+
+	auto enqueueTracked = [this, &intent, nowMs](CommandType type, const std::string& arg = "") {
+		const std::uint64_t id = _manager->enqueue(type, nowMs, arg);
+		if (id != 0) {
+			_intentTypeByCommandId[id] = intent.description();
+		}
+		return id;
+	};
+
+	if (dynamic_cast<const RequestVoir*>(&intent) != nullptr) {
+		return enqueueTracked(CommandType::Voir);
+	}
+	if (dynamic_cast<const RequestInventaire*>(&intent) != nullptr) {
+		return enqueueTracked(CommandType::Inventaire);
+	}
+	if (const RequestTake* take = dynamic_cast<const RequestTake*>(&intent)) {
+		return enqueueTracked(CommandType::Prend, toProtocolString(take->resource));
+	}
+	if (const RequestPlace* place = dynamic_cast<const RequestPlace*>(&intent)) {
+		return enqueueTracked(CommandType::Pose, toProtocolString(place->resource));
+	}
+	if (dynamic_cast<const RequestMove*>(&intent) != nullptr) {
+		return enqueueTracked(CommandType::Avance);
+	}
+	if (dynamic_cast<const RequestTurnRight*>(&intent) != nullptr) {
+		return enqueueTracked(CommandType::Droite);
+	}
+	if (dynamic_cast<const RequestTurnLeft*>(&intent) != nullptr) {
+		return enqueueTracked(CommandType::Gauche);
+	}
+	if (const RequestBroadcast* broadcast = dynamic_cast<const RequestBroadcast*>(&intent)) {
+		return enqueueTracked(CommandType::Broadcast, broadcast->message);
+	}
+
+	Logger::warn("submitIntentAt received unsupported intent type");
+	return 0;
+}
+
+std::uint64_t ClientRunner::submitIntent(const std::shared_ptr<IntentRequest>& intent) {
+	if (!intent) {
+		Logger::warn("submitIntent called with null intent");
+		return 0;
+	}
+
+	const std::uint64_t id = submitIntentAt(*intent, nowMs());
+	if (id == 0) {
+		Logger::warn("Intent submission declined: " + intent->description());
+	} else {
+		Logger::info("Intent submitted as command id=" + std::to_string(id) + " intent=" + intent->description());
+	}
+	return id;
+}
+
+bool ClientRunner::popCompletedIntent(IntentResult& out) {
+	if (_completedIntents.empty()) {
+		return false;
+	}
+	out = _completedIntents.front();
+	_completedIntents.pop_front();
+	return true;
+}
+
+Result ClientRunner::tickCommandLayer(int64_t nowMs) {
+	if (!_manager) {
+		return Result::success();
+	}
+
+	if (_policy) {
+		std::vector<std::shared_ptr<IntentRequest>> intents = _policy->onTick(nowMs);
+		for (const std::shared_ptr<IntentRequest>& intent : intents) {
+			if (!intent) {
+				continue;
+			}
+			const std::uint64_t id = submitIntentAt(*intent, nowMs);
+			if (id == 0) {
+				Logger::warn("Policy intent submission declined: " + intent->description());
+			}
+		}
+	}
+
+	const Result managerTickRes = _manager->tick(nowMs);
+	if (!managerTickRes.ok()) {
+		return managerTickRes;
+	}
+
+	return handleCompletedCommands(nowMs);
+}
+
+Result ClientRunner::processManagedTextFrame(const std::string& text, int64_t nowMs) {
+	if (!_manager) {
+		return Result::success();
+	}
+
+	_manager->onServerTextFrame(text);
+	return handleCompletedCommands(nowMs);
+}
+
+Result ClientRunner::tickCommandLayerForTesting(int64_t nowMs) {
+	return tickCommandLayer(nowMs);
+}
+
+Result ClientRunner::processManagedTextFrameForTesting(const std::string& text, int64_t nowMs) {
+	return processManagedTextFrame(text, nowMs);
 }
 
 Result ClientRunner::handleCompletedCommands(int64_t nowMs) {
@@ -193,6 +368,45 @@ Result ClientRunner::handleCompletedCommands(int64_t nowMs) {
 
 	CommandResult completed;
 	while (_manager->popCompleted(completed)) {
+		const auto intentIt = _intentTypeByCommandId.find(completed.id);
+		const bool hasTrackedIntent = (intentIt != _intentTypeByCommandId.end());
+		const std::string intentType = hasTrackedIntent
+			? intentIt->second
+			: ("Command(" + commandTypeName(completed.type) + ")");
+
+		IntentResult intentResult(
+			completed.id,
+			intentType,
+			completed.status == CommandStatus::Success,
+			completed.details
+		);
+		_completedIntents.push_back(intentResult);
+		if (_intentCompletionHandler) {
+			_intentCompletionHandler(intentResult);
+		}
+		if (hasTrackedIntent) {
+			_intentTypeByCommandId.erase(intentIt);
+		}
+
+		CommandEvent event;
+		event.commandId = completed.id;
+		event.commandType = completed.type;
+		event.status = completed.status;
+		event.details = completed.details;
+		if (_policy) {
+			std::optional<IntentResult> optIntent = hasTrackedIntent ? std::optional<IntentResult>(intentResult) : std::nullopt;
+			std::vector<std::shared_ptr<IntentRequest>> followUps = _policy->onCommandEvent(nowMs, event, optIntent);
+			for (const std::shared_ptr<IntentRequest>& followUp : followUps) {
+				if (!followUp) {
+					continue;
+				}
+				const std::uint64_t id = submitIntentAt(*followUp, nowMs);
+				if (id == 0) {
+					Logger::warn("Policy follow-up intent declined: " + followUp->description());
+				}
+			}
+		}
+
 		if (completed.status != CommandStatus::Success) {
 			if (completed.status == CommandStatus::ServerError && completed.type == CommandType::Prend) {
 				Logger::warn("Prend failed: " + completed.details);
@@ -206,18 +420,8 @@ Result ClientRunner::handleCompletedCommands(int64_t nowMs) {
 			return Result::failure(mappedError, "Command failed: " + completed.details);
 		}
 
-		if (completed.type == CommandType::Inventaire) {
-			const int nourritureCount = tryParseNourritureCount(completed.details);
-			if (nourritureCount >= 0) {
-				Logger::info("Inventory check: nourriture=" + std::to_string(nourritureCount));
-				const int lowFoodThreshold = 6;
-				if (nourritureCount <= lowFoodThreshold && nowMs >= _nextFoodPickupEarliestAt) {
-					_manager->enqueue(CommandType::Prend, nowMs, "nourriture");
-					Logger::warn("Low food detected; queued prend nourriture");
-					_nextFoodPickupEarliestAt = nowMs + 3000;
-				}
-			}
-		}
+		Logger::info("Completed command id=" + std::to_string(completed.id) +
+			" type=" + std::to_string(static_cast<int>(completed.type)));
 	}
 
 	return Result::success();
@@ -239,19 +443,14 @@ Result ClientRunner::handleLoopTextFrame(const std::string& text, int64_t now) {
 		return Result::success();
 	}
 
-	if (_manager) {
-		_manager->onServerTextFrame(text);
-		return handleCompletedCommands(now);
-	}
-
-	return Result::success();
+	return processManagedTextFrame(text, now);
 }
 
 Result ClientRunner::runPersistentLoop(int intervalMs) {
-	_nextVoirAt = nowMs() + intervalMs;
-	_nextInventoryAt = nowMs() + 2000;
-	_nextFoodPickupEarliestAt = nowMs();
 	_sawDieEvent = false;
+	if (!_policy) {
+		_policy = std::make_unique<PeriodicScanPolicy>(intervalMs, 2000, 7000);
+	}
 
 	while (true) {
 		const int64_t now = nowMs();
@@ -263,31 +462,9 @@ Result ClientRunner::runPersistentLoop(int intervalMs) {
 			return tickRes;
 		}
 
-		if (now >= _nextVoirAt) {
-			if (_manager) {
-				_manager->enqueue(CommandType::Voir, now);
-			}
-			Logger::info("Periodic voir command queued");
-			_nextVoirAt = now + intervalMs;
-		}
-
-		if (now >= _nextInventoryAt) {
-			if (_manager) {
-				_manager->enqueue(CommandType::Inventaire, now);
-			}
-			Logger::info("Periodic inventaire command queued");
-			_nextInventoryAt = now + 7000;
-		}
-
-		if (_manager) {
-			const Result managerTickRes = _manager->tick(now);
-			if (!managerTickRes.ok()) {
-				return managerTickRes;
-			}
-			const Result completedRes = handleCompletedCommands(now);
-			if (!completedRes.ok()) {
-				return completedRes;
-			}
+		const Result commandTickRes = tickCommandLayer(now);
+		if (!commandTickRes.ok()) {
+			return commandTickRes;
 		}
 
 		WebSocketFrame frame;
@@ -308,20 +485,6 @@ Result ClientRunner::runPersistentLoop(int intervalMs) {
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(20));
 	}
-}
-
-bool ClientRunner::containsJsonType(const std::string& payload, const std::string& typeValue) const {
-	return payload.find("\"type\":\"" + typeValue + "\"") != std::string::npos
-		|| payload.find("\"type\": \"" + typeValue + "\"") != std::string::npos;
-}
-
-int ClientRunner::tryParseNourritureCount(const std::string& text) const {
-	std::smatch match;
-	const std::regex foodRegex("\\\"nourriture\\\"\\s*:\\s*(\\d+)");
-	if (std::regex_search(text, match, foodRegex) && match.size() > 1) {
-		return std::stoi(match[1].str());
-	}
-	return -1;
 }
 
 Result ClientRunner::runTransportFlow() {

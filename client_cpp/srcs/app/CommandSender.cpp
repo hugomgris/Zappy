@@ -19,8 +19,44 @@ Result CommandSender::sendInventaire() {
 	return sendCommand("inventaire");
 }
 
+Result CommandSender::sendAvance() {
+	return sendCommand("avance");
+}
+
+Result CommandSender::sendDroite() {
+	return sendCommand("droite");
+}
+
+Result CommandSender::sendGauche() {
+	return sendCommand("gauche");
+}
+
 Result CommandSender::sendPrend(ResourceType resource) {
 	return sendCommand("prend", toProtocolString(resource));
+}
+
+Result CommandSender::sendPose(ResourceType resource) {
+	return sendCommand("pose", toProtocolString(resource));
+}
+
+Result CommandSender::sendExpulse() {
+	return sendCommand("expulse");
+}
+
+Result CommandSender::sendBroadcast(const std::string& message) {
+	return sendCommand("broadcast", message);
+}
+
+Result CommandSender::sendIncantation() {
+	return sendCommand("incantation");
+}
+
+Result CommandSender::sendFork() {
+	return sendCommand("fork");
+}
+
+Result CommandSender::sendConnectNbr() {
+	return sendCommand("connect_nbr");
 }
 
 Result CommandSender::sendPrendNourriture() {

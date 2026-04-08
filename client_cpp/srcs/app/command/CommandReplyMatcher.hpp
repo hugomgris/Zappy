@@ -40,4 +40,13 @@ class CommandReplyMatcher {
 		static MatchResult matchVoirReply(const std::string& text);
 		static MatchResult matchInventaireReply(const std::string& text);
 		static MatchResult matchPrendReply(const std::string& text);
+		static MatchResult matchPoseReply(const std::string& text);
+		static MatchResult matchAvanceReply(const std::string& text);
+		static MatchResult matchDroiteReply(const std::string& text);
+		static MatchResult matchGaucheReply(const std::string& text);
+		static MatchResult matchExpulseReply(const std::string& text);
+		static MatchResult matchBroadcastReply(const std::string& text);
+		static MatchResult matchIncantationReply(const std::string& text);
+		static MatchResult matchForkReply(const std::string& text);
+		static MatchResult matchConnectNbrReply(const std::string& text);
 };
