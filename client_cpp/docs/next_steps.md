@@ -1,5 +1,45 @@
 # Next Steps Plan: Command Management (Post-Integration)
 
+## 0) Progress Update (2026-04-08)
+
+Major progress landed since this plan was first drafted.
+
+### Newly Completed
+
+- Milestone F1 (Intent submission bridge in `ClientRunner`) is complete.
+  - `submitIntent(...)` now translates intent types into command requests.
+  - Queue-decline (`id == 0`) is handled and logged.
+- Milestone F2 (event-driven policy seam) is complete at infrastructure level.
+  - Added a pluggable `DecisionPolicy` interface (`onTick`, `onCommandEvent`).
+  - Added default `PeriodicScanPolicy` and wired loop mode to policy-driven intent emission.
+  - Added command-layer testing hooks (`tickCommandLayerForTesting`, `processManagedTextFrameForTesting`) to validate flow without requiring a live socket.
+- Intent/command correlation is now explicit.
+  - `ClientRunner` tracks command-id -> intent description mapping.
+  - Completions emit `IntentResult` records and optional `IntentCompletionHandler` callbacks.
+
+### Test Delta
+
+- Previous baseline: **85/85 passing**.
+- Current baseline: **125/125 passing**.
+- Added:
+  - `ClientRunnerIntentIntegrationTest` (intent -> dispatch -> frame -> completion correlation)
+  - `PeriodicScanPolicyTest` (policy cadence behavior)
+  - `ClientRunnerIntentIntegrationTest` soak/regression coverage (queue saturation, 100-cycle stability)
+  - `WorldStateTest` (state storage and inventory parsing)
+  - `WorldModelPolicyTest` (state updates and refresh cadence)
+  - `ClientRunnerWorldModelPolicyIntegrationTest` (runner + world model integration)
+  - `NavigationPlannerTest` (target selection, travel planning, exploration fallback)
+  - `ResourceStrategyTest` (food emergency and deficit-based pickup priorities)
+  - `IncantationStrategyTest` (readiness decisions: none/summon/incantate)
+  - `TeamBroadcastProtocolTest` (team message parsing and legacy compatibility)
+  - `ClientRunnerTeamMessageIntegrationTest` (unsolicited message routing to policy)
+
+### Remaining for Milestone F
+
+- F3 soak/regression acceptance is complete.
+  - Deterministic integration coverage is in place.
+  - Long-run soak targets (100-cycle saturation/stability) are now passing.
+
 ## 1) Status Snapshot
 
 This phase is **complete**.
@@ -16,12 +56,32 @@ Completed:
 - Milestone E (AI-facing intent API): **✓ Done**
   - E1: Intent abstraction (7 concrete types with polymorphic base) ✓
   - E2: Event/outcome notification (callback-based observer pattern) ✓
-- Baseline tests: **83/83 passing** (5 new intent flow integration tests + 78 from D-phase).
+- Milestone F (policy integration): **✓ Complete**
+  - F1 intent submission in runner ✓
+  - F2 event-driven decision seam + policy abstraction ✓
+  - F3 soak/regression hardening ✓
+- Milestone I1 (world-state model + memory): **✓ Complete**
+  - `WorldState` stores observations, inventory snapshots, and broadcasts ✓
+  - `WorldModelPolicy` updates the model from successful command events ✓
+  - Refresh cadence emits `voir`/`inventaire` when state is missing or stale ✓
+- Milestone I2 (navigation + local planning): **✓ Complete**
+  - `NavigationPlanner` targets visible resources and emits movement/take plans ✓
+  - `WorldModelPolicy` replans or falls back to exploration when needed ✓
+- Milestone I3 (resource strategy): **✓ Complete**
+  - `ResourceStrategy` enforces food emergency behavior before non-food pickups ✓
+  - Deficit-based stone priorities are now injected into `NavigationPlanner` ✓
+  - `WorldModelPolicy` now plans against dynamic priorities instead of static ordering ✓
+- Milestone I4 (incantation readiness and timing): **✓ Complete**
+  - Added `RequestIncantation` intent and runner mapping to `CommandType::Incantation` ✓
+  - Added `IncantationStrategy` (food/resources/player-count readiness) ✓
+  - `WorldModelPolicy` now emits summon broadcast or incantation with anti-spam cooldowns ✓
+  - `WorldState` now tracks `player` counts per visible tile (including current tile) ✓
+- Baseline tests: **125/125 passing**.
 
 Not done yet (optional enhancements):
 
 - Extended command-level integration scenarios (delayed reply timing tests, wrong reply rejection paths, retry-success sequences).
-- Milestone F (policy layer integration with intent submissions).
+- Milestone F3 long-run soak/saturation validation (100+ cycles with stronger invariants).
 
 
 ## 2) Current Architecture
@@ -29,7 +89,11 @@ Not done yet (optional enhancements):
 - `WebsocketClient`: transport (TLS/WebSocket) only.
 - `CommandSender`: payload formatting + transport send.
 - `CommandManager`: queue/in-flight/completion lifecycle, timeout/retry, text-frame matching.
-- `ClientRunner`: high-level runtime loop, periodic scheduling, manager tick/frame forwarding, policy decisions from completed outcomes.
+- `DecisionPolicy`: pluggable decision abstraction (`onTick`, `onCommandEvent`).
+- `PeriodicScanPolicy`: default cadence-based policy for loop mode.
+- `WorldState`: reusable world-memory store for observations and inventory counts.
+- `WorldModelPolicy`: first stateful policy layer that updates world memory from events.
+- `ClientRunner`: orchestrates transport + manager + policy, owns intent correlation and completion reporting.
 
 ## 3) Remaining Work by Milestone
 
@@ -165,7 +229,7 @@ Integration tests verify:
 
 ## 5) Immediate Action Plan
 
-**Milestones A through E Complete!**
+**Milestones A through E Complete, Milestone F mostly landed.**
 
 The command management infrastructure is now feature-complete:
 
@@ -174,58 +238,11 @@ The command management infrastructure is now feature-complete:
 - ✓ Integration into ClientRunner (C)
 - ✓ Protocol validation and safety hardening (D)
 - ✓ Intent abstraction and event notification (E)
+- ✓ Intent submission + policy seam integration (F1/F2)
 
-**Test Status**: 85/85 passing.
+**Test Status**: 118/118 passing.
 
-## 6) Recommended Next Batch: Milestones F-I
-
-### Milestone F: Policy Layer Integration with Intent Submission
-
-**Priority: High** — This bridges the abstraction layers and enables intelligent behavior.
-
-#### F1) Intent Submission in ClientRunner
-- Add `submitIntent(const std::shared_ptr<IntentRequest>&)` method to ClientRunner
-- Translate intent type to CommandType + argument string
-  - `RequestVoir()` → CommandType::Voir, ""
-  - `RequestTake(ResourceType::Linemate)` → CommandType::Prend, "linemate"
-  - `RequestBroadcast("hello")` → CommandType::Broadcast, "hello"
-- Handle queue overflow feedback (manager returns 0 on overflow)
-- Log intent submissions with intent description for debugging
-
-**Acceptance**:
-- ClientRunner successfully converts all 7 intent types to manager.enqueue() calls
-- Overflow conditions gracefully declined in logs (not crashed)
-- Intent IDs correlate with command completions for tracing
-
-#### F2) Event-Driven Decision Loop
-- Register event handler in ClientRunner constructor:
-  ```cpp
-  manager.setEventHandler([this](const CommandEvent& e){ onCommandComplete(e); });
-  ```
-- Implement handler that processes command outcomes and chains intents:
-  - On Voir success: Extract visible players/resources, decide next action
-  - On Inventaire success: Check if resource targets are available
-  - On Take/Place/Move success: Update internal state model
-  - On any failure: Log error and trigger recovery policy
-- Build simple state machine for multi-step behaviors (e.g., "move → voir → take")
-
-**Acceptance**:
-- Event handler is called on every command completion
-- Intent chaining works (voir → take decision) in single-threaded event loop
-- State updates from event outcomes are visible in next tick
-
-#### F3) Soak/Regression Testing
-- Create `ClientRunnerIntegrationTest` validating 5+ command cycles
-- Test queue saturation (enqueue 32 commands, verify overflow rejection)
-- Verify no commands silently drop over 100+ cycles
-- Confirm stale timeout protection triggers for long-running commands
-
-**Acceptance**:
-- 100+ consecutive command cycles complete without crashes or corruption
-- Queue overflow is gracefully rejected and logged
-- All commands eventually complete or timeout with diagnostics
-
----
+## 6) Recommended Next Batch: Milestones G-I
 
 ### Milestone G: Advanced Command Scenarios (Optional Polish)
 
@@ -287,37 +304,44 @@ The command management infrastructure is now feature-complete:
 - Decisions use stored state, not only immediate last frame
 
 #### I2) Navigation + Local Planning
-- Implement movement planner for target acquisition:
-  - Select target tile from world model
-  - Convert target into movement sequence (turn + avance)
-  - Re-plan when new voir contradicts old assumptions
-- Add fallback exploration policy when no good target exists.
+- Implemented the first navigation planner on top of `WorldState`:
+  - Selects a target tile from the latest visible resources
+  - Converts that target into movement sequences (`turn` + `avance`)
+  - Re-plans when new `voir` contradicts old assumptions
+  - Falls back to exploration when no good target exists
 
 **Acceptance**:
 - Bot can repeatedly navigate to chosen targets without getting stuck in simple loops
 - Planner recovers when path assumptions are invalidated by fresh observations
 
+Status: **COMPLETE**
+
 #### I3) Resource Strategy
-- Implement priority system for pickups by game phase:
-  - Survival-first food thresholds
-  - Level-up resource sets for next incantation
-  - Ignore low-value resources when inventory pressure is high
-- Add drop policy for incantation preparation tiles.
+- Implemented dynamic pickup priorities:
+  - Survival-first food emergency threshold
+  - Food comfort target before switching to stone deficits
+  - Deficit-based stone targets for next progression set
+- Drop/staging policy remains for I4+ integration.
 
 **Acceptance**:
-- Bot maintains food above configured emergency threshold in normal conditions
-- Bot actively gathers required stones for next level instead of random picks
+- Bot maintains food above configured emergency threshold in normal conditions ✓
+- Bot actively gathers required stones for next level instead of random picks ✓
+
+Status: **COMPLETE**
 
 #### I4) Incantation Readiness and Timing
-- Add rule engine for ascension decisions:
-  - Check level-specific resource requirements
-  - Check nearby teammate count (or summon via broadcast)
-  - Trigger incantation only when preconditions hold
-- Add abort/defer policy if risk is high (low food, hostile situation, missing teammates).
+- Implemented readiness and timing rule engine:
+  - Checks minimum food and required inventory resources
+  - Checks nearby teammate availability via current-tile `player` count from vision
+  - Triggers `RequestIncantation` only when preconditions hold
+  - Triggers summon broadcast fallback when resources are ready but players are missing
+  - Applies retry/summon cooldown windows to prevent spam loops
 
 **Acceptance**:
-- Bot attempts incantation only when requirements are met
-- Failed/incapable incantation attempts produce clear recovery actions
+- Bot attempts incantation only when requirements are met ✓
+- Failed/incapable incantation attempts produce clear recovery actions (summon fallback + cooldown behavior) ✓
+
+Status: **COMPLETE**
 
 #### I5) Team Coordination via Broadcast
 - Implement lightweight team protocol:
@@ -327,8 +351,10 @@ The command management infrastructure is now feature-complete:
 - Parse teammate broadcasts into actionable intents.
 
 **Acceptance**:
-- Bot emits and reacts to team messages for at least one cooperative scenario
-- Coordination decisions are visible in logs (why message was sent/acted on)
+- Bot emits and reacts to team messages for at least one cooperative scenario ✓
+- Coordination decisions are visible in logs (why message was sent/acted on) ✓
+
+Status: **COMPLETE**
 
 #### I6) Gameplay Validation Harness
 - Add scenario-driven integration tests (mocked frame sequences):
@@ -345,10 +371,9 @@ The command management infrastructure is now feature-complete:
 
 ## 7) Delivery Order Recommendation
 
-1. Complete Milestone F (intent submission + event-driven loop)
-2. Implement Milestone I1-I3 (state, planning, resource policy)
-3. Implement Milestone I4-I5 (ascension logic + team coordination)
-4. Validate with Milestone I6, then move to G/H polish as needed
+1. Validate with Milestone I6 gameplay harness
+2. Move to G/H polish as needed
+3. Move to G/H polish as needed
 
 ## 8) Session Summary
 
@@ -356,7 +381,19 @@ The command management infrastructure is now feature-complete:
 
 - ✅ Completed Milestone D (Reliability Hardening) with protocol validation, queue guardrails, stale detection, comprehensive logging
 - ✅ Completed Milestone E (AI-Facing API Bridge) with Intent abstraction layer (7 types) and event notification system
-- ✅ All tests passing: **85/85**
+- ✅ Implemented Milestone F1/F2 policy integration foundations (policy interface + runner intent correlation)
+- ✅ Completed Milestone F3 soak/regression coverage
+- ✅ Added runner/policy integration tests and soak tests
+- ✅ Completed Milestone I1 world-state foundation
+- ✅ Completed Milestone I2 navigation + local planning
+- ✅ Completed Milestone I3 resource strategy (food emergency + deficit priorities)
+- ✅ Completed Milestone I4 incantation readiness and timing
+- ✅ Added world-state and world-model tests
+- ✅ Added navigation planner tests
+- ✅ Added resource strategy tests
+- ✅ Added incantation strategy tests
+- ✅ Completed Milestone I5 team coordination via broadcast protocol
+- ✅ All tests passing: **125/125**
 - ✅ Documentation updated with architectural diagrams and implementation narrative
 
 **Handoff State:**
@@ -364,12 +401,19 @@ The command management infrastructure is now feature-complete:
 - Command infrastructure is feature-complete and production-ready
 - 7 concrete intent types defined and tested
 - Event callback system fully wired into CommandManager
-- Makefile updated with all new sources
-- Next session can immediately start on Milestone F without setup work
+- Policy seam and intent completion correlation are wired in `ClientRunner`
+- World-state memory is now tracked in `WorldState` and updated by `WorldModelPolicy`
+- Navigation planning now uses strategy-injected priorities from `WorldState` inventory + vision
+- Incantation decisions now use readiness checks + summon fallback in `WorldModelPolicy`
+- Makefile updated with policy sources
+- Next session can immediately start on I6 gameplay validation harness
+
+Now that I4 is complete, the next useful tranche is I5 team coordination via broadcast.
 
 **Debugging/Reference Notes:**
 
 - If tests fail after changes, verify Makefile includes app/intent/*.cpp and app/event/*.cpp
+- Also verify policy source inclusion (`app/policy/PeriodicScanPolicy.cpp`) in Makefile
 - CommandEvent::statusName() provides full status-to-string mapping for logging
 - CommandManager::_eventHandler can be nullptr; notifyCompletion() checks before calling
 - Intent resource types use free function `toProtocolString()`, not class method

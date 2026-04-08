@@ -37,7 +37,7 @@ GTEST_MAIN_LIB  := $(GTEST_DIR)/build/lib/libgtest_main.a
 
 MAIN_SRC        := main.cpp
 HELPER_SRC		:= helpers/Parser.cpp helpers/Logger.cpp
-APP_SRC			:= app/ClientBootstrap.cpp app/ClientRunner.cpp app/CommandSender.cpp app/CommandManager.cpp app/command/CommandReplyMatcher.cpp app/intent/Intent.cpp app/event/CommandEvent.cpp app/policy/PeriodicScanPolicy.cpp
+APP_SRC			:= app/ClientBootstrap.cpp app/ClientRunner.cpp app/CommandSender.cpp app/CommandManager.cpp app/command/CommandReplyMatcher.cpp app/intent/Intent.cpp app/event/CommandEvent.cpp app/state/WorldState.cpp app/policy/IncantationStrategy.cpp app/policy/NavigationPlanner.cpp app/policy/PeriodicScanPolicy.cpp app/policy/ResourceStrategy.cpp app/policy/TeamBroadcastProtocol.cpp app/policy/WorldModelPolicy.cpp
 NET_SRC			:= net/FrameCodec.cpp net/SecureSocket.cpp net/TcpSocket.cpp net/TlsContext.cpp net/WebsocketClient.cpp
 ALL_SRC         := $(MAIN_SRC) $(CORE_SRC) $(HELPER_SRC) $(APP_SRC) $(NET_SRC)
 

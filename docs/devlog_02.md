@@ -6,6 +6,12 @@
 3. [Commander Takes the Wheel](#23---commander-takes-the-wheel)
 4. [Hardening the Protocol](#24---hardening-the-protocol)
 5. [AI-Facing API Bridge](#25---ai-facing-api-bridge)
+6. [Games are Political (or Policy Layer Integration)](#26---games-are-political-or-policy-layer-integration)
+7. [Correlation and Validation Upgrade](#27---correlation-and-validation-upgrade)
+8. [World-State Foundation](#28---world-state-foundation)
+9. [Navigation and Local Planning](#29---navigation-and-local-planning)
+10. [Incantation Readiness and Timing](#210---incantation-readiness-and-timing)
+11. [Team Coordination via Broadcast](#211---team-coordination-via-broadcast)
 
 
 <br>
@@ -346,3 +352,125 @@ Just to not get lost in our own sauce, I think its a good idea if we stop, make 
           │ (validation)   │  │ (callback)  │
           └────────────────┘  └─────────────┘
 ```
+
+<br>
+<br>
+
+# 2.6 - Games are Political (or Policy Layer Integration)
+
+Before moving into full gameplay behavior, the client architecture needs to be pushed one step further so that runtime orchestration can be policy-driven instead of hardcoded in the runner loop.
+
+The key addition in this very moment is a new `DecisionPolicy` abstraction with two hooks:
+
+- `onTick(nowMs)`: emits intents on periodic cadence
+- `onCommandEvent(nowMs, event, intentResult)`: reacts to outcomes and can chain follow-up intents
+
+This gives us a clean contract between command infrastructure and future AI behavior. The runner no longer needs to embed concrete decision rules to keep the loop alive. To keep current behavior, we also added a default `PeriodicScanPolicy` used by loop mode when no explicit policy is injected. It reproduces the old periodic scan behavior (`voir` and `inventaire`) while keeping that behavior outside transport orchestration. Additionally, `ClientRunner` gained command-layer APIs so integration tests can run deterministic command cycles without requiring a real websocket session:
+
+- `tickCommandLayerForTesting(...)`
+- `processManagedTextFrameForTesting(...)`
+
+That is an important enabler for faster iteration on the decision layer.
+
+<br>
+<br>
+
+# 2.7 - Correlation and Validation Upgrade
+
+Another important improvement that's needed before going into full gameplay implementations mode is making intent/command correlation explicit in `ClientRunner`. When intents are submitted, the runner now stores command id to intent description mappings. When a command completes, it emits/records an `IntentResult` tied to the originating intent semantics (instead of only low-level command status). This means we can now:
+
+- correlate policy decisions to concrete command completions,
+- consume completion records through a dedicated queue (`popCompletedIntent`),
+- and subscribe to completion callbacks via `setIntentCompletionHandler(...)`.
+
+In practical terms, this closes a key observability gap: policy code can reason about outcomes in terms of intent language, not just protocol language. Which also makes it *easier*, or at least *clearer* for when the gameplay programming moment arrives.
+
+<br>
+<br>
+
+# 2.8 - World-State Foundation
+
+With the policy seam stable, the next step was to stop treating command outcomes as isolated events and start keeping a reusable memory of the world. That means the client now has a dedicated `WorldState` model that stores:
+
+- the last successful `voir` payload,
+- the last successful `inventaire` payload,
+- parsed inventory counts by resource type,
+- and the last broadcast-related semantic payload.
+
+To make that state useful, `WorldModelPolicy` was introduced as the first stateful policy implementation. It consumes command completion events, updates the world model, and asks for fresh `voir` / `inventaire` data when observations are missing or stale.
+
+The important distinction here is that we are no longer just moving commands around correctly. We now have a real memory layer that future planning logic can consult.
+
+<br>
+<br>
+
+# 2.9 - Navigation and Local Planning
+
+The first gameplay-oriented layer on top of the world model is now in place. Rather than blindly alternating between refresh commands, the client can now inspect the latest visible resources, pick a target, and translate that target into a small movement plan.
+
+The new `NavigationPlanner` is intentionally simple:
+
+- it prefers visible resources in a fixed priority order,
+- it converts a target tile into `turn` and `avance` steps,
+- it treats the current tile as a `take` opportunity,
+- and it falls back to a basic exploration step when nothing worth pursuing is visible.
+
+`WorldModelPolicy` now keeps that planner in the loop, clears the plan when fresh vision arrives, and updates pose memory when movement and turn commands succeed. That gives us the first closed loop where observations drive a plan, and plan completion updates the model for the next decision.
+
+This is still a deliberately conservative planner, but it is the first point where the client starts acting like a bot instead of a command scheduler.
+
+<br>
+<br>
+
+# 2.10 - Incantation Readiness and Timing
+
+With local planning and resource strategy in place, the next step was to make incantation a readiness-driven decision instead of a blind command. The policy layer now evaluates whether ascension should be attempted immediately, deferred, or converted into a summon request.
+
+This update landed in three parts:
+
+- Added a dedicated `RequestIncantation` intent so ascension attempts stay in intent language through policy and runner flows.
+- Added `IncantationStrategy` with explicit readiness rules based on:
+	- minimum safe food,
+	- required inventory set,
+	- minimum players on the current tile.
+- Extended `WorldState` vision parsing to count `player` tokens per tile, exposing `currentTilePlayerCount()` to the policy layer.
+
+`WorldModelPolicy` now evaluates incantation readiness before normal navigation planning:
+
+- when preconditions are met, it emits `RequestIncantation`;
+- when resources are ready but player count is insufficient, it emits a summon broadcast;
+- when preconditions are not met, it falls back to gather/navigation behavior.
+
+Timing guardrails were added as well:
+
+- incantation retry delay,
+- summon broadcast cooldown.
+
+Those delays prevent spam loops and create a safer transition into team-coordination behavior for the next milestone.
+
+<br>
+<br>
+
+# 2.11 - Team Coordination via Broadcast
+
+The next milestone after readiness timing was to turn broadcasts into an actual coordination channel, not only a summon fallback. The client now understands a lightweight team protocol and can react to teammate messages in policy space.
+
+Three concrete pieces landed:
+
+- Added `TeamBroadcastProtocol` as a shared parser for team messages. It supports both new structured messages (`team:need:players`, `team:need:food`, role announcements) and legacy summon phrasing (`need_players_for_incantation`).
+- Extended `WorldModelPolicy` with team-coordination rules:
+	- parse incoming team broadcasts,
+	- apply food-safety-first priority rules,
+	- emit cooperative responses (`team:on_my_way`, `team:offer:food`) under cooldown,
+	- periodically publish local role intent (`team:role:gatherer`).
+- Updated `ClientRunner` frame handling so unsolicited server frames with `"type":"message"` are routed into policy events (`CommandType::Broadcast`) even when there is no in-flight command waiting for completion.
+
+This keeps command correlation intact while letting the policy react to teammate communication as first-class input.
+
+Coverage for this milestone includes:
+
+- `TeamBroadcastProtocolTest` for protocol parsing and compatibility.
+- `WorldModelPolicyTest` cases for incoming team requests, food-priority conflict resolution, and role-cadence broadcasts.
+- `ClientRunnerTeamMessageIntegrationTest` for end-to-end unsolicited-message routing from frame to follow-up intent dispatch.
+
+With this in place, coordination decisions are now visible in logs and deterministic tests, and the policy can participate in at least one cooperative scenario without introducing transport-level coupling.

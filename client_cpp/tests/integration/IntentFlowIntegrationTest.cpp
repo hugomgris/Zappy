@@ -113,6 +113,9 @@ TEST_F(IntentFlowIntegrationTest, IntentTypesConvertToReadableDescriptions) {
 
 	auto breq = std::make_unique<RequestBroadcast>("hello world");
 	EXPECT_EQ(breq->description(), "RequestBroadcast(\"hello world\")");
+
+	auto incReq = std::make_unique<RequestIncantation>();
+	EXPECT_EQ(incReq->description(), "RequestIncantation");
 }
 
 TEST_F(IntentFlowIntegrationTest, CommandEventConvenienceMethodsReturnCorrectStatus) {

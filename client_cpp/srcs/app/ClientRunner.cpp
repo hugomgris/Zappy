@@ -11,6 +11,7 @@
 #include "net/WebsocketClient.hpp"
 
 #include <openssl/opensslv.h>
+#include <cctype>
 #include <chrono>
 #include <memory>
 #include <optional>
@@ -66,6 +67,48 @@ namespace {
 			case CommandType::ConnectNbr: return "ConnectNbr";
 			default: return "Unknown";
 		}
+	}
+
+	std::optional<std::string> extractJsonStringField(const std::string& text, const std::string& fieldName) {
+		const std::string keyToken = "\"" + fieldName + "\"";
+		const std::size_t keyPos = text.find(keyToken);
+		if (keyPos == std::string::npos) {
+			return std::nullopt;
+		}
+
+		const std::size_t colonPos = text.find(':', keyPos + keyToken.size());
+		if (colonPos == std::string::npos) {
+			return std::nullopt;
+		}
+
+		std::size_t valuePos = colonPos + 1;
+		while (valuePos < text.size() && std::isspace(static_cast<unsigned char>(text[valuePos]))) {
+			++valuePos;
+		}
+
+		if (valuePos >= text.size() || text[valuePos] != '"') {
+			return std::nullopt;
+		}
+
+		++valuePos;
+		std::size_t closePos = valuePos;
+		while (closePos < text.size()) {
+			if (text[closePos] == '"' && (closePos == valuePos || text[closePos - 1] != '\\')) {
+				return text.substr(valuePos, closePos - valuePos);
+			}
+			++closePos;
+		}
+
+		return std::nullopt;
+	}
+
+	std::optional<std::string> extractIncomingBroadcastArg(const std::string& text) {
+		const std::optional<std::string> type = extractJsonStringField(text, "type");
+		if (!type.has_value() || *type != "message") {
+			return std::nullopt;
+		}
+
+		return extractJsonStringField(text, "arg");
 	}
 }
 
@@ -289,6 +332,9 @@ std::uint64_t ClientRunner::submitIntentAt(const IntentRequest& intent, std::int
 	if (const RequestBroadcast* broadcast = dynamic_cast<const RequestBroadcast*>(&intent)) {
 		return enqueueTracked(CommandType::Broadcast, broadcast->message);
 	}
+	if (dynamic_cast<const RequestIncantation*>(&intent) != nullptr) {
+		return enqueueTracked(CommandType::Incantation);
+	}
 
 	Logger::warn("submitIntentAt received unsupported intent type");
 	return 0;
@@ -349,7 +395,30 @@ Result ClientRunner::processManagedTextFrame(const std::string& text, int64_t no
 		return Result::success();
 	}
 
-	_manager->onServerTextFrame(text);
+	const bool consumedByManager = _manager->onServerTextFrame(text);
+
+	if (!consumedByManager && _policy) {
+		const std::optional<std::string> incomingBroadcast = extractIncomingBroadcastArg(text);
+		if (incomingBroadcast.has_value()) {
+			CommandEvent event;
+			event.commandId = 0;
+			event.commandType = CommandType::Broadcast;
+			event.status = CommandStatus::Success;
+			event.details = *incomingBroadcast;
+
+			std::vector<std::shared_ptr<IntentRequest>> followUps = _policy->onCommandEvent(nowMs, event, std::nullopt);
+			for (const std::shared_ptr<IntentRequest>& followUp : followUps) {
+				if (!followUp) {
+					continue;
+				}
+				const std::uint64_t id = submitIntentAt(*followUp, nowMs);
+				if (id == 0) {
+					Logger::warn("Policy follow-up intent declined: " + followUp->description());
+				}
+			}
+		}
+	}
+
 	return handleCompletedCommands(nowMs);
 }
 

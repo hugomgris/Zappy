@@ -79,6 +79,13 @@ class RequestBroadcast : public IntentRequest {
 		std::string message;
 };
 
+// Concrete intent: Trigger incantation
+class RequestIncantation : public IntentRequest {
+	public:
+		RequestIncantation() = default;
+		std::string description() const override { return "RequestIncantation"; }
+};
+
 // Intent result: Outcome of a completed intent
 struct IntentResult {
 	std::uint64_t	id = 0;
