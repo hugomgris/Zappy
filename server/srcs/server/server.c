@@ -156,7 +156,7 @@ void m_server_notify_observers(int fd, cJSON* notification)
         return ;
 
     cJSON_AddNumberToObject(notification, "player_id", fd);
-    msg = cJSON_Print(notification);
+    msg = cJSON_PrintUnformatted(notification);
     if (!msg)
         return ;
 
@@ -187,7 +187,7 @@ int server_create_response_msg(int fd, char *cmd, char *arg, char* status)
     if (status)
         cJSON_AddStringToObject(response, "status", status);
 
-    json = cJSON_Print(response);
+    json = cJSON_PrintUnformatted(response);
     if (!json)
     {
         cJSON_Delete(response);
@@ -217,7 +217,7 @@ int server_create_response_to_command(int fd, char *cmd, char *arg, char* status
     if (status)
         cJSON_AddStringToObject(response, "status", status);
 
-    json = cJSON_Print(response);
+    json = cJSON_PrintUnformatted(response);
     if (!json)
     {
         cJSON_Delete(response);
@@ -249,7 +249,7 @@ static int m_create_json_response(int fd, char* type, char* msg, char* args)
     if (args)
         cJSON_AddStringToObject(response, "args", args);
 
-    json = cJSON_Print(response);
+    json = cJSON_PrintUnformatted(response);
     if (!json)
     {
         cJSON_Delete(response);
@@ -397,7 +397,7 @@ static int m_handle_login_client(int fd, cJSON *root)
     
     cJSON_AddItemToObject(response, "map_size", map_size);
     
-    json = cJSON_Print(response);
+    json = cJSON_PrintUnformatted(response);
     if (!json)
     {
         cJSON_Delete(response);

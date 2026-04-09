@@ -207,7 +207,6 @@ int main(int argc, char **argv)
     printf("Server started on port %d\n", args.port);
 
     /* if server closes us something weird could happen */
-    signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, signal_handler);
     signal(SIGUSR1, signal_handler);
     main_loop();
