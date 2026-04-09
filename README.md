@@ -38,3 +38,10 @@ Useful environment variables:
 - `ZAPPY_TEAM_ONE_NAME` and `ZAPPY_TEAM_TWO_NAME`
 - `ZAPPY_MAX_SECONDS`
 - `ZAPPY_LOG_DIR`
+- `ZAPPY_GAME_TICK_RATE` (server time unit; higher means faster game ticks, default: `20`)
+- `ZAPPY_SERVER_TOTAL_CLIENTS` (optional override for launcher capacity checks; otherwise read from `server/config` `NUMBER_OF_CLIENTS`)
+- `ZAPPY_DEEP_TRACE` (`1` enables high-detail client telemetry for TX/RX frames, command lifecycle, state parsing, and intents)
+
+You can also place these settings in [run_session.local.env](run_session.local.env) and run `./run_session.sh` with no inline env prefix. Copy [run_session.local.env.example](run_session.local.env.example) to `run_session.local.env` and edit the values you want.
+
+Note: with the current server setup, per-team capacity is derived as `NUMBER_OF_CLIENTS / 2`. If requested clients exceed that value, `run_session.sh` now clamps and prints a warning.

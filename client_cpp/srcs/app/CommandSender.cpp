@@ -73,9 +73,13 @@ Result CommandSender::sendCommand(const std::string& cmd, const std::string& arg
 }
 
 Result CommandSender::sendRawJson(const std::string& payload, const std::string& context) {
+	Logger::trace("TX", context + " payload=" + payload);
 	const IoResult sendRes = _ws.sendText(payload);
 	if (sendRes.status != NetStatus::Ok) {
+		Logger::trace("TX", context + " send failed status=" + std::to_string(static_cast<int>(sendRes.status))
+			+ " message=" + sendRes.message);
 		return Result::failure(ErrorCode::NetworkError, "Failed to queue " + context + " frame: " + sendRes.message);
 	}
+	Logger::trace("TX", context + " queued successfully");
 	return Result::success();
 }

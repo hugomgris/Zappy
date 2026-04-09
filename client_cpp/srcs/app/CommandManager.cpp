@@ -3,6 +3,27 @@
 
 #include <utility>
 
+namespace {
+	std::string commandTypeName(CommandType type) {
+		switch (type) {
+			case CommandType::Login: return "Login";
+			case CommandType::Avance: return "Avance";
+			case CommandType::Droite: return "Droite";
+			case CommandType::Gauche: return "Gauche";
+			case CommandType::Voir: return "Voir";
+			case CommandType::Inventaire: return "Inventaire";
+			case CommandType::Prend: return "Prend";
+			case CommandType::Pose: return "Pose";
+			case CommandType::Expulse: return "Expulse";
+			case CommandType::Broadcast: return "Broadcast";
+			case CommandType::Incantation: return "Incantation";
+			case CommandType::Fork: return "Fork";
+			case CommandType::ConnectNbr: return "ConnectNbr";
+			default: return "Unknown";
+		}
+	}
+}
+
 CommandManager::CommandManager(DispatchFn dispatch)
 	: _dispatch(std::move(dispatch)), _nextId(1) {}
 
@@ -16,6 +37,10 @@ std::uint64_t CommandManager::enqueue(CommandType type, std::int64_t nowMs, cons
 
 	const std::uint64_t id = _nextId++;
 	_pending.push_back(CommandRequest::make(id, type, nowMs, arg));
+	Logger::trace("CMD_ENQUEUE", "id=" + std::to_string(id)
+		+ " type=" + commandTypeName(type)
+		+ " arg='" + arg + "'"
+		+ " pending=" + std::to_string(_pending.size()));
 	Logger::info("CommandManager: Enqueued command " + std::to_string(id) +
 		" (type=" + std::to_string(static_cast<int>(type)) + "), queue size=" + std::to_string(_pending.size()));
 	return id;
@@ -28,6 +53,10 @@ Result CommandManager::tick(std::int64_t nowMs) {
 	checkStaleFlight(nowMs);
 
 	if (_inFlight && nowMs >= _inFlight->deadlineAtMs) {
+		Logger::trace("CMD_TIMEOUT", "id=" + std::to_string(_inFlight->id)
+			+ " type=" + commandTypeName(_inFlight->type)
+			+ " retry=" + std::to_string(_inFlight->retryCount)
+			+ "/" + std::to_string(_inFlight->spec.maxRetries));
 		if (_inFlight->retryCount < _inFlight->spec.maxRetries) {
 			_inFlight->retryCount += 1;
 			_inFlight->deadlineAtMs = nowMs + _inFlight->spec.timeoutMs;
@@ -58,6 +87,10 @@ bool CommandManager::onServerTextFrame(const std::string& text) {
 		return false;
 	}
 
+	Logger::trace("RX", "inFlight id=" + std::to_string(_inFlight->id)
+		+ " type=" + commandTypeName(_inFlight->type)
+		+ " frame=" + text);
+
 	// Use new matcher for comprehensive validation
 	MatchResult matchResult = CommandReplyMatcher::validateReply(_inFlight->type, text);
 
@@ -84,6 +117,8 @@ bool CommandManager::onServerTextFrame(const std::string& text) {
 		// (it might be for something else or out-of-order)
 		Logger::info("CommandManager: Ignoring unexpected reply for command " +
 			std::to_string(_inFlight->id) + ": " + matchResult.details);
+		Logger::trace("CMD_MATCH", "unexpected for id=" + std::to_string(_inFlight->id)
+			+ " details=" + matchResult.details);
 		return false;
 	}
 
@@ -135,6 +170,10 @@ void CommandManager::startNextIfIdle() {
 
 	_inFlight = _pending.front();
 	_pending.pop_front();
+	Logger::trace("CMD_DISPATCH", "start id=" + std::to_string(_inFlight->id)
+		+ " type=" + commandTypeName(_inFlight->type)
+		+ " pendingAfterPop=" + std::to_string(_pending.size())
+		+ " deadline=" + std::to_string(_inFlight->deadlineAtMs));
 
 	const Result dispatchRes = dispatchInFlight();
 	if (!dispatchRes.ok()) {
@@ -176,6 +215,10 @@ void CommandManager::completeInFlight(CommandStatus status, const std::string& d
 	result.status = status;
 	result.details = details;
 	_completed.push_back(result);
+	Logger::trace("CMD_DONE", "id=" + std::to_string(result.id)
+		+ " type=" + commandTypeName(result.type)
+		+ " status=" + std::to_string(static_cast<int>(result.status))
+		+ " details=" + result.details);
 	
 	Logger::info("CommandManager: Command " + std::to_string(_inFlight->id) +
 		" completed with status=" + std::to_string(static_cast<int>(status)));

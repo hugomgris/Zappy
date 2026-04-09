@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 
 enum class TeamSignalKind {
@@ -16,6 +17,7 @@ enum class TeamSignalKind {
 struct TeamSignal {
 	TeamSignalKind kind = TeamSignalKind::Unknown;
 	std::string rawMessage;
+	std::optional<int> direction;
 };
 
 class TeamBroadcastProtocol {

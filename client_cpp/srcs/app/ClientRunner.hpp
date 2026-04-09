@@ -30,6 +30,7 @@ class ClientRunner {
 		std::unordered_map<std::uint64_t, std::string>	_intentTypeByCommandId;
 		std::deque<IntentResult>			_completedIntents;
 		bool								_sawDieEvent;
+		std::int64_t						_lastCmdLayerTraceAtMs;
 	
 	private:
 		static int64_t nowMs();

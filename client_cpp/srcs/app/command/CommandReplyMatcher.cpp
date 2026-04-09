@@ -55,6 +55,17 @@ namespace {
 				"Expected '" + expectedCmd + "' command, got '" + *cmd + "'");
 		}
 
+		auto status = extractQuotedValue(text, "status");
+		if (status) {
+			if (*status == "ko") {
+				return MatchResult(false, CommandStatus::ServerError, text);
+			}
+			if (*status != "ok") {
+				return MatchResult(false, CommandStatus::UnexpectedReply,
+					"Expected status 'ok'/'ko' in " + expectedCmd + " reply, got '" + *status + "'");
+			}
+		}
+
 		return MatchResult(true, CommandStatus::Success, text);
 	}
 }
@@ -137,19 +148,32 @@ bool CommandReplyMatcher::isErrorFrame(const std::string& text) {
 }
 
 bool CommandReplyMatcher::isKoFrame(const std::string& text) {
+	auto status = extractJsonField(text, "status");
+	if (status && *status == "ko") {
+		return true;
+	}
+
 	auto arg = extractJsonField(text, "arg");
 	return arg && *arg == "ko";
 }
 
 MatchResult CommandReplyMatcher::matchLoginReply(const std::string& text) {
-	// Login replies don't have a "cmd" field, just need valid JSON structure
-	// Any non-error, validly-structured reply is acceptable for login
+	const std::optional<std::string> type = extractJsonField(text, "type");
+	if (type.has_value() && *type == "welcome") {
+		return MatchResult(true, CommandStatus::Success, text);
+	}
+
+	const std::optional<std::string> cmd = extractJsonField(text, "cmd");
+	if (cmd.has_value() && *cmd == "login") {
+		return MatchResult(true, CommandStatus::Success, text);
+	}
+
 	if (isErrorFrame(text)) {
 		return MatchResult(false, CommandStatus::ServerError, text);
 	}
-	// Login replies have different structure (e.g., {"type":"welcome"})
-	// so just confirm it's valid JSON and not an error
-	return MatchResult(true, CommandStatus::Success, text);
+
+	return MatchResult(false, CommandStatus::UnexpectedReply,
+		"Expected welcome or login response while waiting for login, got: " + text);
 }
 
 MatchResult CommandReplyMatcher::matchVoirReply(const std::string& text) {
@@ -271,16 +295,12 @@ MatchResult CommandReplyMatcher::matchBroadcastReply(const std::string& text) {
 	}
 
 	if (*type == "message") {
-		const std::optional<std::string> arg = extractJsonField(text, "arg");
-		if (!arg.has_value()) {
-			return MatchResult(false, CommandStatus::MalformedReply,
-				"Missing 'arg' field in message-style broadcast reply");
-		}
-		return MatchResult(true, CommandStatus::Success, text);
+		return MatchResult(false, CommandStatus::UnexpectedReply,
+			"Received unsolicited message frame while waiting for broadcast ack");
 	}
 
 	return MatchResult(false, CommandStatus::UnexpectedReply,
-		"Expected broadcast cmd or message-type reply, got type='" + *type + "'");
+		"Expected broadcast ack, got type='" + *type + "'");
 }
 
 MatchResult CommandReplyMatcher::matchIncantationReply(const std::string& text) {

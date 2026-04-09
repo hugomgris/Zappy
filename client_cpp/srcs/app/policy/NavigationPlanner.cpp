@@ -44,21 +44,31 @@ namespace {
 
 std::vector<NavigationStep> NavigationPlanner::buildPlan(
 	const WorldState& state,
-	const std::vector<ResourceType>& resourcePriority
+	const std::vector<ResourceType>& resourcePriority,
+	std::optional<NavigationTarget>* selectedTarget
 ) const {
 	const std::optional<std::pair<WorldState::VisionTile, ResourceType>> target = selectTarget(state, resourcePriority);
 	if (!target.has_value()) {
+		if (selectedTarget != nullptr) {
+			selectedTarget->reset();
+		}
 		return buildFallbackExplorationPlan();
 	}
 
 	const WorldState::VisionTile& tile = target->first;
 	const ResourceType resource = target->second;
 	if (tile.index == 0) {
+		if (selectedTarget != nullptr) {
+			selectedTarget->reset();
+		}
 		return {{std::make_shared<RequestTake>(resource), CommandType::Prend}};
 	}
 
 	const WorldState::Pose pose = state.pose().value_or(WorldState::Pose{});
 	const std::pair<int, int> targetDelta = localToWorldDelta(pose, tile.localX, tile.localY);
+	if (selectedTarget != nullptr) {
+		selectedTarget->emplace(NavigationTarget{tile, resource, pose.x + targetDelta.first, pose.y + targetDelta.second});
+	}
 	return buildTravelPlan(pose, pose.x + targetDelta.first, pose.y + targetDelta.second);
 }
 
@@ -67,6 +77,32 @@ std::vector<NavigationStep> NavigationPlanner::buildFallbackExplorationPlan() {
 		{std::make_shared<RequestTurnLeft>(), CommandType::Gauche},
 		{std::make_shared<RequestMove>(), CommandType::Avance},
 	};
+}
+
+std::vector<NavigationStep> NavigationPlanner::buildBroadcastApproachPlan(
+	const WorldState::Pose& pose,
+	int direction
+) const {
+	if (direction <= 0 || direction > 8) {
+		return {};
+	}
+
+	int localX = 0;
+	int localY = 0;
+	switch (direction) {
+		case 1: localY = -1; break;
+		case 2: localX = 1; localY = -1; break;
+		case 3: localX = 1; break;
+		case 4: localX = 1; localY = 1; break;
+		case 5: localY = 1; break;
+		case 6: localX = -1; localY = 1; break;
+		case 7: localX = -1; break;
+		case 8: localX = -1; localY = -1; break;
+		default: return {};
+	}
+
+	const std::pair<int, int> delta = localToWorldDelta(pose, localX, localY);
+	return buildTravelPlan(pose, pose.x + delta.first, pose.y + delta.second);
 }
 
 std::vector<NavigationStep> NavigationPlanner::buildTravelPlan(
@@ -89,7 +125,7 @@ std::vector<NavigationStep> NavigationPlanner::buildTravelPlan(
 
 	const int deltaY = targetY - currentY;
 	if (deltaY != 0) {
-		const int desiredOrientation = deltaY > 0 ? 1 : 3;
+		const int desiredOrientation = deltaY > 0 ? 3 : 1;
 		appendTurnToOrientation(plan, currentOrientation, desiredOrientation);
 		appendAdvanceSteps(plan, deltaY > 0 ? deltaY : -deltaY);
 	}
@@ -103,10 +139,10 @@ std::vector<NavigationStep> NavigationPlanner::buildTravelPlan(
 
 std::pair<int, int> NavigationPlanner::localToWorldDelta(const WorldState::Pose& pose, int localX, int localY) {
 	switch (pose.orientation) {
-		case 1: return {localX, localY};
-		case 2: return {localY, -localX};
-		case 3: return {-localX, -localY};
-		case 4: return {-localY, localX};
+		case 1: return {localX, -localY};
+		case 2: return {localY, localX};
+		case 3: return {-localX, localY};
+		case 4: return {-localY, -localX};
 		default: return {localX, localY};
 	}
 }

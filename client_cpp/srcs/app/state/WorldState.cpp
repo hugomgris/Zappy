@@ -1,4 +1,5 @@
 #include "app/state/WorldState.hpp"
+#include "helpers/Logger.hpp"
 
 #include <array>
 #include <utility>
@@ -59,6 +60,7 @@ void WorldState::clear() {
 	_lastVisionPayload.clear();
 	_lastInventoryPayload.clear();
 	_lastBroadcastPayload.clear();
+	_lastBroadcastDirection.reset();
 	_inventoryCounts.clear();
 	_visionTiles.clear();
 	_pose = Pose{};
@@ -66,9 +68,16 @@ void WorldState::clear() {
 	_lastVisionAtMs = -1;
 	_lastInventoryAtMs = -1;
 	_lastBroadcastAtMs = -1;
+	_lastBroadcastDirection.reset();
 	_lastPoseAtMs = -1;
 	_lastLevelUpAtMs = -1;
 	_playerLevel = 1;
+}
+
+void WorldState::invalidateVision() {
+	_lastVisionPayload.clear();
+	_visionTiles.clear();
+	_lastVisionAtMs = -1;
 }
 
 void WorldState::recordVision(std::int64_t nowMs, const std::string& payload) {
@@ -89,6 +98,15 @@ void WorldState::recordVision(std::int64_t nowMs, const std::string& payload) {
 		tile.resources = parseTileResources(tilePayloads[index]);
 		_visionTiles.push_back(tile);
 	}
+
+	if (Logger::isDeepTraceEnabled()) {
+		const int currentPlayers = currentTilePlayerCount();
+		const int tile0Food = currentTileResourceCount(ResourceType::Nourriture);
+		Logger::trace("STATE_VISION", "tiles=" + std::to_string(_visionTiles.size())
+			+ " tile0_players=" + std::to_string(currentPlayers)
+			+ " tile0_food=" + std::to_string(tile0Food)
+			+ " raw=" + payload);
+	}
 }
 
 void WorldState::recordInventory(std::int64_t nowMs, const std::string& payload) {
@@ -102,11 +120,24 @@ void WorldState::recordInventory(std::int64_t nowMs, const std::string& payload)
 			_inventoryCounts[entry.type] = *count;
 		}
 	}
+
+	if (Logger::isDeepTraceEnabled()) {
+		Logger::trace("STATE_INV", "food=" + std::to_string(inventoryCount(ResourceType::Nourriture).value_or(0))
+			+ " linemate=" + std::to_string(inventoryCount(ResourceType::Linemate).value_or(0))
+			+ " deraumere=" + std::to_string(inventoryCount(ResourceType::Deraumere).value_or(0))
+			+ " sibur=" + std::to_string(inventoryCount(ResourceType::Sibur).value_or(0))
+			+ " mendiane=" + std::to_string(inventoryCount(ResourceType::Mendiane).value_or(0))
+			+ " phiras=" + std::to_string(inventoryCount(ResourceType::Phiras).value_or(0))
+			+ " thystame=" + std::to_string(inventoryCount(ResourceType::Thystame).value_or(0))
+			+ " raw=" + payload);
+	}
 }
 
-void WorldState::recordBroadcast(std::int64_t nowMs, const std::string& payload) {
+void WorldState::recordBroadcast(std::int64_t nowMs, const std::string& payload, std::optional<int> direction) {
 	_lastBroadcastAtMs = nowMs;
 	_lastBroadcastPayload = payload;
+	_lastBroadcastDirection = direction;
+	Logger::trace("STATE_BROADCAST", "payload=" + payload);
 }
 
 void WorldState::recordPose(std::int64_t nowMs, int x, int y, int orientation) {
@@ -141,9 +172,9 @@ void WorldState::recordForward(std::int64_t nowMs) {
 	}
 
 	switch (_pose.orientation) {
-		case 1: _pose.y += 1; break;
+		case 1: _pose.y -= 1; break;
 		case 2: _pose.x += 1; break;
-		case 3: _pose.y -= 1; break;
+		case 3: _pose.y += 1; break;
 		case 4: _pose.x -= 1; break;
 		default: break;
 	}
@@ -203,6 +234,10 @@ std::optional<std::int64_t> WorldState::lastBroadcastAt() const {
 		return std::nullopt;
 	}
 	return _lastBroadcastAtMs;
+}
+
+std::optional<int> WorldState::lastBroadcastDirection() const {
+	return _lastBroadcastDirection;
 }
 
 std::optional<std::int64_t> WorldState::lastPoseAt() const {
@@ -266,6 +301,24 @@ bool WorldState::currentTileHasResource(ResourceType resource) const {
 	}
 
 	return false;
+}
+
+int WorldState::currentTileResourceCount(ResourceType resource) const {
+	for (const VisionTile& tile : _visionTiles) {
+		if (tile.index != 0) {
+			continue;
+		}
+
+		int count = 0;
+		for (ResourceType current : tile.resources) {
+			if (current == resource) {
+				++count;
+			}
+		}
+		return count;
+	}
+
+	return 0;
 }
 
 std::optional<WorldState::VisionTile> WorldState::nearestVisionTileWith(ResourceType resource) const {
@@ -367,8 +420,15 @@ std::vector<ResourceType> WorldState::parseTileResources(const std::string& tile
 	std::vector<ResourceType> resources;
 	for (const ResourceNameEntry& entry : RESOURCE_NAMES) {
 		const std::string token = std::string("\"") + entry.name + "\"";
-		if (tilePayload.find(token) != std::string::npos) {
+		std::size_t offset = 0;
+		while (true) {
+			const std::size_t found = tilePayload.find(token, offset);
+			if (found == std::string::npos) {
+				break;
+			}
+
 			resources.push_back(entry.type);
+			offset = found + token.size();
 		}
 	}
 

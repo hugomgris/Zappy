@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <math.h>
 #include <cJSON.h>
 #include "game_structs.h"
@@ -88,6 +89,7 @@ static int m_command_expulse(void* _p, void* _arg);
 static int m_command_broadcast(void* _p, void* _arg);
 static int m_command_incantation(void* _p, void* _arg);
 static int m_command_fork(void* _p, void* _arg);
+int server_create_response_msg(int fd, char *cmd, char *arg, char* status);
 
 static server m_server = {0};
 spawn_ctx m_ctx;
@@ -95,6 +97,8 @@ int LIFE_UNIT = 0;
 int START_LIFE_UNITS = 0;
 int EGG_HATCH_DELAY = 600;
 int m_incantation_time = 0;
+static int m_easy_ascension_mode = 0;
+static int m_winner_team_id = -1;
 t_egg* m_eggs = NULL;
 int m_egg_count = 0;
 
@@ -153,6 +157,27 @@ level_requisites level_reqs[LEVEL_MAX] =
     {6, {0, 1, 2, 3, 0, 1, 0}}, /* 6-7 */
     {6, {0, 2, 2, 2, 2, 2, 1}}  /* 7-8 */
 };
+
+static void m_apply_easy_ascension_mode(void)
+{
+    const char* mode;
+    int i;
+
+    mode = getenv("ZAPPY_EASY_ASCENSION");
+    if (!mode || strcmp(mode, "1") != 0)
+        return;
+
+    m_easy_ascension_mode = 1;
+
+    for (i = 0; i < LEVEL_MAX; i++)
+    {
+        level_reqs[i].player_number = 1;
+        memset(&level_reqs[i].inv, 0, sizeof(level_reqs[i].inv));
+        level_reqs[i].inv.linemate = 1;
+    }
+
+    log_msg(LOG_LEVEL_INFO, "Easy ascension mode enabled (ZAPPY_EASY_ASCENSION=1)\n");
+}
 
 observer** game_get_observers()
 {
@@ -410,6 +435,70 @@ static int m_game_get_client_from_fd(int fd, client **c)
     return ERROR;
 }
 
+static int m_game_get_client_from_player_id(int player_id, client **c)
+{
+    if (!m_server.clients || !c)
+        return ERROR;
+
+    if (player_id < 0 || player_id >= m_server.client_count)
+        return ERROR;
+
+    if (!m_server.clients[player_id])
+        return ERROR;
+
+    *c = m_server.clients[player_id];
+    return SUCCESS;
+}
+
+static int m_game_get_socket_fd_from_player(const player* p)
+{
+    client* c;
+
+    if (!p)
+        return ERROR;
+
+    if (m_game_get_client_from_player_id(p->id, &c) == ERROR)
+        return ERROR;
+
+    if (!c || c->socket_fd < 0)
+        return ERROR;
+
+    return c->socket_fd;
+}
+
+static int m_send_json_to_player(const player* p, cJSON* root)
+{
+    int fd;
+
+    fd = m_game_get_socket_fd_from_player(p);
+    if (fd == ERROR)
+        return ERROR;
+
+    return server_send_json(fd, root);
+}
+
+static int m_send_command_response_to_player(const player* p, char *cmd, char *arg, char *status)
+{
+    int fd;
+
+    fd = m_game_get_socket_fd_from_player(p);
+    if (fd == ERROR)
+        return ERROR;
+
+    return server_create_response_to_command(fd, cmd, arg, status);
+}
+
+static int m_send_message_to_player(const player* p, char *type, char *arg, char *status)
+{
+    int fd;
+
+    fd = m_game_get_socket_fd_from_player(p);
+    if (fd == ERROR)
+        return ERROR;
+
+    return server_create_response_msg(fd, type, arg, status);
+}
+
 static int m_team_add_player_to_team(player *p)
 {
     int team_id;
@@ -440,6 +529,8 @@ static int m_team_add_p2c_to_team(player *p)
     {
         new_size = t->p2c_size + 3;
         new_p2c = realloc(t->p2c, sizeof(int) * new_size);
+        if (!new_p2c)
+            return ERROR;
         t->p2c = new_p2c;
         t->p2c_size = new_size;
     }
@@ -476,8 +567,10 @@ static int m_team_remove_player_from_team(player *p)
     }
     else
     {
-        t->players[t->current_players] = 0;
+        if (t->current_players <= 0)
+            return ERROR;
         t->current_players--;
+        t->players[t->current_players] = 0;
     }
     return SUCCESS;
 }
@@ -497,7 +590,14 @@ static int m_add_client_to_server(client *c)
 
     m_server.client_count += 10;
 
-    m_server.clients = realloc(m_server.clients, sizeof(client*) * m_server.client_count);
+    {
+        client** new_clients;
+
+        new_clients = realloc(m_server.clients, sizeof(client*) * m_server.client_count);
+        if (!new_clients)
+            return ERROR;
+        m_server.clients = new_clients;
+    }
     memset(&m_server.clients[m_server.client_count - 10], 0, sizeof(client*) * 10);
     log_msg(LOG_LEVEL_DEBUG, "Resizing clients array to %d\n", m_server.client_count);
 
@@ -529,43 +629,29 @@ static inline int wrap(int v, int m)
 static cJSON* build_tile_vision(tile *T, player *p)
 {
     cJSON *tile_arr;
-    // player* p;
-    // cJSON *obj;
-    // int i;
+    player* p2;
+    int i;
+
+    (void)p;
 
     tile_arr = cJSON_CreateArray();
 
-    // for (p = T->players; p; p = p->next_on_tile)
-    // {
-    //     obj = cJSON_CreateObject();
-    //     cJSON_AddStringToObject(obj, "type",  "player");
-    //     cJSON_AddStringToObject(obj, "team",  m_server.teams[p->team_id].name);
-    //     cJSON_AddItemToArray(tile_arr, obj);
-    // }
-
-    if (T->players && T->players->id != p->id && p->next_on_tile != NULL)
+    for (p2 = T->players; p2; p2 = p2->next_on_tile)
         cJSON_AddItemToArray(tile_arr, cJSON_CreateString("player"));
 
-    // for (i = 0; i < T->items.nourriture; i++)
-    if (T->items.nourriture > 0)
+    for (i = 0; i < T->items.nourriture; i++)
         cJSON_AddItemToArray(tile_arr, cJSON_CreateString("nourriture"));
-    // for (i = 0; i < T->items.linemate; i++)
-    if (T->items.linemate > 0)
+    for (i = 0; i < T->items.linemate; i++)
         cJSON_AddItemToArray(tile_arr, cJSON_CreateString("linemate"));
-    // for (i = 0; i < T->items.deraumere; i++)
-    if (T->items.deraumere > 0)
+    for (i = 0; i < T->items.deraumere; i++)
         cJSON_AddItemToArray(tile_arr, cJSON_CreateString("deraumere"));
-    // for (i = 0; i < T->items.sibur; i++)
-    if (T->items.sibur > 0)
+    for (i = 0; i < T->items.sibur; i++)
         cJSON_AddItemToArray(tile_arr, cJSON_CreateString("sibur"));
-    // for (i = 0; i < T->items.mendiane; i++)
-    if (T->items.mendiane > 0)
+    for (i = 0; i < T->items.mendiane; i++)
         cJSON_AddItemToArray(tile_arr, cJSON_CreateString("mendiane"));
-    // for (i = 0; i < T->items.phiras; i++)
-    if (T->items.phiras > 0)
+    for (i = 0; i < T->items.phiras; i++)
         cJSON_AddItemToArray(tile_arr, cJSON_CreateString("phiras"));
-    // for (i = 0; i < T->items.thystame; i++)
-    if (T->items.thystame > 0)
+    for (i = 0; i < T->items.thystame; i++)
         cJSON_AddItemToArray(tile_arr, cJSON_CreateString("thystame"));
     return tile_arr;
 }
@@ -653,7 +739,7 @@ int m_command_voir(void* _p, void* _arg)
         }
     }
 
-    server_send_json(p->id, root);
+    m_send_json_to_player(p, root);
     /* DEBUG */
     // char* json = cJSON_Print(root);
     // fprintf(stderr, "Player %d t(%d,%d) dir(", p->id, p->pos.x, p->pos.y);
@@ -696,7 +782,7 @@ static int m_command_inventaire(void* _p, void* _arg)
 
     cJSON_AddItemToObject(root, "inventaire", inv);
 
-    server_send_json(p->id, root);
+    m_send_json_to_player(p, root);
     cJSON_Delete(root);
 
     return SUCCESS;
@@ -822,7 +908,7 @@ static int m_command_prend(void* _p, void* _arg)
     arg = (char*)_arg;
 
     if (!arg)
-        return server_create_response_to_command(p->id, "prend", "Invalid arg.", "ko");
+        return m_send_command_response_to_player(p, "prend", "Invalid arg.", "ko");
 
     type = UNKNOWN;
     for (i = 0; inventory_names[i].name; i++)
@@ -835,11 +921,11 @@ static int m_command_prend(void* _p, void* _arg)
     }
 
     if (type == UNKNOWN)
-        ret =  server_create_response_to_command(p->id, "prend", "Unknown type.", "ko");
+        ret =  m_send_command_response_to_player(p, "prend", "Unknown type.", "ko");
     else if (m_helper_items_to_tiles(MAP(p->pos.x, p->pos.y), p, -1, type) == ERROR)
-        ret = server_create_response_to_command(p->id, "prend", arg, "ko");
+        ret = m_send_command_response_to_player(p, "prend", arg, "ko");
     else
-        ret = server_create_response_to_command(p->id, "prend", arg, "ok");
+        ret = m_send_command_response_to_player(p, "prend", arg, "ok");
 
     return ret;
 }
@@ -855,7 +941,7 @@ static int m_command_pose(void* _p, void* _arg)
     p = (player*)_p;
     arg = (char*)_arg;
     if (!arg)
-        return server_create_response_to_command(p->id, "pose", "Invalid arg.", "ko");
+        return m_send_command_response_to_player(p, "pose", "Invalid arg.", "ko");
     
     type = UNKNOWN;
     for (i = 0; inventory_names[i].name; i++)
@@ -868,11 +954,11 @@ static int m_command_pose(void* _p, void* _arg)
     }
 
     if (type == UNKNOWN)
-        ret = server_create_response_to_command(p->id, "pose", "Unknown type.", "ko");
+        ret = m_send_command_response_to_player(p, "pose", "Unknown type.", "ko");
     else if (m_helper_items_to_tiles(MAP(p->pos.x, p->pos.y), p, 1, type) == ERROR)
-        ret = server_create_response_to_command(p->id, "pose", arg, "ko");
+        ret = m_send_command_response_to_player(p, "pose", arg, "ko");
     else
-        ret = server_create_response_to_command(p->id, "pose", arg, "ok");
+        ret = m_send_command_response_to_player(p, "pose", arg, "ok");
 
     return ret;
 }
@@ -898,7 +984,7 @@ static int m_command_expulse(void* _p, void* _arg)
     p = (player*)_p;
     t = MAP(p->pos.x, p->pos.y);
     if (t->players == NULL)
-        return server_create_response_to_command(p->id, "expulse", NULL, "ok");
+        return m_send_command_response_to_player(p, "expulse", NULL, "ok");
 
     new_x = p->pos.x;
     new_y = p->pos.y;
@@ -919,10 +1005,10 @@ static int m_command_expulse(void* _p, void* _arg)
         dir_string = direction_table[p->dir][p->dir];
 
         m_game_move_player(it, new_x, new_y);
-        server_create_response_to_command(it->id, "deplacement", NULL, (char*)dir_string);
+        m_send_command_response_to_player(it, "deplacement", NULL, (char*)dir_string);
     }
 
-    return server_create_response_to_command(p->id, "expulse", NULL, "ok");
+    return m_send_command_response_to_player(p, "expulse", NULL, "ok");
 }
 
 static int minimal_delta(int delta, int max)
@@ -1004,10 +1090,10 @@ static int m_command_broadcast(void* _p, void* _arg)
 
         // server_create_response_to_command(receiver->id, "message", k_str, text);
         // int server_create_response_msg(int fd, char *cmd, char *arg, char* status)
-        server_create_response_msg(receiver->id, "message", text, k_str);
+        (void)m_send_message_to_player(receiver, "message", text, k_str);
     }
 
-    return server_create_response_to_command(emitter->id, "broadcast", NULL, "ok");
+    return m_send_command_response_to_player(emitter, "broadcast", NULL, "ok");
 }
 
 /* For incantation to happen, the tile where the player is must have
@@ -1022,8 +1108,11 @@ static int m_game_check_can_incantation(player* p, bool check_items)
     level_requisites* reqs;
     player* p2;
 
-    if (p->level >= LEVEL_MAX)
+    if (p->level > LEVEL_MAX)
         return ERROR;
+
+    if (m_easy_ascension_mode)
+        return SUCCESS;
 
     t = MAP(p->pos.x, p->pos.y);
 
@@ -1077,10 +1166,10 @@ static int m_command_real_incantation(void* _p, void* _arg)
 
     /* Already leveled up!! */
     if (p->level != initial_level)
-        return server_create_response_to_command(p->id, "incantation", NULL, "ko");
+        return m_send_command_response_to_player(p, "incantation", NULL, "ko");
 
     if (m_game_check_can_incantation(p, false) == ERROR)
-        return server_create_response_to_command(p->id, "incantation", NULL, "ko");
+        return m_send_command_response_to_player(p, "incantation", NULL, "ko");
 
     p2 = t->players;
     while (p2)
@@ -1089,12 +1178,12 @@ static int m_command_real_incantation(void* _p, void* _arg)
         {
             p2->level++;
             // server_create_response_to_command(p2->id, "incantation", NULL, "Level up!");
-            server_create_response_msg(p2->id, "event", NULL, "Level up!");
+            m_send_message_to_player(p2, "event", NULL, "Level up!");
         }
         p2 = p2->next_on_tile;
     }
 
-    return server_create_response_to_command(p->id, "incantation", NULL, "ok");
+    return m_send_command_response_to_player(p, "incantation", NULL, "ok");
 }
 
 static int m_command_incantation(void* _p, void* _arg)
@@ -1109,26 +1198,39 @@ static int m_command_incantation(void* _p, void* _arg)
 
     p = (player*)_p;
 
-    if (p->level >= LEVEL_MAX)
-        return server_create_response_to_command(p->id, "incantation", NULL, "ko");
+    if (m_easy_ascension_mode)
+    {
+        if (p->level > LEVEL_MAX)
+            return m_send_command_response_to_player(p, "incantation", NULL, "ko");
+
+        p->level++;
+        m_send_message_to_player(p, "event", NULL, "Level up!");
+        return m_send_command_response_to_player(p, "incantation", NULL, "ok");
+    }
+
+    if (p->level > LEVEL_MAX)
+        return m_send_command_response_to_player(p, "incantation", NULL, "ko");
 
     if (m_game_check_can_incantation(p, true) == ERROR)
-        return server_create_response_to_command(p->id, "incantation", NULL, "ko");
+        return m_send_command_response_to_player(p, "incantation", NULL, "ko");
 
     t = MAP(p->pos.x, p->pos.y);
     reqs = &level_reqs[p->level - 1]; /* if level 0, we'll go to 0 pos to check */
 
-    t->items.nourriture -= reqs->inv.nourriture;
-    t->items.linemate -= reqs->inv.linemate;
-    t->items.deraumere -= reqs->inv.deraumere;
-    t->items.sibur -= reqs->inv.sibur;
-    t->items.mendiane -= reqs->inv.mendiane;
-    t->items.phiras -= reqs->inv.phiras;
-    t->items.thystame -= reqs->inv.thystame;
-
-    if (m_game_get_client_from_fd(p->id, &c) == ERROR)
+    if (!m_easy_ascension_mode)
     {
-        log_msg(LOG_LEVEL_WARN, "Failed to get client from fd %d\n", p->id);
+        t->items.nourriture -= reqs->inv.nourriture;
+        t->items.linemate -= reqs->inv.linemate;
+        t->items.deraumere -= reqs->inv.deraumere;
+        t->items.sibur -= reqs->inv.sibur;
+        t->items.mendiane -= reqs->inv.mendiane;
+        t->items.phiras -= reqs->inv.phiras;
+        t->items.thystame -= reqs->inv.thystame;
+    }
+
+    if (m_game_get_client_from_player_id(p->id, &c) == ERROR)
+    {
+        log_msg(LOG_LEVEL_WARN, "Failed to get client from player id %d\n", p->id);
         return ERROR;
     }
 
@@ -1136,7 +1238,7 @@ static int m_command_incantation(void* _p, void* _arg)
 
     time_api_schedule_client_event_front(NULL, &c->event_buffer, m_incantation_time, m_command_real_incantation, p, strdup(level));
 
-    return server_create_response_to_command(p->id, "incantation", NULL, "in_progress");
+    return m_send_command_response_to_player(p, "incantation", NULL, "in_progress");
 }
 
 static int m_egg_create_player(void* _egg, void* _arg)
@@ -1172,6 +1274,8 @@ static int m_egg_create_player(void* _egg, void* _arg)
     p->id = m_add_client_to_server(c);
     log_msg(LOG_LEVEL_INFO, "Egg %d created player %d at (%d,%d) for team %d\n",
         egg->id, p->id, p->pos.x, p->pos.y, p->team_id + 1);
+    log_msg(LOG_LEVEL_INFO, "Egg %d creating player %d for team %d at (%d,%d)\n",
+        egg->id, p->id, p->team_id + 1, p->pos.x, p->pos.y);
 
 
     m_team_add_p2c_to_team(p);
@@ -1204,21 +1308,76 @@ static int m_command_fork(void* _p, void* _arg)
     log_msg(LOG_LEVEL_INFO, "Player %d (team %d) forked egg %d at (%d,%d) to hatch at %d\n",
                 p->id, p->team_id + 1, egg->id, egg->pos.x, egg->pos.y, egg->event.exec_time);
 
-    return server_create_response_to_command(p->id, "fork", NULL, "ok");
+    return m_send_command_response_to_player(p, "fork", NULL, "ok");
 }
 
 static int m_command_connect_nbr(void* _p, void* _arg)
 {
     player* p;
-    char number[10];
+    team* t;
+    char number[12];
+    int remaining;
 
     (void)_arg;
 
     p = (player*)_p;
-    snprintf(number, sizeof(number),\
-     "%d", m_server.teams[p->team_id].max_players - m_server.teams[p->team_id].current_players);
+    t = &m_server.teams[p->team_id];
+    remaining = t->max_players - (t->current_players + t->p2c_pending);
+    if (remaining < 0)
+        remaining = 0;
 
-    return server_create_response_to_command(p->id, "connect_nbr", number,  NULL);
+    snprintf(number, sizeof(number), "%d", remaining);
+
+    return m_send_command_response_to_player(p, "connect_nbr", number,  NULL);
+}
+
+static int m_game_get_winner_team_id(void)
+{
+    int i;
+    int team_counts[64];
+    int players_to_win;
+    client* c;
+
+    memset(team_counts, 0, sizeof(team_counts));
+    players_to_win = 6;
+
+    if (m_server.team_count > (int)(sizeof(team_counts) / sizeof(team_counts[0])))
+        return -1;
+
+    for (i = 0; i < m_server.client_count; i++)
+    {
+        c = m_server.clients[i];
+        if (!c || !c->player)
+            continue;
+        if (c->player->to_be_claimed)
+            continue;
+        if (c->player->level < (LEVEL_MAX + 1))
+            continue;
+        if (c->player->team_id < 0 || c->player->team_id >= m_server.team_count)
+            continue;
+
+        team_counts[c->player->team_id]++;
+        if (team_counts[c->player->team_id] >= players_to_win)
+            return c->player->team_id;
+    }
+
+    return -1;
+}
+
+static void m_game_update_winner_state(void)
+{
+    int winner_team;
+
+    if (m_winner_team_id >= 0)
+        return;
+
+    winner_team = m_game_get_winner_team_id();
+    if (winner_team < 0)
+        return;
+
+    m_winner_team_id = winner_team;
+    log_msg(LOG_LEVEL_INFO, "Winner condition reached: team '%s' (team_id=%d) has at least 6 players at level %d\n",
+        m_server.teams[winner_team].name, winner_team, LEVEL_MAX + 1);
 }
 
 static int m_command_droite(void* _p, void* _arg)
@@ -1245,7 +1404,7 @@ static int m_command_droite(void* _p, void* _arg)
             break;
     }
 
-    ret = server_create_response_to_command(p->id, "droite", arg, "ok");
+    ret = m_send_command_response_to_player(p, "droite", arg, "ok");
 
     return ret;
 }
@@ -1274,7 +1433,7 @@ static int m_command_gauche(void* _p, void* _arg)
             break;
     }
 
-    ret = server_create_response_to_command(p->id, "gauche", arg, "ok");
+    ret = m_send_command_response_to_player(p, "gauche", arg, "ok");
 
     return ret;
 }
@@ -1313,7 +1472,7 @@ static int m_command_avance(void* _p, void* _arg)
 
     m_game_move_player(p, new_x, new_y);
  
-    ret = server_create_response_to_command(p->id, "avance", arg, "ok");
+    ret = m_send_command_response_to_player(p, "avance", arg, "ok");
 
     return ret;
 }
@@ -1351,12 +1510,19 @@ int game_get_team_remaining_clients(int fd)
 {
     client *c;
     int ret;
+    int remaining;
+    team* t;
 
     ret = m_game_get_client_from_fd(fd, &c);
     if (ret == ERROR)
         return ERROR;
 
-    return m_server.teams[c->player->team_id].max_players - m_server.teams[c->player->team_id].current_players;
+    t = &m_server.teams[c->player->team_id];
+    remaining = t->max_players - (t->current_players + t->p2c_pending);
+    if (remaining < 0)
+        remaining = 0;
+
+    return remaining;
 }
 
 int game_get_client_count()
@@ -1408,18 +1574,40 @@ int game_register_player(int fd, char *team_name)
         return team_id;
     }
 
+    log_msg(LOG_LEVEL_INFO,
+        "Register player request: fd=%d team=%s current=%d/%d pending_claim=%d\n",
+        fd,
+        team_name,
+        m_server.teams[team_id].current_players,
+        m_server.teams[team_id].max_players,
+        m_server.teams[team_id].p2c_pending);
+
     if (TEAM_HAS_P2C(team_id))
     {
         pid = TEAM_GET_LATEST_P2C(team_id);
         c = m_server.clients[pid];
         if (c && c->player && c->player->to_be_claimed)
         {
-            log_msg(LOG_LEVEL_DEBUG, "Player %d has been claimed!!\n", pid);
+            log_msg(LOG_LEVEL_INFO, "Claiming pending egg player index=%d for socket fd=%d team=%s\n", pid, fd, team_name);
             c->socket_fd = fd; /* Update socket fd */
-            c->player->id = fd; /* Update player id */
             c->player->to_be_claimed = false; /* No longer waiting to be claimed */
-            
-            m_server.teams[team_id].current_players++;
+
+            m_server.teams[team_id].p2c_pending--;
+            m_server.teams[team_id].p2c[m_server.teams[team_id].p2c_pending] = -1;
+
+            if (m_team_add_player_to_team(c->player) == ERROR)
+            {
+                log_msg(LOG_LEVEL_ERROR, "Failed to add claimed player %d to team %s\n", fd, team_name);
+                return ERROR;
+            }
+
+            log_msg(LOG_LEVEL_INFO,
+                "Claim success: fd=%d team=%s current=%d/%d pending_claim=%d\n",
+                fd,
+                team_name,
+                m_server.teams[team_id].current_players,
+                m_server.teams[team_id].max_players,
+                m_server.teams[team_id].p2c_pending);
             return SUCCESS;
         }
     }
@@ -1439,8 +1627,16 @@ int game_register_player(int fd, char *team_name)
     c->socket_fd = fd;
     c->player = p;
 
+    /* add player to server and assign logical id */
+    p->id = m_add_client_to_server(c);
+    if (p->id == ERROR)
+    {
+        free(p);
+        free(c);
+        return ERROR;
+    }
+
     /* Init player */
-    p->id = fd;
     p->team_id = team_id;
     p->level = 1;
     p->to_be_claimed = false;
@@ -1450,15 +1646,18 @@ int game_register_player(int fd, char *team_name)
 
     /**/
     t_api = time_api_get_local();
-    /*inventroy already 0*/
+    p->inv.nourriture = 10;
     p->die_time = t_api->current_time_units + TIME_TO_DIE; /* 1260 time units = 1 minute */
     p->start_time = t_api->current_time_units; /* 1260 time units = 1 minute */
 
     /* add player to team */
-    m_team_add_player_to_team(p);
-
-    /* add player to server */
-    m_add_client_to_server(c);
+    if (m_team_add_player_to_team(p) == ERROR)
+    {
+        m_remove_client_from_server(c);
+        free(p);
+        free(c);
+        return ERROR;
+    }
 
     log_msg(LOG_LEVEL_DEBUG, "Spawned player %d on tile (%d,%d,%d) for team %s\n", p->id, p->pos.x, p->pos.y, p->dir,team_name);
 
@@ -1625,6 +1824,8 @@ int game_play()
         egg = m_eggs;
     }
 
+    m_game_update_winner_state();
+
     /* check if players can play and then make them play */
     if (!has_played)
         return 0;
@@ -1775,6 +1976,8 @@ int game_init(int width, int height, char **teams, int nb_teams)
 
     parse_set_commands_delay(command_prototypes);
     parse_set_nb_clients(&nb_clients);
+    m_apply_easy_ascension_mode();
+    m_winner_team_id = -1;
 
     if (nb_teams > nb_clients)
     {

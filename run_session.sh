@@ -6,12 +6,21 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVER_DIR="$ROOT_DIR/server"
 CLIENT_DIR="$ROOT_DIR/client_cpp"
 
+SESSION_ENV_FILE="${ZAPPY_SESSION_ENV_FILE:-$ROOT_DIR/run_session.local.env}"
+if [[ -f "$SESSION_ENV_FILE" ]]; then
+	set -a
+	# shellcheck disable=SC1090
+	source "$SESSION_ENV_FILE"
+	set +a
+fi
+
 PORT="${ZAPPY_PORT:-8674}"
 HOST="${ZAPPY_HOST:-localhost}"
 TEAM_ONE_NAME="${ZAPPY_TEAM_ONE_NAME:-team1}"
 TEAM_TWO_NAME="${ZAPPY_TEAM_TWO_NAME:-team2}"
 TEAM_ONE_CLIENTS="${ZAPPY_TEAM_ONE_CLIENTS:-10}"
 TEAM_TWO_CLIENTS="${ZAPPY_TEAM_TWO_CLIENTS:-10}"
+SERVER_TOTAL_CLIENTS="${ZAPPY_SERVER_TOTAL_CLIENTS:-}"
 RESUME_DELAY_SECONDS="${ZAPPY_RESUME_DELAY_SECONDS:-2}"
 POLL_INTERVAL_SECONDS="${ZAPPY_POLL_INTERVAL_SECONDS:-2}"
 MAX_SECONDS="${ZAPPY_MAX_SECONDS:-0}"
@@ -19,9 +28,47 @@ BUILD_BEFORE_RUN="${ZAPPY_BUILD_BEFORE_RUN:-1}"
 LOG_DIR="${ZAPPY_LOG_DIR:-/tmp/zappy_session_$(date +%Y%m%d_%H%M%S)}"
 LIVE_STATUS="${ZAPPY_LIVE_STATUS:-1}"
 KILL_PREVIOUS="${ZAPPY_KILL_PREVIOUS:-1}"
+EASY_ASCENSION="${ZAPPY_EASY_ASCENSION:-1}"
+GAME_TICK_RATE="${ZAPPY_GAME_TICK_RATE:-20}"
+DEEP_TRACE="${ZAPPY_DEEP_TRACE:-0}"
+
+if [[ -z "$SERVER_TOTAL_CLIENTS" && -f "$SERVER_DIR/config" ]]; then
+	SERVER_TOTAL_CLIENTS="$(grep -E '^NUMBER_OF_CLIENTS=' "$SERVER_DIR/config" | tail -n 1 | cut -d '=' -f 2 | tr -d '[:space:]')"
+fi
+
+if [[ -n "$SERVER_TOTAL_CLIENTS" && "$SERVER_TOTAL_CLIENTS" =~ ^[0-9]+$ && "$SERVER_TOTAL_CLIENTS" -gt 0 ]]; then
+	per_team_capacity=$((SERVER_TOTAL_CLIENTS / 2))
+	if (( per_team_capacity < 1 )); then
+		per_team_capacity=1
+	fi
+
+	if (( TEAM_ONE_CLIENTS > per_team_capacity )); then
+		echo "Requested $TEAM_ONE_CLIENTS clients for $TEAM_ONE_NAME but per-team capacity is $per_team_capacity; clamping"
+		TEAM_ONE_CLIENTS="$per_team_capacity"
+	fi
+
+	if (( TEAM_TWO_CLIENTS > per_team_capacity )); then
+		echo "Requested $TEAM_TWO_CLIENTS clients for $TEAM_TWO_NAME but per-team capacity is $per_team_capacity; clamping"
+		TEAM_TWO_CLIENTS="$per_team_capacity"
+	fi
+fi
 
 SERVER_LOG="$LOG_DIR/server.log"
 RUNSH_LOG="$LOG_DIR/runsh.log"
+SERVER_APP_LOG_REL=""
+SERVER_APP_LOG=""
+
+if [[ -f "$SERVER_DIR/config" ]]; then
+	SERVER_APP_LOG_REL="$(grep -E '^LOG_FILE_PATH=' "$SERVER_DIR/config" | tail -n 1 | cut -d '=' -f 2- | tr -d '[:space:]')"
+fi
+if [[ -z "$SERVER_APP_LOG_REL" ]]; then
+	SERVER_APP_LOG_REL="log.txt"
+fi
+if [[ "$SERVER_APP_LOG_REL" = /* ]]; then
+	SERVER_APP_LOG="$SERVER_APP_LOG_REL"
+else
+	SERVER_APP_LOG="$SERVER_DIR/$SERVER_APP_LOG_REL"
+fi
 
 mkdir -p "$LOG_DIR"
 shopt -s nullglob
@@ -62,7 +109,7 @@ spawn_client() {
 
 	(
 		cd "$CLIENT_DIR"
-		./client -n "$team_name" -p "$PORT" -h "$HOST" -c 1 --insecure true --loop
+		ZAPPY_EASY_ASCENSION="$EASY_ASCENSION" ZAPPY_DEEP_TRACE="$DEEP_TRACE" ZAPPY_TIME_UNIT="$GAME_TICK_RATE" ./client -n "$team_name" -p "$PORT" -h "$HOST" -c 1 --insecure true --loop
 	) >"$log_file" 2>&1 &
 	client_pids+=("$!")
 	client_logs+=("$log_file")
@@ -70,17 +117,10 @@ spawn_client() {
 }
 
 detect_winner() {
-	local log_file
-	for log_file in "${client_logs[@]}"; do
-		if grep -q "victory threshold reached" "$log_file" 2>/dev/null; then
-			winner_log="$log_file"
-			return 0
-		fi
-		if grep -q "player level advanced to 8" "$log_file" 2>/dev/null; then
-			winner_log="$log_file"
-			return 0
-		fi
-	done
+	if [[ -f "$SERVER_APP_LOG" ]] && grep -q "Winner condition reached" "$SERVER_APP_LOG" 2>/dev/null; then
+		winner_log="$SERVER_APP_LOG"
+		return 0
+	fi
 	return 1
 }
 
@@ -96,6 +136,23 @@ count_matches() {
 		fi
 	done
 	echo "$total"
+}
+
+count_server_matches() {
+	local pattern="$1"
+	local count
+	if [[ -f "$SERVER_APP_LOG" ]]; then
+		count=$(grep -Eci "$pattern" "$SERVER_APP_LOG" 2>/dev/null || true)
+	elif [[ -f "$SERVER_LOG" ]]; then
+		count=$(grep -Eci "$pattern" "$SERVER_LOG" 2>/dev/null || true)
+	else
+		echo "0"
+		return
+	fi
+	if [[ -z "$count" ]]; then
+		count=0
+	fi
+	echo "$count"
 }
 
 count_clients_with_pattern() {
@@ -133,14 +190,18 @@ all_clients_exited() {
 
 print_status() {
 	local elapsed="$1"
-	local connected alive failed died malformed levelups
+	local connected alive failed died malformed levelups fork_requests fork_acks egg_spawns egg_claims
 	connected=$(count_clients_with_pattern "Login reply frame")
 	alive=$(count_alive_clients)
 	failed=$(count_clients_with_pattern "Bootstrap failed")
 	died=$(count_matches "Server reported player death")
 	malformed=$(count_matches "malformed reply")
 	levelups=$(count_matches "player level advanced")
-	echo "[status t=${elapsed}s] connected=$connected alive=$alive failed=$failed levelups=$levelups deaths=$died malformed=$malformed"
+	fork_requests=$(count_matches "requesting fork to grow team population")
+	fork_acks=$(count_matches "fork acknowledged by server")
+	egg_spawns=$(count_server_matches "Egg [0-9]+ (created player|creating player)")
+	egg_claims=$(count_server_matches "Claiming pending egg player|Claim success")
+	echo "[status t=${elapsed}s] connected=$connected alive=$alive failed=$failed levelups=$levelups deaths=$died malformed=$malformed fork_req=$fork_requests fork_ok=$fork_acks egg_spawn=$egg_spawns egg_claim=$egg_claims"
 }
 
 stop_clients_and_server() {
@@ -158,10 +219,20 @@ echo "Session logs: $LOG_DIR"
 if [[ "$LIVE_STATUS" == "1" ]]; then
 	echo "Live view commands:"
 	echo "  tail -f $SERVER_LOG"
+	echo "  tail -f $SERVER_APP_LOG"
 	echo "  tail -f $LOG_DIR/${TEAM_ONE_NAME}_1.log"
 fi
 
 echo "Starting server on port $PORT"
+echo "Game tick rate (time unit): $GAME_TICK_RATE"
+if (( TEAM_ONE_CLIENTS < 6 && TEAM_TWO_CLIENTS < 6 )); then
+	echo "Warning: official server winner requires 6 level-8 players on the same team; current per-team clients are below 6"
+fi
+if [[ "$EASY_ASCENSION" == "1" ]]; then
+	echo "Easy ascension mode: enabled"
+else
+	echo "Easy ascension mode: disabled"
+fi
 if [[ "$KILL_PREVIOUS" == "1" ]]; then
 	pkill -f "./zappy $PORT" 2>/dev/null || true
 	pkill -f "/zappy $PORT" 2>/dev/null || true
@@ -169,7 +240,7 @@ if [[ "$KILL_PREVIOUS" == "1" ]]; then
 fi
 (
 	cd "$SERVER_DIR"
-	./zappy "$PORT"
+	ZAPPY_EASY_ASCENSION="$EASY_ASCENSION" ZAPPY_TIME_UNIT="$GAME_TICK_RATE" ./zappy "$PORT"
 ) >"$SERVER_LOG" 2>&1 &
 server_pid=$!
 
@@ -235,11 +306,20 @@ done
 wait "$server_pid" 2>/dev/null || true
 
 if [[ -n "$winner_log" ]]; then
-	winner_file_name="$(basename "$winner_log")"
-	winner_team="${winner_file_name%%_*}"
-	winner_client="${winner_file_name#*_}"
-	winner_client="${winner_client%.log}"
-	echo "Winning team: $winner_team (client $winner_client)"
+	if [[ "$winner_log" == "$SERVER_APP_LOG" ]]; then
+		winner_team="$(grep -E "Winner condition reached" "$SERVER_APP_LOG" | tail -n 1 | sed -n "s/.*team '\([^']*\)'.*/\1/p")"
+		if [[ -n "$winner_team" ]]; then
+			echo "Winning team: $winner_team (detected by server)"
+		else
+			echo "Winning team detected by server"
+		fi
+	else
+		winner_file_name="$(basename "$winner_log")"
+		winner_team="${winner_file_name%%_*}"
+		winner_client="${winner_file_name#*_}"
+		winner_client="${winner_client%.log}"
+		echo "Winning team: $winner_team (client $winner_client)"
+	fi
 elif [[ "$all_clients_dead" == "1" ]]; then
 	echo "No winner: all clients exited/died"
 else

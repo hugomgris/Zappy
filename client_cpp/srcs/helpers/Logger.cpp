@@ -1,6 +1,7 @@
 #include "Logger.hpp"
 
 #include <chrono>
+#include <cstdlib>
 #include <ctime>
 #include <iomanip>
 #include <iostream>
@@ -18,6 +19,15 @@ void Logger::debug(const std::string &message) { log(LogLevel::Debug, message); 
 void Logger::info(const std::string &message) { log(LogLevel::Info, message); }
 void Logger::warn(const std::string &message) { log(LogLevel::Warn, message); }
 void Logger::error(const std::string &message) { log(LogLevel::Error, message); }
+bool Logger::isDeepTraceEnabled() { return deepTraceEnabled(); }
+
+void Logger::trace(const std::string& category, const std::string& message) {
+	if (!deepTraceEnabled()) {
+		return;
+	}
+
+	log(LogLevel::Info, "TRACE[" + category + "]: " + message);
+}
 
 void Logger::log(LogLevel level, const std::string &message) {
 	std::lock_guard<std::mutex> lock(g_logMutex);
@@ -46,4 +56,13 @@ const char* Logger::levelToString(LogLevel level) {
 		default:
 			return "UNKNOWN";
 	}
+}
+
+bool Logger::deepTraceEnabled() {
+	const char* value = std::getenv("ZAPPY_DEEP_TRACE");
+	if (!value || !*value) {
+		return false;
+	}
+
+	return std::string(value) == "1";
 }

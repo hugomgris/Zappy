@@ -14,6 +14,7 @@
 #include <openssl/opensslv.h>
 #include <cctype>
 #include <chrono>
+#include <cstdlib>
 #include <memory>
 #include <optional>
 #include <thread>
@@ -126,27 +127,42 @@ namespace {
 	}
 
 	bool isElevationCompletionFrame(const std::string& text) {
-		const std::optional<std::string> status = extractJsonStringField(text, "status");
-		if (!isServerEventFrame(text) || !status.has_value()) {
+		if (!isServerEventFrame(text)) {
 			return false;
 		}
 
-		if (*status == "Level up!") {
+		const std::optional<std::string> status = extractJsonStringField(text, "status");
+		if (!status.has_value()) {
+			return false;
+		}
+
+		if (*status == "Level up!" || *status == "level up!") {
 			return true;
 		}
 
 		const std::optional<std::string> event = extractJsonStringField(text, "event");
-		return event.has_value() && *event == "elevation" && *status == "ok";
+		if (!event.has_value() || *event != "elevation") {
+			return false;
+		}
+
+		return status.has_value() && (*status == "Level up!" || *status == "level up!" || *status == "ok");
+	}
+
+	bool shouldExitOnLocalVictory() {
+		const char* value = std::getenv("ZAPPY_EXIT_ON_LOCAL_VICTORY");
+		return value != nullptr && std::string(value) == "1";
 	}
 }
 
 ClientRunner::ClientRunner(const Arguments& args)
 	: _args(args), _ws(std::make_unique<WebsocketClient>()), _commands(std::make_unique<CommandSender>(*_ws)),
-	  _manager(std::make_unique<CommandManager>([this](const CommandRequest& req) { return dispatchManagedCommand(req); })), _sawDieEvent(false) {}
+	  _manager(std::make_unique<CommandManager>([this](const CommandRequest& req) { return dispatchManagedCommand(req); })),
+	  _sawDieEvent(false), _lastCmdLayerTraceAtMs(-1) {}
 
 ClientRunner::ClientRunner(const Arguments& args, std::function<Result(const CommandRequest&)> testDispatch)
 	: _args(args), _ws(std::make_unique<WebsocketClient>()), _commands(std::make_unique<CommandSender>(*_ws)),
-	  _manager(std::make_unique<CommandManager>(std::move(testDispatch))), _sawDieEvent(false) {}
+	  _manager(std::make_unique<CommandManager>(std::move(testDispatch))),
+	  _sawDieEvent(false), _lastCmdLayerTraceAtMs(-1) {}
 
 ClientRunner::~ClientRunner() = default;
 
@@ -351,6 +367,9 @@ std::uint64_t ClientRunner::submitIntentAt(const IntentRequest& intent, std::int
 	if (dynamic_cast<const RequestMove*>(&intent) != nullptr) {
 		return enqueueTracked(CommandType::Avance);
 	}
+	if (dynamic_cast<const RequestConnectNbr*>(&intent) != nullptr) {
+		return enqueueTracked(CommandType::ConnectNbr);
+	}
 	if (dynamic_cast<const RequestTurnRight*>(&intent) != nullptr) {
 		return enqueueTracked(CommandType::Droite);
 	}
@@ -362,6 +381,9 @@ std::uint64_t ClientRunner::submitIntentAt(const IntentRequest& intent, std::int
 	}
 	if (dynamic_cast<const RequestIncantation*>(&intent) != nullptr) {
 		return enqueueTracked(CommandType::Incantation);
+	}
+	if (dynamic_cast<const RequestFork*>(&intent) != nullptr) {
+		return enqueueTracked(CommandType::Fork);
 	}
 
 	Logger::warn("submitIntentAt received unsupported intent type");
@@ -428,6 +450,8 @@ Result ClientRunner::processManagedTextFrame(const std::string& text, int64_t no
 		return Result::success();
 	}
 
+	Logger::trace("RX", "loop frame=" + text);
+
 	if (isServerEventFrame(text)) {
 		if (isElevationInProgressFrame(text)) {
 			Logger::info("ClientRunner: elevation in progress event: " + text);
@@ -479,7 +503,7 @@ Result ClientRunner::processManagedTextFrame(const std::string& text, int64_t no
 			event.commandId = 0;
 			event.commandType = CommandType::Broadcast;
 			event.status = CommandStatus::Success;
-			event.details = *incomingBroadcast;
+			event.details = text;
 
 			std::vector<std::shared_ptr<IntentRequest>> followUps = _policy->onCommandEvent(nowMs, event, std::nullopt);
 			const std::size_t backlog = _manager->queuedCount() + (_manager->hasInFlight() ? 1u : 0u);
@@ -516,6 +540,13 @@ Result ClientRunner::processManagedTextFrameForTesting(const std::string& text, 
 Result ClientRunner::handleCompletedCommands(int64_t nowMs) {
 	if (!_manager) {
 		return Result::success();
+	}
+
+	if (Logger::isDeepTraceEnabled() && (_lastCmdLayerTraceAtMs < 0 || (nowMs - _lastCmdLayerTraceAtMs) >= 500)) {
+		Logger::trace("CMD_LAYER", "tick now=" + std::to_string(nowMs)
+			+ " queued=" + std::to_string(_manager->queuedCount())
+			+ " inFlight=" + std::string(_manager->hasInFlight() ? "1" : "0"));
+		_lastCmdLayerTraceAtMs = nowMs;
 	}
 
 	CommandResult completed;
@@ -563,6 +594,8 @@ Result ClientRunner::handleCompletedCommands(int64_t nowMs) {
 					Logger::warn("Policy follow-up intent declined: " + followUp->description());
 					continue;
 				}
+				Logger::trace("INTENT", "follow-up submitted id=" + std::to_string(id)
+					+ " desc=" + followUp->description());
 				submitted += 1;
 			}
 		}
@@ -571,6 +604,12 @@ Result ClientRunner::handleCompletedCommands(int64_t nowMs) {
 			if (completed.status == CommandStatus::ServerError) {
 				Logger::warn("Command rejected by server (continuing): " + commandTypeName(completed.type)
 					+ " -> " + completed.details);
+				continue;
+			}
+
+			if (_args.loopMode) {
+				Logger::warn("Loop mode: transient command failure (continuing): "
+					+ commandTypeName(completed.type) + " -> " + completed.details);
 				continue;
 			}
 
@@ -628,9 +667,26 @@ Result ClientRunner::runPersistentLoop(int intervalMs) {
 			return commandTickRes;
 		}
 
-		WebSocketFrame frame;
-		const IoResult recvRes = _ws->recvFrame(frame);
-		if (recvRes.status == NetStatus::Ok && frame.opcode == WebSocketOpcode::Text) {
+		const WorldModelPolicy* worldModel = dynamic_cast<const WorldModelPolicy*>(_policy.get());
+		if (shouldExitOnLocalVictory() && worldModel != nullptr && worldModel->victoryReached()) {
+			Logger::info("ClientRunner: policy reached victory threshold, stopping loop mode");
+			return Result::success();
+		}
+
+		while (true) {
+			WebSocketFrame frame;
+			const IoResult recvRes = _ws->recvFrame(frame);
+			if (recvRes.status == NetStatus::WouldBlock) {
+				break;
+			}
+			if (recvRes.status != NetStatus::Ok) {
+				return Result::failure(ErrorCode::NetworkError, "Loop receive failed: " + recvRes.message);
+			}
+
+			if (frame.opcode != WebSocketOpcode::Text) {
+				continue;
+			}
+
 			std::string text(frame.payload.begin(), frame.payload.end());
 			const Result frameRes = handleLoopTextFrame(text, now);
 			if (!frameRes.ok()) {
@@ -639,9 +695,11 @@ Result ClientRunner::runPersistentLoop(int intervalMs) {
 			if (_sawDieEvent) {
 				return Result::success();
 			}
-		}
-		if (recvRes.status != NetStatus::WouldBlock && recvRes.status != NetStatus::Ok) {
-			return Result::failure(ErrorCode::NetworkError, "Loop receive failed: " + recvRes.message);
+
+			if (shouldExitOnLocalVictory() && worldModel != nullptr && worldModel->victoryReached()) {
+				Logger::info("ClientRunner: policy reached victory threshold, stopping loop mode");
+				return Result::success();
+			}
 		}
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(20));

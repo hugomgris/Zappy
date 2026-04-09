@@ -32,6 +32,7 @@ class WorldState {
 		std::string _lastVisionPayload;
 		std::string _lastInventoryPayload;
 		std::string _lastBroadcastPayload;
+		std::optional<int> _lastBroadcastDirection;
 		std::map<ResourceType, int> _inventoryCounts;
 		std::vector<VisionTile> _visionTiles;
 		Pose _pose;
@@ -55,10 +56,11 @@ class WorldState {
 		WorldState();
 
 		void clear();
+		void invalidateVision();
 
 		void recordVision(std::int64_t nowMs, const std::string& payload);
 		void recordInventory(std::int64_t nowMs, const std::string& payload);
-		void recordBroadcast(std::int64_t nowMs, const std::string& payload);
+		void recordBroadcast(std::int64_t nowMs, const std::string& payload, std::optional<int> direction = std::nullopt);
 		void recordPose(std::int64_t nowMs, int x, int y, int orientation);
 		void recordTurnLeft(std::int64_t nowMs);
 		void recordTurnRight(std::int64_t nowMs);
@@ -76,6 +78,7 @@ class WorldState {
 		std::optional<std::int64_t> lastVisionAt() const;
 		std::optional<std::int64_t> lastInventoryAt() const;
 		std::optional<std::int64_t> lastBroadcastAt() const;
+		std::optional<int> lastBroadcastDirection() const;
 		std::optional<std::int64_t> lastPoseAt() const;
 		std::optional<std::int64_t> lastLevelUpAt() const;
 		std::optional<Pose> pose() const;
@@ -89,6 +92,7 @@ class WorldState {
 		const std::map<ResourceType, int>& inventoryCounts() const;
 		const std::vector<VisionTile>& visionTiles() const;
 		bool currentTileHasResource(ResourceType resource) const;
+		int currentTileResourceCount(ResourceType resource) const;
 		std::optional<VisionTile> nearestVisionTileWith(ResourceType resource) const;
 		int currentTilePlayerCount() const;
 };

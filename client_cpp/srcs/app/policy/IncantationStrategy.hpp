@@ -15,7 +15,6 @@ class IncantationStrategy {
 	private:
 		int _minFood;
 		int _minPlayersOnTile;
-		std::map<ResourceType, int> _requiredResources;
 
 	public:
 		explicit IncantationStrategy(int minFood = 0, int minPlayersOnTile = 0);
@@ -23,5 +22,7 @@ class IncantationStrategy {
 		IncantationAction decide(const WorldState& state) const;
 
 	private:
-		bool hasRequiredResources(const WorldState& state) const;
+		bool hasRequiredResources(const WorldState& state, int playerLevel) const;
+		int requiredPlayersForLevel(int playerLevel) const;
+		std::map<ResourceType, int> requiredResourcesForLevel(int playerLevel) const;
 };

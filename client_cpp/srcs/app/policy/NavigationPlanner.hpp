@@ -14,11 +14,24 @@ struct NavigationStep {
 	CommandType commandType = CommandType::Unknown;
 };
 
+struct NavigationTarget {
+	WorldState::VisionTile tile;
+	ResourceType resource = ResourceType::Nourriture;
+	int targetX = 0;
+	int targetY = 0;
+};
+
 class NavigationPlanner {
 	public:
 		std::vector<NavigationStep> buildPlan(
 			const WorldState& state,
-			const std::vector<ResourceType>& resourcePriority = {}
+			const std::vector<ResourceType>& resourcePriority = {},
+			std::optional<NavigationTarget>* selectedTarget = nullptr
+		) const;
+
+		std::vector<NavigationStep> buildBroadcastApproachPlan(
+			const WorldState::Pose& pose,
+			int direction
 		) const;
 
 	private:

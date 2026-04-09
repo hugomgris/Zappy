@@ -13,6 +13,7 @@
 /*debug*/
 #include <time.h>
 #include <stdlib.h>
+#include <errno.h>
 
 #define PORT 8674
 
@@ -119,6 +120,10 @@ char* teams[] = {"team1", "team2", "team3", "team4", "team5",\
 
 int main(int argc, char **argv)
 {
+    char *time_unit_env;
+    char *endptr;
+    long parsed_time_unit;
+
     /* DEBUG */
     t_args args = {
         .port = PORT,
@@ -142,6 +147,16 @@ int main(int argc, char **argv)
     args.nb_teams = 2;
     // args.time_unit = rand() % 1000 + 1;
     args.time_unit = 7; // Tick control: around 1 action per second
+
+    time_unit_env = getenv("ZAPPY_TIME_UNIT");
+    if (time_unit_env && *time_unit_env)
+    {
+        errno = 0;
+        endptr = NULL;
+        parsed_time_unit = strtol(time_unit_env, &endptr, 10);
+        if (errno == 0 && endptr != time_unit_env && *endptr == '\0' && parsed_time_unit > 0)
+            args.time_unit = (time_t)parsed_time_unit;
+    }
     
     if (parse_config("config") == ERROR)
             goto error;
@@ -192,6 +207,7 @@ int main(int argc, char **argv)
     printf("Server started on port %d\n", args.port);
 
     /* if server closes us something weird could happen */
+    signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, signal_handler);
     signal(SIGUSR1, signal_handler);
     main_loop();

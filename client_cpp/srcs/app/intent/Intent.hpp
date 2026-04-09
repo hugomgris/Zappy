@@ -86,6 +86,20 @@ class RequestIncantation : public IntentRequest {
 		std::string description() const override { return "RequestIncantation"; }
 };
 
+// Concrete intent: Request fork (egg creation)
+class RequestFork : public IntentRequest {
+	public:
+		RequestFork() = default;
+		std::string description() const override { return "RequestFork"; }
+};
+
+// Concrete intent: Request available connection slots
+class RequestConnectNbr : public IntentRequest {
+	public:
+		RequestConnectNbr() = default;
+		std::string description() const override { return "RequestConnectNbr"; }
+};
+
 // Intent result: Outcome of a completed intent
 struct IntentResult {
 	std::uint64_t	id = 0;

@@ -584,7 +584,7 @@ int server_select()
     memcpy(&read_fds, &m_read_fds, sizeof(m_read_fds));
 
     timeout.tv_sec = 0;
-    timeout.tv_usec = 0;
+    timeout.tv_usec = 10000;
 
     ret = select(m_max_fd + 1, &read_fds, NULL, NULL, &timeout);
     if (ret < 0) /* Error... */
