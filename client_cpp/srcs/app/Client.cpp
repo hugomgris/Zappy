@@ -29,7 +29,10 @@ namespace zappy {
 
 		// wait for websocket con
 		while (!_ws.isConnected()) {
-			_ws.tick(nowMs);
+			Result tickRes = _ws.tick(nowMs);
+			if (!tickRes.ok()) {
+				return Result::failure(ErrorCode::NetworkError, "Websocket setup failed: " + tickRes.message);
+			}
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 			nowMs += 10;
 
@@ -57,7 +60,10 @@ namespace zappy {
 		auto startTime = std::chrono::steady_clock::now();
 
 		while (true) {
-			_ws.tick(nowMs);
+			Result tickRes = _ws.tick(nowMs);
+			if (!tickRes.ok()) {
+				return Result::failure(ErrorCode::NetworkError, "Websocket error while waiting bienvenue: " + tickRes.message);
+			}
 
 			WebSocketFrame frame;
 			IoResult io = _ws.recvFrame(frame);
@@ -90,7 +96,10 @@ namespace zappy {
 		auto startTime = std::chrono::steady_clock::now();
 		
 		while (true) {
-			_ws.tick(nowMs);
+			Result tickRes = _ws.tick(nowMs);
+			if (!tickRes.ok()) {
+				return Result::failure(ErrorCode::NetworkError, "Websocket error during login: " + tickRes.message);
+			}
 			
 			WebSocketFrame frame;
 			IoResult io = _ws.recvFrame(frame);
@@ -122,6 +131,8 @@ namespace zappy {
 
 	Result Client::run() {
 		_running = true;
+		// Kick-start activity early to avoid idle disconnects on strict servers.
+		(void)_sender.sendVoir();
 		_networkThread = std::make_unique<std::thread>(&Client::networkLoop, this);
 		return Result::success();
 	}
@@ -148,6 +159,7 @@ namespace zappy {
 			Result tickRes = _ws.tick(nowMs);
 			if (!tickRes.ok()) {
 				Logger::error("Websocket error: " + tickRes.message);
+				_running = false;
 				break;
 			}
 
@@ -196,7 +208,8 @@ namespace zappy {
 			
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
 		}
-		
+
+		_running = false;
 		Logger::info("Network loop ended");
 	}
 
@@ -207,13 +220,18 @@ namespace zappy {
 		IoResult io = _ws.recvFrame(frame);
 
 		while (io.status == NetStatus::Ok) {
+			Logger::info("Received frame, opcode=" + std::to_string(static_cast<int>(frame.opcode)) + 
+				", payload size=" + std::to_string(frame.payload.size()));
+				
 			if (frame.opcode == WebSocketOpcode::Text) {
 				std::string text(frame.payload.begin(), frame.payload.end());
+				Logger::info("RECEIVED TEXT: " + text);
 				ServerMessage msg = parseServerMessage(text);
 				
 				// Update world state
 				switch (msg.type) {
 					case ServerMessageType::Response:
+						Logger::info("Processing response, cmd=" + msg.cmd + ", status=" + msg.status);
 						_state.onResponse(msg);
 						_sender.processResponse(msg);
 						break;

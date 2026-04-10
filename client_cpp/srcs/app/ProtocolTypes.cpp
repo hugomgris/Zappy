@@ -89,36 +89,40 @@ namespace zappy {
 		}
 
 		// parse vision response - FIXED coordinate calculation
+		// Replace the vision parsing section (around line 180)
 		if (msg.type == ServerMessageType::Response && msg.cmd == "voir") {
 			cJSON* visionField = cJSON_GetObjectItem(root, "vision");
 			if (visionField && cJSON_IsArray(visionField)) {
 				std::vector<VisionTile> tiles;
 				int arraySize = cJSON_GetArraySize(visionField);
 				
+				// Server vision order: 
+				// Level 0: [current tile]
+				// Level 1: [tile in front, left, right] - actually 3 tiles
+				// Level 2: [row of 5 tiles]
+				// etc.
+				
+				int currentLevel = 0;
+				int tilesProcessed = 0;
+				int tilesInCurrentLevel = 1; // Level 0 has 1 tile
+				
 				for (int i = 0; i < arraySize; i++) {
+					if (tilesProcessed >= tilesInCurrentLevel) {
+						currentLevel++;
+						tilesInCurrentLevel = 2 * currentLevel + 1;
+						tilesProcessed = 0;
+					}
+					
 					cJSON* tileArray = cJSON_GetArrayItem(visionField, i);
 					if (tileArray && cJSON_IsArray(tileArray)) {
 						VisionTile tile;
-						tile.distance = i;
+						tile.distance = currentLevel;
 						
-						// FIXED: Correct row and position calculation
-						// Vision is ordered: tile 0 (distance 0), then row 1 (3 tiles, distance 1),
-						// row 2 (5 tiles, distance 2), etc.
-						int row = 0;
-						int tilesInPrevRows = 0;
+						// Calculate local position
+						int posInRow = tilesProcessed - currentLevel;
+						tile.localX = posInRow;
+						tile.localY = currentLevel;
 						
-						// Calculate which row this tile belongs to
-						while (tilesInPrevRows + (2 * row + 1) <= i) {
-							tilesInPrevRows += 2 * row + 1;
-							row++;
-						}
-						
-						// Position within the row
-						int posInRow = i - tilesInPrevRows;
-						tile.localX = posInRow - row;
-						tile.localY = row;
-						
-						// Parse items on tile
 						int tileSize = cJSON_GetArraySize(tileArray);
 						for (int j = 0; j < tileSize; j++) {
 							cJSON* item = cJSON_GetArrayItem(tileArray, j);
@@ -133,8 +137,16 @@ namespace zappy {
 						}
 						tiles.push_back(tile);
 					}
+					tilesProcessed++;
 				}
 				msg.vision = tiles;
+				
+				// DEBUG: Log what we parsed
+				Logger::debug("Parsed " + std::to_string(tiles.size()) + " vision tiles");
+				for (const auto& tile : tiles) {
+					Logger::debug("Tile dist=" + std::to_string(tile.distance) + 
+								" items=" + std::to_string(tile.items.size()));
+				}
 			}
 		}
 		

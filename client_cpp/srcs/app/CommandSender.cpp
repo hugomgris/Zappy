@@ -126,49 +126,83 @@ namespace zappy {
 		return id;
 	}
 
-	// FIXED: Search entire queue for matching command, not just front
+	// Match response to pending command.
+	// Some server responses only carry a generic status and omit the original cmd.
 	void CommandSender::processResponse(const ServerMessage& msg) {
 		if (msg.type != ServerMessageType::Response) return;
 
-		std::lock_guard<std::mutex> lock(_mutex);
-		
-		// Find matching pending command
-		auto it = std::find_if(_pending.begin(), _pending.end(),
-			[&msg](const PendingCommand& p) { return p.cmd == msg.cmd; });
-		
-		if (it != _pending.end()) {
-			Logger::debug("Matched response for: " + msg.cmd + " (id=" + std::to_string(it->id) + ")");
-			if (it->callback) it->callback(msg);
-			_pending.erase(it);
-		} else {
-			Logger::debug("No pending command found for response: " + msg.cmd);
+		std::function<void(const ServerMessage&)> callback;
+		uint64_t matchedId = 0;
+		std::string matchedCmd;
+		{
+			std::lock_guard<std::mutex> lock(_mutex);
+			
+			// DEBUG: Log pending commands
+			Logger::debug("Processing response for cmd: " + msg.cmd + ", pending count=" + std::to_string(_pending.size()));
+			for (const auto& p : _pending) {
+				Logger::debug("  Pending: id=" + std::to_string(p.id) + ", cmd=" + p.cmd);
+			}
+			
+			auto it = _pending.end();
+
+			if (!msg.cmd.empty()) {
+				it = std::find_if(_pending.begin(), _pending.end(),
+					[&msg](const PendingCommand& p) { return p.cmd == msg.cmd; });
+			} else if (!_pending.empty()) {
+				// Fallback: cmd-less responses are assumed to answer the oldest pending command.
+				it = _pending.begin();
+			}
+
+			if (it != _pending.end()) {
+				matchedId = it->id;
+				matchedCmd = it->cmd;
+				callback = it->callback;
+				_pending.erase(it);
+				Logger::debug("Matched pending command: " + matchedCmd + " with id:" + std::to_string(matchedId));
+			} else {
+				Logger::warn("No matching pending command for: " + msg.cmd);
+			}
+		}
+
+		if (callback) {
+			ServerMessage callbackMsg = msg;
+			if (callbackMsg.cmd.empty()) {
+				callbackMsg.cmd = matchedCmd;
+			}
+			callback(callbackMsg);
 		}
 	}
 
 	// FIXED: Invoke callback on timeout with error message
 	void CommandSender::checkTimeouts(int timeoutMs) {
-		std::lock_guard<std::mutex> lock(_mutex);
 		auto now = std::chrono::steady_clock::now();
-		
-		auto it = _pending.begin();
-		while (it != _pending.end()) {
-			auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - it->sentAt).count();
-			if (elapsed >= timeoutMs) {
-				Logger::warn("Command timeout: " + it->cmd + " (id=" + std::to_string(it->id) + ")");
-				
-				// Create timeout message and invoke callback
+		std::vector<std::pair<std::string, std::function<void(const ServerMessage&)>>> expired;
+
+		{
+			std::lock_guard<std::mutex> lock(_mutex);
+			auto it = _pending.begin();
+			while (it != _pending.end()) {
+				auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - it->sentAt).count();
+				if (elapsed >= timeoutMs) {
+					expired.emplace_back(it->cmd, it->callback);
+					it = _pending.erase(it);
+				} else {
+					++it;
+				}
+			}
+		}
+
+		for (const auto& entry : expired) {
+			const std::string& cmd = entry.first;
+			const auto& callback = entry.second;
+			Logger::warn("Command timeout: " + cmd);
+
+			if (callback) {
 				ServerMessage timeoutMsg;
 				timeoutMsg.type = ServerMessageType::Error;
-				timeoutMsg.cmd = it->cmd;
+				timeoutMsg.cmd = cmd;
 				timeoutMsg.status = "timeout";
-				
-				if (it->callback) {
-					it->callback(timeoutMsg);
-				}
-				
-				it = _pending.erase(it);
-			} else {
-				++it;
+				callback(timeoutMsg);
 			}
 		}
 	}

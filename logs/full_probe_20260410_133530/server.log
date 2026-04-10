@@ -1,0 +1,401 @@
+[1;31m[0] Time api resumed
+[0m>>> HANDSHAKE DONE CALLED (fd=5)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: U5ajClLu0ltwdQ0RkK11rQ==
+>>> Accept key computed: ST76fEGoYOKNHjrrN/Np+b2OpWo=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: ST76fEGoYOKNHjrrN/Np+b2OpWo=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=6)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: BG95QnyInhOiyL4gsH6HBg==
+>>> Accept key computed: Z4b0eBRAeAVoqf2nCmr2j3V7XUc=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: Z4b0eBRAeAVoqf2nCmr2j3V7XUc=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=7)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: 1r/BzW/eEsKFKniZxDwQ5w==
+>>> Accept key computed: PES5N4L03DqfsqXpk32HW2xSaSc=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: PES5N4L03DqfsqXpk32HW2xSaSc=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=8)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: v98nZ1Qsc4yBmPdeZGaN2w==
+>>> Accept key computed: aFuEy/UxnB4O0SP2kySO9s7LWB0=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: aFuEy/UxnB4O0SP2kySO9s7LWB0=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=9)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: HfZyqjyjBxmgBHy/NCzexg==
+>>> Accept key computed: oCLkh+ZPgqKtsdulkhD3BQUjitM=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: oCLkh+ZPgqKtsdulkhD3BQUjitM=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=10)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: SpL7lEOjEP/EAblAmTV7ag==
+>>> Accept key computed: g4RNJGdyWD2Ml/zthamQhl15y9E=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: g4RNJGdyWD2Ml/zthamQhl15y9E=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=11)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: 5jsgzAe/MqjbEfTyaVWhCA==
+>>> Accept key computed: V/TCunAgGAnkPillJwW/ee1cxxU=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: V/TCunAgGAnkPillJwW/ee1cxxU=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=12)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: i0jm5cOJhPl06fcYxZlnfA==
+>>> Accept key computed: T6ezhXs+w3GCEf0wLvohyECIEdw=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: T6ezhXs+w3GCEf0wLvohyECIEdw=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=13)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: Nb7YAG+fqal0uL8qd/Ioyw==
+>>> Accept key computed: +NUCbRRhQARAB9nV024K54O09e8=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: +NUCbRRhQARAB9nV024K54O09e8=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=14)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: M2BdE4k3ZDhuvvroG4zygQ==
+>>> Accept key computed: qS6M+s1Ph8d5E9VZLJVYniOmPNY=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: qS6M+s1Ph8d5E9VZLJVYniOmPNY=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=15)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: gQBtDB+/k5QIQ8RJANKV9g==
+>>> Accept key computed: rFPsmGKq+8vXn5XAQ+nQCSwX9RE=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: rFPsmGKq+8vXn5XAQ+nQCSwX9RE=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=16)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: YO5ol7nh72ZplIF/7tcjAQ==
+>>> Accept key computed: EbhMwATNdhpeXkjnuUA+ncyEiIY=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: EbhMwATNdhpeXkjnuUA+ncyEiIY=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=17)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: 3YwQpAo+mEmIQQNdiAh8BQ==
+>>> Accept key computed: fuRPKFE6fo8v8kz1DrbhQ4fmgSA=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: fuRPKFE6fo8v8kz1DrbhQ4fmgSA=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=18)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: xfNd0lqmI1cVNPkXcTnYBA==
+>>> Accept key computed: b+DhfKsDKe4J1tOaGTzFFxGaGl0=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: b+DhfKsDKe4J1tOaGTzFFxGaGl0=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=19)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: mhW6q4HvjqiBHfLvaa6z4A==
+>>> Accept key computed: WyPIPvWCLCzWSAdR6jJlhvW00QI=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: WyPIPvWCLCzWSAdR6jJlhvW00QI=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=20)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: D3h9vQtyPTc/9o6F/2jWZg==
+>>> Accept key computed: +gsalrl5eONhdqLKYZD183IT+yE=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: +gsalrl5eONhdqLKYZD183IT+yE=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=21)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: ICPNlXItTXICZPp0ICnIww==
+>>> Accept key computed: +J/jVOkv116cklW98QQRKHrt/24=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: +J/jVOkv116cklW98QQRKHrt/24=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=22)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: xx1gKswEWD2JSh8T0XJlJw==
+>>> Accept key computed: 5+sfQZ7k83x03U6zSqGMkKgKYco=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: 5+sfQZ7k83x03U6zSqGMkKgKYco=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=23)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: 4IWetOME8YDnS5T4WOb5/A==
+>>> Accept key computed: sEiIKCOSjxCq5FUCpF63NsscIwE=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: sEiIKCOSjxCq5FUCpF63NsscIwE=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=24)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: ywMaXpNL0PM6CpuVGIcoNA==
+>>> Accept key computed: FWkEijFees4zccv2ZT7sBE9gObs=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: FWkEijFees4zccv2ZT7sBE9gObs=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129

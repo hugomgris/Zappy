@@ -16,6 +16,7 @@ typedef struct
     int    INITIAL_LIFE_UNITS;
     int    LIFE_UNIT_TO_TIME;
     int    NUMBER_OF_CLIENTS;
+    int    TIME_UNIT;
 
     double DENSITY_NOURRITURE;
     double DENSITY_LINEMATE;
@@ -66,6 +67,7 @@ static void m_init_config_content()
     m_config_content->INITIAL_LIFE_UNITS = 10;
     m_config_content->LIFE_UNIT_TO_TIME = 126;
     m_config_content->NUMBER_OF_CLIENTS = 100;
+    m_config_content->TIME_UNIT = 100;
 
     m_config_content->DENSITY_NOURRITURE = 1.0;
     m_config_content->DENSITY_LINEMATE   = 0.02;
@@ -98,7 +100,7 @@ static void m_init_config_content()
     m_config_content->SPAWN_MORE_RESOURCES_PHIRAS    = 0.04;
     m_config_content->SPAWN_MORE_RESOURCES_THYSTAME  = 0.005;
 
-    m_config_content->LOG_LEVEL = LOG_LEVEL_WARN;
+    m_config_content->LOG_LEVEL = 4;
     m_config_content->LOG_FILE_PATH = strdup("log.txt");
     m_config_content->LOG_ERASE = true;
 
@@ -210,6 +212,14 @@ void parse_free_config()
     m_config_content = NULL;
 }
 
+int parse_get_time_unit(void)
+{
+    if (!m_config_content)
+        return 100;
+    
+    return m_config_content->TIME_UNIT;
+}
+
 int parse_config(const char *filename)
 {
     char    line[256];
@@ -220,17 +230,22 @@ int parse_config(const char *filename)
     char*   val;
     char    c;
 
-    m_config_content = malloc(sizeof(config_t));
-
-    /* Set default values */
-    m_init_config_content();
-
     fp = fopen(filename, "r");
     if (!fp)
     {
         perror("Unable to open config file");
         return ERROR;
     }
+    
+    m_config_content = malloc(sizeof(config_t));
+    if (!m_config_content)
+    {
+        fclose(fp);
+        return ERROR;
+    }
+
+    /* Set default values */
+    m_init_config_content();
 
     while (fgets(line, sizeof(line), fp))
     {
@@ -261,6 +276,8 @@ int parse_config(const char *filename)
             m_config_content->LIFE_UNIT_TO_TIME = atoi(val);
         else if (strcmp(key, "NUMBER_OF_CLIENTS") == 0)
             m_config_content->NUMBER_OF_CLIENTS = atoi(val);
+        else if (strcmp(key, "TIME_UNIT") == 0)
+            m_config_content->TIME_UNIT = atoi(val);
         else if (strcmp(key, "DENSITY_NOURRITURE") == 0)
             m_config_content->DENSITY_NOURRITURE = strtod(val, NULL);
         else if (strcmp(key, "DENSITY_LINEMATE") == 0)

@@ -177,6 +177,7 @@ int ws_read(int fd, void *buf, size_t bufsize, int flags)
     unsigned char *dest;
     size_t i;
     int opcode = 0;
+    int masked = 0;
     unsigned char ping_payload[125]; /* RFC: ping max size = 125 */
 
     (void)flags;
@@ -192,7 +193,12 @@ int ws_read(int fd, void *buf, size_t bufsize, int flags)
         r = SSL_read(ssl, header + offset, 2 - offset);
         if (r <= 0)
         {
-            log_msg(LOG_LEVEL_ERROR, "SSL_read error[%d]: %d\n", __LINE__, r);
+            int ssl_err = SSL_get_error(ssl, r);
+            if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE)
+                return -2;
+            if (ssl_err == SSL_ERROR_ZERO_RETURN)
+                return 0;
+            log_msg(LOG_LEVEL_ERROR, "SSL_read error[%d]: %d (ssl_err=%d)\n", __LINE__, r, ssl_err);
             return ERROR;
         }
 
@@ -200,6 +206,7 @@ int ws_read(int fd, void *buf, size_t bufsize, int flags)
     }
 
     payload_len = header[1] & 0x7F;
+    masked = (header[1] & 0x80) != 0;
     offset = 2;
 
     /* Check for ping 
@@ -212,22 +219,47 @@ int ws_read(int fd, void *buf, size_t bufsize, int flags)
     }
     else if (opcode == 0x9) /* Ping frame */
     {
-        /* Ping received, so lets answer with PONG (0xA) */
-        r = 0;
-        if (payload_len > 0 && payload_len <= sizeof(ping_payload))
+        /* RFC: control frames must not use extended payload lengths. */
+        if (payload_len >= 126)
+        {
+            ws_send_close(fd, 1002, "Protocol error: invalid ping length");
+            return 0;
+        }
+
+        if (masked)
+        {
+            r = SSL_read(ssl, mask, 4);
+            if (r != 4)
+            {
+                log_msg(LOG_LEVEL_ERROR, "Failed to read ping mask\n");
+                ws_send_close(fd, 1002, "Malformed ping frame");
+                return 0;
+            }
+        }
+
+        /* Ping received, answer with PONG (0xA), mirroring payload. */
+        if (payload_len > 0)
         {
             r = SSL_read(ssl, ping_payload, payload_len);
             if (r != (int)payload_len)
             {
                 log_msg(LOG_LEVEL_ERROR, "Failed to read ping payload\n");
-                /* try sending empty PONG frame */
                 m_ws_send_control_frame(ssl, 0xA, NULL, 0);
-                return 1;
+                return SUCCESS;
             }
+
+            if (masked)
+            {
+                for (i = 0; i < payload_len; ++i)
+                    ping_payload[i] ^= mask[i % 4];
+            }
+
             m_ws_send_control_frame(ssl, 0xA, ping_payload, payload_len);
         }
         else
+        {
             m_ws_send_control_frame(ssl, 0xA, NULL, 0);
+        }
 
         return -69; /* Indicate that we handled the ping */
     }
@@ -274,6 +306,12 @@ int ws_read(int fd, void *buf, size_t bufsize, int flags)
     r = SSL_read(ssl, mask, 4);
     if (r != 4)
     {
+        if (r <= 0)
+        {
+            int ssl_err = SSL_get_error(ssl, r);
+            if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE)
+                return -2;
+        }
         log_msg(LOG_LEVEL_ERROR, "Failed to read mask: read %d bytes\n", r);
         ws_send_close(fd, 1002, "Malformed frame");
         return 0; /* 0 will fall into a disconnect */

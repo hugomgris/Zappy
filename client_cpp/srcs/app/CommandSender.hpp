@@ -62,7 +62,7 @@ namespace zappy {
 			// response tracking
 			uint64_t expectResponse(const std::string& cmd, std::function<void(const ServerMessage&)> cb);
 			void processResponse(const ServerMessage& msg);
-			void checkTimeouts(int timeoutMs = 5000);
+			void checkTimeouts(int timeoutMs = 30000);
 
 			size_t pendingCount() const { return _pending.size(); }
 			void cancelAll();

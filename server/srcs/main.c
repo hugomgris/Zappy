@@ -56,7 +56,23 @@ int main_loop()
 
     while (!m_die)
     {
+        static int64_t last_log = 0;
+        int64_t now_ms = get_current_time_ms();
+        
+        if (now_ms - last_log > 1000) {
+            log_msg(LOG_LEVEL_INFO, "Loop running, time_units=%lu\n", 
+                    time_api_get_local()->current_time_units);
+            last_log = now_ms;
+        }
+        
         time_api_update(NULL);
+
+        static int loop_count = 0;
+        if (++loop_count % 100 == 0) {
+            log_msg(LOG_LEVEL_INFO, "Main loop iteration %d, time_units=%lu\n", 
+                    loop_count, time_api_get_local()->current_time_units);
+        }
+
         {
             initial_time_units = time_api_get_local()->current_time_units;
             _initial_time_units = initial_time_units;
@@ -123,31 +139,31 @@ int main(int argc, char **argv)
     char *time_unit_env;
     char *endptr;
     long parsed_time_unit;
+    int nb_clients;
 
-    /* DEBUG */
+    // Initialize args with defaults FIRST
     t_args args = {
         .port = PORT,
         .width = 10,
         .height = 10,
         .teams = teams,
         .nb_teams = 2,
-        .time_unit = 1,
+        .time_unit = 100,  // Default value
         .cert = "certs/cert.pem",
         .key = "certs/key.pem",
     };
 
-    srand(time(NULL));
-    // args.width = rand() % 1000 + 4;
-    // args.width = 10000;
-    args.width = 10;
-    // args.height = rand() % 1000 + 4;
-    // args.height = 10000;
-    args.height = 10;
-    // args.nb_teams = rand() % 14 + 1;
-    args.nb_teams = 2;
-    // args.time_unit = rand() % 1000 + 1;
-    args.time_unit = 7; // Tick control: around 1 action per second
+    // Parse command line arguments FIRST (overrides defaults)
+    if (parse_args(argc, argv, &args) == ERROR)
+        goto error;
 
+    // THEN parse config file (overrides command line)
+    if (parse_config("config") != ERROR) {
+        // Override with config values
+        args.time_unit = parse_get_time_unit();
+    }
+    
+    // THEN override with environment variable (highest priority)
     time_unit_env = getenv("ZAPPY_TIME_UNIT");
     if (time_unit_env && *time_unit_env)
     {
@@ -157,25 +173,13 @@ int main(int argc, char **argv)
         if (errno == 0 && endptr != time_unit_env && *endptr == '\0' && parsed_time_unit > 0)
             args.time_unit = (time_t)parsed_time_unit;
     }
-    
-    if (parse_config("config") == ERROR)
-            goto error;
 
     log_init(LOG_LEVEL_DEBUG);
 
-    log_msg(LOG_LEVEL_BOOT, "Randomized values:\n\tWidth='%d'\n\tHeight='%d'\n\tNb_clients='%d'\n\tTime_unit='%lu'\n",
-           args.width, args.height, args.time_unit);
-
-    int port = atoi(argc>1?argv[1]:"2");
-    if (port != 2)
-    {
-        args.port = port;
-    }
-    else
-    {
-        args.port = PORT;
-    }
-    /* DEBUG_END */
+        nb_clients = 0;
+        parse_set_nb_clients(&nb_clients);
+        log_msg(LOG_LEVEL_BOOT, "Randomized values:\n\tWidth='%d'\n\tHeight='%d'\n\tNb_clients='%d'\n\tTime_unit='%lu'\n",
+            args.width, args.height, nb_clients, (unsigned long)args.time_unit);
 
     if (args.nb_teams > 15)
     {
@@ -183,30 +187,20 @@ int main(int argc, char **argv)
         return ERROR;
     }
 
-    if (argc < 2)
-    {
-        ZAPPY_USAGE(EXIT_FAILURE);
-    }
-    if (parse_args(argc, argv, &args) == ERROR)
-        goto error;
-
     parse_get_certificates(&args.cert, &args.key);
-    /* On failure will simply exit soooo :)
-    */
+    
     if (init_server(args.port, args.cert, args.key) == ERROR)
         goto error;
 
     if (time_api_init_local(args.time_unit) == ERROR)
         goto error;
 
-    if (game_init(args.width, args.height, args.teams,\
-                args.nb_teams) == ERROR)
+    if (game_init(args.width, args.height, args.teams, args.nb_teams) == ERROR)
         goto error;
 
     parse_free_config();
     printf("Server started on port %d\n", args.port);
 
-    /* if server closes us something weird could happen */
     signal(SIGINT, signal_handler);
     signal(SIGUSR1, signal_handler);
     main_loop();

@@ -518,6 +518,10 @@ static int m_handle_client_event(int fd)
     bytes = recv(fd, buffer, sizeof(buffer), 0);
     if (bytes <= 0)
     {
+        if (bytes == -2)
+        {
+            return SUCCESS;
+        }
         if (bytes == -69)
         {
             log_msg(LOG_LEVEL_DEBUG, "Client fd=%d sent a ping, ignoring it\n", fd);
@@ -584,7 +588,7 @@ int server_select()
     memcpy(&read_fds, &m_read_fds, sizeof(m_read_fds));
 
     timeout.tv_sec = 0;
-    timeout.tv_usec = 10000;
+    timeout.tv_usec = 0;
 
     ret = select(m_max_fd + 1, &read_fds, NULL, NULL, &timeout);
     if (ret < 0) /* Error... */

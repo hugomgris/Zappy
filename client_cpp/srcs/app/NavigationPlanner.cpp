@@ -33,7 +33,9 @@ namespace zappy {
 
 		// if on current tile, just take it!
 		if (target.distance == 0) {
+			Logger::info("Resource on current tile! Adding take actions");
 			for (const auto& item : target.items) {
+				// Only take items we actually need
 				plan.push_back({NavAction::Take, item});
 			}
 			return plan;
@@ -42,13 +44,13 @@ namespace zappy {
 		// convert local coordinates to world orientation
 		auto [worldX, worldY] = localToWorldDelta(target.localX, target.localY, player.orientation);
 
-			Logger::debug("Target at local (" + std::to_string(target.localX) + "," + 
-				std::to_string(target.localY) + "), world delta (" + 
-				std::to_string(worldX) + "," + std::to_string(worldY) + ")");
+		Logger::debug("Target at local (" + std::to_string(target.localX) + "," + 
+			std::to_string(target.localY) + "), world delta (" + 
+			std::to_string(worldX) + "," + std::to_string(worldY) + ")");
 
 		// First move in X direction
 		if (worldX != 0) {
-			int targetOrientation = (worldX > 0) ? 2 : 4; // eithe reast or west
+			int targetOrientation = (worldX > 0) ? 2 : 4; // either east or west
 			auto turns = turnToFace(player.orientation, targetOrientation);
 			plan.insert(plan.end(), turns.begin(), turns.end());
 
@@ -74,6 +76,11 @@ namespace zappy {
 				plan.push_back({NavAction::MoveForward, ""});
 			}
 		}
+
+		// Once we reach the target tile, pick up visible resources there.
+		for (const auto& item : target.items) {
+			plan.push_back({NavAction::Take, item});
+		}
 		
 		return plan;
 	}
@@ -82,14 +89,22 @@ namespace zappy {
 		(void)state;
 		std::vector<NavigationStep> plan;
 
-		// we'll go with a simple spiral pattern
+		// Simple random walk pattern
 		_explorationStep++;
-
-		if (_explorationStep % 5 == 0) {
+		
+		// Every 3 steps, change direction
+		if (_explorationStep % 3 == 0) {
+			plan.push_back({NavAction::TurnRight, ""});
+		}
+		
+		// Always move forward
+		plan.push_back({NavAction::MoveForward, ""});
+		
+		// Every 6 steps, also turn left to create a spiral
+		if (_explorationStep % 6 == 0) {
 			plan.push_back({NavAction::TurnLeft, ""});
 		}
-		plan.push_back({NavAction::MoveForward, ""});
-
+		
 		return plan;
 	}
 

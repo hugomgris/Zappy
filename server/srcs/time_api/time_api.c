@@ -15,7 +15,7 @@ time_api* m_time = NULL;
 //     return tv.tv_sec * 1000L + tv.tv_usec / 1000;
 // }
 
-static long get_current_time_ms()
+long get_current_time_ms()
 {
     struct timespec ts;
     /* Supposed to be faster than gettimeofday() */

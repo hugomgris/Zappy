@@ -29,9 +29,12 @@ namespace zappy {
 			bool	_forkEnabled = true;
 			int		_targetLevel = 8;
 			int		_maxForks = 5;
-			int		_forkFoodThreshold = 12;
-			int		_foodEmergencyThreshold = 5;
-			int		_foodComfortThreshold = 10;
+			int		_forkFoodThreshold = 15;
+			int		_foodEmergencyThreshold = 3;
+			int		_foodComfortThreshold = 8;
+			bool	_easyAscensionMode = false;
+
+			int		_commandTimeoutMs = 30000;
 
 			// state
 			AIState	_AIstate = AIState::Idle;

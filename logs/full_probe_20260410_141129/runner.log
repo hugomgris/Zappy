@@ -1,0 +1,107 @@
+[0;34m=== Zappy Full Winner Probe ===[0m
+Log directory: /home/jareste/hugo/zappy/logs/full_probe_20260410_141129
+Port=8674 Team1=6 Team2=0 TargetLevel=8 MaxSeconds=360
+TimeUnit=20 EasyAscension=1 Fork=1
+[1;33mBuilding server and client...[0m
+[1;33mStarting server on port 8674...[0m
+[1;33mResuming server time API...[0m
+Sending SIGUSR1 to PID 1293084
+Signaled 1293084
+[1;33mLaunching clients...[0m
+[0;32mAll clients launched. Monitoring winner condition...[0m
+[31s] probing... configured clients=6
+[61s] probing... configured clients=6
+[91s] probing... configured clients=6
+[121s] probing... configured clients=6
+[151s] probing... configured clients=6
+[181s] probing... configured clients=6
+[211s] probing... configured clients=6
+[240s] probing... configured clients=6
+[270s] probing... configured clients=6
+[300s] probing... configured clients=6
+[330s] probing... configured clients=6
+[0;31mTimeout after 360s without winner condition.[0m
+Last server output lines:
+>>> HANDSHAKE DONE CALLED (fd=9)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: R5AsbMFRJXXIkG//Igt0OQ==
+>>> Accept key computed: EHCZCgLVBLDClo0ymd0XnS+OtVw=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: EHCZCgLVBLDClo0ymd0XnS+OtVw=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=10)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: 0/T4zqn31SUv8Z4kuw0ijQ==
+>>> Accept key computed: xzb81aOTite0esuCbTBvtzVp+PU=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: xzb81aOTite0esuCbTBvtzVp+PU=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+Last server game-log lines:
+[6861] Player inventory:
+[6861]  - nourriture: 0
+[6861]  - linemate:   0
+[6861]  - deraumere:  0
+[6861]  - sibur:      0
+[6861]  - mendiane:   0
+[6861]  - phiras:     0
+[6861]  - thystame:   0
+[6861] Player position: (8,7)
+[6861] Player -1 has died
+[6981] Players on tile (3,0):
+[6981]  - Player 22 (team 1, lvl 1, dir 3)
+[6981] Player -1 has died. '6981', '4461'
+[6981] Actual time: 6981
+[6981] Player inventory:
+[6981]  - nourriture: 0
+[6981]  - linemate:   0
+[6981]  - deraumere:  0
+[6981]  - sibur:      0
+[6981]  - mendiane:   0
+[6981]  - phiras:     0
+[6981]  - thystame:   0
+[6981] Player position: (3,0)
+[6981] Player -1 has died
+[7106] Players on tile (8,6):
+[7106]  - Player 23 (team 1, lvl 1, dir 0)
+[7106] Player -1 has died. '7106', '4586'
+[7106] Actual time: 7106
+[7106] Player inventory:
+[7106]  - nourriture: 0
+[7106]  - linemate:   0
+[7106]  - deraumere:  0
+[7106]  - sibur:      0
+[7106]  - mendiane:   0
+[7106]  - phiras:     0
+[7106]  - thystame:   0
+[7106] Player position: (8,6)
+[7106] Player -1 has died
+[7205] Client fd=5 sent a ping, ignoring it
+[7209] Client fd=6 sent a ping, ignoring it
+
+[1;33mCleaning up processes...[0m

@@ -6,13 +6,11 @@
 #include <getopt.h>
 
 static zappy::Client* g_client = nullptr;
+static volatile sig_atomic_t g_stop_requested = 0;
 
 void signalHandler(int sig) {
 	if (sig == SIGINT || sig == SIGTERM) {
-		std::cout << std::endl << "Shutting down..." << std::endl;
-		if (g_client) {
-			g_client->stop();
-		}
+		g_stop_requested = 1;
 	}
 }
 
@@ -112,6 +110,11 @@ int main(int argc, char** argv) {
 
 	// wait for ctrl+c
 	while (client.isRunning()) {
+		if (g_stop_requested) {
+			std::cout << std::endl << "Shutting down..." << std::endl;
+			client.stop();
+			break;
+		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 

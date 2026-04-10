@@ -23,44 +23,127 @@ namespace zappy {
 	void WorldState::onResponse(const ServerMessage& msg) {
 		std::lock_guard<std::mutex> lock(_mutex);
 		
-		if (msg.cmd == "voir" && msg.vision.has_value()) {
-			updateVision(*msg.vision);
+		// TEMPORARY DEBUG: Log all responses to see what's coming in
+		Logger::info("=== onResponse received ===");
+		Logger::info("  cmd: " + msg.cmd);
+		Logger::info("  status: " + msg.status);
+		Logger::info("  arg: " + msg.arg);
+		Logger::info("  raw: " + msg.raw);
+		
+		if (msg.cmd == "voir") {
+			Logger::info("=== VOIR RESPONSE DETECTED ===");
+			Logger::info("  vision.has_value(): " + std::to_string(msg.vision.has_value()));
+			if (msg.vision.has_value()) {
+				Logger::info("  vision size: " + std::to_string(msg.vision->size()));
+				// Log first few tiles to see what we got
+				for (size_t i = 0; i < std::min(size_t(5), msg.vision->size()); i++) {
+					const auto& tile = (*msg.vision)[i];
+					Logger::info("    Tile[" + std::to_string(i) + "]: distance=" + std::to_string(tile.distance) +
+							", items=" + std::to_string(tile.items.size()) +
+							", players=" + std::to_string(tile.playerCount));
+					if (!tile.items.empty()) {
+						std::string itemsStr;
+						for (const auto& item : tile.items) {
+							if (!itemsStr.empty()) itemsStr += ", ";
+							itemsStr += item;
+						}
+						Logger::info("      Items: " + itemsStr);
+					}
+				}
+			} else {
+				Logger::error("=== VOIR RESPONSE HAS NO VISION DATA! ===");
+				Logger::error("  This means ProtocolTypes::parseServerMessage failed to parse the vision array");
+			}
+			
+			if (msg.vision.has_value()) {
+				updateVision(*msg.vision);
+			} else {
+				Logger::warn("  Skipping updateVision because vision has no value");
+			}
 		}
 		else if (msg.cmd == "inventaire" && msg.inventory.has_value()) {
+			Logger::info("=== INVENTAIRE RESPONSE ===");
+			std::string invStr;
+			for (const auto& [item, count] : *msg.inventory) {
+				if (!invStr.empty()) invStr += ", ";
+				invStr += item + "=" + std::to_string(count);
+			}
+			Logger::info("  Inventory: " + invStr);
 			updateInventory(*msg.inventory);
 		}
 		else if (msg.cmd == "avance" && msg.isOk()) {
 			if (_mapSize.has_value()) {
+				int oldX = _player.x;
+				int oldY = _player.y;
 				applyMove(_player.x, _player.y, _player.orientation, _mapSize->x, _mapSize->y);
+				Logger::info("=== AVANCE ===");
+				Logger::info("  Moved from (" + std::to_string(oldX) + "," + std::to_string(oldY) + 
+							") to (" + std::to_string(_player.x) + "," + std::to_string(_player.y) + ")");
 			}
-			Logger::debug("Moved to (" + std::to_string(_player.x) + "," + std::to_string(_player.y) + ")");
 		}
 		else if (msg.cmd == "droite" && msg.isOk()) {
+			int oldOrientation = _player.orientation;
 			applyTurn(_player.orientation, true);
-			Logger::debug("Turned right, now facing " + orientationToString(_player.orientation));
+			Logger::info("=== DROITE ===");
+			Logger::info("  Turned from " + orientationToString(oldOrientation) + 
+						" to " + orientationToString(_player.orientation));
 		}
 		else if (msg.cmd == "gauche" && msg.isOk()) {
+			int oldOrientation = _player.orientation;
 			applyTurn(_player.orientation, false);
-			Logger::debug("Turned left, now facing " + orientationToString(_player.orientation));
+			Logger::info("=== GAUCHE ===");
+			Logger::info("  Turned from " + orientationToString(oldOrientation) + 
+						" to " + orientationToString(_player.orientation));
 		}
 		else if (msg.cmd == "fork" && msg.isOk()) {
 			_forkCount++;
-			Logger::info("Fork successful! Total forks: " + std::to_string(_forkCount));
+			Logger::info("=== FORK ===");
+			Logger::info("  Fork successful! Total forks: " + std::to_string(_forkCount));
 		}
 		else if (msg.cmd == "connect_nbr") {
 			try {
 				_player.remainingSlots = std::stoi(msg.arg);
-				Logger::info("Team slots available: " + std::to_string(_player.remainingSlots));
-			} catch (...) {}
-		}
-		else if (msg.cmd == "incantation") {
-			if (msg.arg == "in_progress") {
-				Logger::info("Incantation in progress...");
+				Logger::info("=== CONNECT_NBR ===");
+				Logger::info("  Team slots available: " + std::to_string(_player.remainingSlots));
+			} catch (...) {
+				Logger::error("  Failed to parse connect_nbr arg: " + msg.arg);
 			}
 		}
-		// FIXED: Handle deplacement (expulse response)
+		else if (msg.cmd == "incantation") {
+			Logger::info("=== INCANTATION ===");
+			if (msg.arg == "in_progress") {
+				Logger::info("  Incantation in progress...");
+			} else if (msg.isOk()) {
+				Logger::info("  Incantation completed!");
+			} else if (msg.isKo()) {
+				Logger::info("  Incantation failed");
+			} else {
+				Logger::info("  Incantation response: arg=" + msg.arg + ", status=" + msg.status);
+			}
+		}
 		else if (msg.cmd == "deplacement" && msg.direction.has_value()) {
-			Logger::debug("Expulsed! New direction relative: " + std::to_string(*msg.direction));
+			Logger::info("=== DEPLACEMENT (Expulse) ===");
+			Logger::info("  Expulsed! New direction relative: " + std::to_string(*msg.direction));
+		}
+		else if (msg.cmd == "prend") {
+			Logger::info("=== PREND ===");
+			Logger::info("  Arg: " + msg.arg + ", Status: " + msg.status);
+			if (msg.isKo()) {
+				Logger::error("  PREND FAILED! Resource not available?");
+			}
+		}
+		else if (msg.cmd == "pose") {
+			Logger::info("=== POSE ===");
+			Logger::info("  Arg: " + msg.arg + ", Status: " + msg.status);
+		}
+		else if (msg.cmd == "broadcast") {
+			Logger::info("=== BROADCAST ===");
+			Logger::info("  Status: " + msg.status);
+		}
+		else {
+			Logger::info("=== UNHANDLED RESPONSE ===");
+			Logger::info("  cmd: " + msg.cmd);
+			Logger::info("  raw: " + msg.raw);
 		}
 	}
 
@@ -87,16 +170,21 @@ namespace zappy {
 	}
 
 	void WorldState::updateInventory(const std::map<std::string, int>& inv) {
+		std::lock_guard<std::mutex> lock(_mutex);
+		// REPLACE completely - don't merge
+		_player.inventory.clear();
 		_player.inventory = inv;
+		
 		_lastInventoryTime = std::chrono::duration_cast<std::chrono::milliseconds>(
 			std::chrono::steady_clock::now().time_since_epoch()).count();
-
+		
+		// Debug logging
 		std::string invStr;
 		for (const auto& [item, count] : _player.inventory) {
 			if (!invStr.empty()) invStr += ", ";
 			invStr += item + "=" + std::to_string(count);
 		}
-		Logger::debug("Inventory updated: " + invStr);
+		Logger::debug("Inventory updated (REPLACE): " + invStr);
 	}
 
 	void WorldState::updateVision(const std::vector<VisionTile>& vision) {
@@ -182,18 +270,21 @@ namespace zappy {
 		return true;
 	}
 
-	// FIXED: Consider stones already on tile when calculating missing stones
 	std::vector<std::string> WorldState::getMissingStones() const {
 		std::lock_guard<std::mutex> lock(_mutex);
 		std::vector<std::string> missing;
 		
 		if (_player.level >= 8) return missing;
 		
+		Logger::debug("getMissingStones: level=" + std::to_string(_player.level) + 
+					", vision empty=" + std::to_string(_vision.empty()));
+		
 		// Check stones on current tile
 		std::map<std::string, int> availableOnTile;
 		if (!_vision.empty()) {
 			for (const auto& item : _vision[0].items) {
 				availableOnTile[item]++;
+				Logger::debug("Tile has: " + item);
 			}
 		}
 		
@@ -203,7 +294,10 @@ namespace zappy {
 			int have = (it != _player.inventory.end()) ? it->second : 0;
 			int onTile = availableOnTile[stone];
 			
-			// Only need stones we don't have on tile or in inventory
+			Logger::debug("Stone " + stone + ": have=" + std::to_string(have) + 
+						", onTile=" + std::to_string(onTile) + 
+						", needed=" + std::to_string(needed));
+			
 			int totalNeeded = needed - onTile;
 			if (totalNeeded < 0) totalNeeded = 0;
 			
@@ -214,6 +308,7 @@ namespace zappy {
 			}
 		}
 		
+		Logger::debug("Missing stones count: " + std::to_string(missing.size()));
 		return missing;
 	}
 

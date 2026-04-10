@@ -1,0 +1,221 @@
+[0;34m=== Zappy Full Winner Probe ===[0m
+Log directory: /home/jareste/hugo/zappy/logs/full_probe_20260410_131126
+Port=8674 Team1=12 Team2=12 TargetLevel=8 MaxSeconds=900
+TimeUnit=20 EasyAscension=1 Fork=1
+[1;33mBuilding server and client...[0m
+[1;33mStarting server on port 8674...[0m
+[1;33mResuming server time API...[0m
+Sending SIGUSR1 to PID 1272331
+Signaled 1272331
+[1;33mLaunching clients...[0m
+[0;32mAll clients launched. Monitoring winner condition...[0m
+[0s] probing... configured clients=21
+[30s] probing... configured clients=20
+[60s] probing... configured clients=20
+[90s] probing... configured clients=20
+[120s] probing... configured clients=20
+[150s] probing... configured clients=20
+[180s] probing... configured clients=20
+[210s] probing... configured clients=20
+[240s] probing... configured clients=20
+
+[1;33mCleaning up processes...[0m
+[570s] probing... configured clients=0
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m
+
+[1;33mCleaning up processes...[0m

@@ -1,0 +1,100 @@
+[0;34m=== Zappy Full Winner Probe ===[0m
+Log directory: /home/jareste/hugo/zappy/logs/full_probe_20260410_133058
+Port=8674 Team1=10 Team2=10 TargetLevel=8 MaxSeconds=140
+TimeUnit=20 EasyAscension=1 Fork=1
+[1;33mBuilding server and client...[0m
+[1;33mStarting server on port 8674...[0m
+[1;33mResuming server time API...[0m
+Sending SIGUSR1 to PID 1277988
+Signaled 1277988
+[1;33mLaunching clients...[0m
+[0;32mAll clients launched. Monitoring winner condition...[0m
+[30s] probing... configured clients=20
+[60s] probing... configured clients=20
+[90s] probing... configured clients=20
+[120s] probing... configured clients=20
+[0;31mTimeout after 140s without winner condition.[0m
+Last server output lines:
+>>> HANDSHAKE DONE CALLED (fd=23)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: MvdZTlQG9t7zS/+wKw7M4Q==
+>>> Accept key computed: uBHvjschqcw4RYcqTE6l1SVNd3s=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: uBHvjschqcw4RYcqTE6l1SVNd3s=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=24)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: 8+oO0aK5NbBDuzemfIY3iA==
+>>> Accept key computed: E4bKIJxiIStM0vN2BI51oSSoafA=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: E4bKIJxiIStM0vN2BI51oSSoafA=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+Last server game-log lines:
+[1814] Client fd=10 sent a ping, ignoring it
+[1816] Client fd=11 sent a ping, ignoring it
+[1818] Client fd=12 sent a ping, ignoring it
+[1819] Client fd=13 sent a ping, ignoring it
+[1822] Client fd=14 sent a ping, ignoring it
+[1824] Client fd=15 sent a ping, ignoring it
+[1826] Client fd=16 sent a ping, ignoring it
+[1828] Client fd=17 sent a ping, ignoring it
+[1830] Client fd=18 sent a ping, ignoring it
+[1832] Client fd=19 sent a ping, ignoring it
+[1834] Client fd=20 sent a ping, ignoring it
+[1836] Client fd=21 sent a ping, ignoring it
+[1838] Client fd=22 sent a ping, ignoring it
+[1840] Client fd=23 sent a ping, ignoring it
+[1841] Player 24 (team 2) forked egg 0 at (7,6) to hatch at 2441
+[1842] Client fd=24 sent a ping, ignoring it
+[2284] Player 5 (team 1) forked egg 1 at (2,2) to hatch at 2884
+[2441] Resizing clients array to 30
+[2441] Egg 0 created player 29 at (7,6) for team 2
+[2441] Egg 0 hatched at 2441
+[2704] Client fd=5 sent a ping, ignoring it
+[2706] Client fd=6 sent a ping, ignoring it
+[2708] Client fd=7 sent a ping, ignoring it
+[2711] Client fd=8 sent a ping, ignoring it
+[2712] Client fd=9 sent a ping, ignoring it
+[2715] Client fd=10 sent a ping, ignoring it
+[2717] Client fd=11 sent a ping, ignoring it
+[2719] Client fd=12 sent a ping, ignoring it
+[2720] Client fd=13 sent a ping, ignoring it
+[2723] Client fd=14 sent a ping, ignoring it
+[2725] Client fd=15 sent a ping, ignoring it
+[2727] Client fd=16 sent a ping, ignoring it
+[2729] Client fd=17 sent a ping, ignoring it
+[2730] Client fd=18 sent a ping, ignoring it
+[2732] Client fd=19 sent a ping, ignoring it
+[2735] Client fd=20 sent a ping, ignoring it
+[2736] Client fd=21 sent a ping, ignoring it
+[2738] Client fd=22 sent a ping, ignoring it
+[2741] Client fd=23 sent a ping, ignoring it
+[2743] Client fd=24 sent a ping, ignoring it
+
+[1;33mCleaning up processes...[0m

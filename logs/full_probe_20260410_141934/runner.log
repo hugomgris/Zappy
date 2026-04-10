@@ -1,0 +1,109 @@
+[0;34m=== Zappy Full Winner Probe ===[0m
+Log directory: /home/jareste/hugo/zappy/logs/full_probe_20260410_141934
+Port=8674 Team1=6 Team2=0 TargetLevel=8 MaxSeconds=420
+TimeUnit=20 EasyAscension=1 Fork=1
+[1;33mBuilding server and client...[0m
+[1;33mStarting server on port 8674...[0m
+[1;33mResuming server time API...[0m
+Sending SIGUSR1 to PID 1295225
+Signaled 1295225
+[1;33mLaunching clients...[0m
+[0;32mAll clients launched. Monitoring winner condition...[0m
+[30s] probing... configured clients=6
+[60s] probing... configured clients=6
+[90s] probing... configured clients=6
+[120s] probing... configured clients=6
+[150s] probing... configured clients=6
+[181s] probing... configured clients=6
+[211s] probing... configured clients=6
+[241s] probing... configured clients=6
+[271s] probing... configured clients=6
+[301s] probing... configured clients=6
+[331s] probing... configured clients=6
+[360s] probing... configured clients=6
+[390s] probing... configured clients=6
+[0;31mTimeout after 420s without winner condition.[0m
+Last server output lines:
+>>> HANDSHAKE DONE CALLED (fd=9)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: t/2FqVkSKfr1SyKV8mGt5A==
+>>> Accept key computed: Amd2AQq2aKaXw0xMbl+0GYwgzPc=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: Amd2AQq2aKaXw0xMbl+0GYwgzPc=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+>>> HANDSHAKE DONE CALLED (fd=10)
+>>> ATTEMPTING SSL_READ FOR HTTP REQUEST
+>>> SSL_READ RETURNED: 179
+>>> RECEIVED 179 BYTES, FIRST 80: GET / HTTP/1.1
+Host: localhost:8674
+Upgrade: websocket
+Connection: Upgrade
+S
+>>> CALLING websocket_handshake
+>>> websocket_handshake called
+>>> Found key: ahcoj4lLCQrL6Uu/CII91w==
+>>> Accept key computed: mUdTwY2uxzLFVzI5GWE9w4sWjtE=
+>>> Sending HTTP response (129 bytes):
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: mUdTwY2uxzLFVzI5GWE9w4sWjtE=
+
+<<<END_RESPONSE
+>>> SSL_write returned: 129
+Last server game-log lines:
+[7689]  - mendiane:   0
+[7689]  - phiras:     0
+[7689]  - thystame:   0
+[7689] Player position: (9,0)
+[7689] Player -1 has died
+[8011] Players on tile (0,4):
+[8011]  - Player 14 (team 1, lvl 1, dir 3)
+[8011] Player -1 has died. '8011', '5491'
+[8011] Actual time: 8011
+[8011] Player inventory:
+[8011]  - nourriture: 0
+[8011]  - linemate:   0
+[8011]  - deraumere:  0
+[8011]  - sibur:      0
+[8011]  - mendiane:   0
+[8011]  - phiras:     0
+[8011]  - thystame:   0
+[8011] Player position: (0,4)
+[8011] Player -1 has died
+[8105] Client fd=5 sent a ping, ignoring it
+[8108] Client fd=6 sent a ping, ignoring it
+[8110] Client fd=7 sent a ping, ignoring it
+[8113] Client fd=8 sent a ping, ignoring it
+[8113] Client fd=9 sent a ping, ignoring it
+[8116] Client fd=10 sent a ping, ignoring it
+[8313] Players on tile (8,1):
+[8313]  - Player 15 (team 1, lvl 1, dir 3)
+[8313] Player -1 has died. '8313', '5793'
+[8313] Actual time: 8313
+[8313] Player inventory:
+[8313]  - nourriture: 0
+[8313]  - linemate:   0
+[8313]  - deraumere:  0
+[8313]  - sibur:      0
+[8313]  - mendiane:   0
+[8313]  - phiras:     0
+[8313]  - thystame:   0
+[8313] Player position: (8,1)
+[8313] Player -1 has died
+[8394] Player 9 (team 1) forked egg 28 at (9,0) to hatch at 8994
+
+[1;33mCleaning up processes...[0m

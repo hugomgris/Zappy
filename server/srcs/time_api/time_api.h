@@ -55,4 +55,7 @@ int time_api_process_single_event(time_api *_api, event *ev);
 void time_api_run(time_api *_api);
 void time_api_pause(time_api *_api);
 
+// by hugo
+long get_current_time_ms();
+
 #endif /* TIME_API_H */

@@ -5,6 +5,7 @@ void parse_set_initial_density(spawn_ctx* ctx);
 void parse_set_commands_delay(command cmd[MAX_COMMANDS]);
 void parse_set_nb_clients(int* nb_clients);
 int parse_config(const char *filename);
+int parse_get_time_unit(void); 
 
 bool parse_respawn_resources();
 void parse_set_respawn_context(spawn_ctx* ctx);

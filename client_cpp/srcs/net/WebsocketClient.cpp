@@ -81,7 +81,10 @@ Result WebsocketClient::connect(const std::string& host, int port, bool insecure
 }
 
 Result WebsocketClient::tick(int64_t now_ms) {
+	Logger::debug("WebSocket tick state=" + std::to_string(static_cast<int>(_state)));
+
     if (_state == WsState::Disconnected || _state == WsState::Closed) {
+		Logger::error("tick() called in invalid state=" + std::to_string(static_cast<int>(_state)));
         return Result::failure(ErrorCode::InternalError, "WebSocket not connected");
     }
 
@@ -105,6 +108,7 @@ Result WebsocketClient::tick(int64_t now_ms) {
                 return res;
             }
             _state = WsState::Connected;
+            _last_ping_time_ms = now_ms;
             Logger::info("WebSocket: Handshake complete, connection established");
         }
     }
@@ -121,6 +125,7 @@ Result WebsocketClient::tick(int64_t now_ms) {
 
     Result flush_res = flushSendQueue();
     if (!flush_res.ok()) {
+		Logger::error("flushSendQueue failed: " + flush_res.message);
         _state = WsState::Closed;
         return flush_res;
     }
@@ -132,9 +137,11 @@ Result WebsocketClient::tick(int64_t now_ms) {
     if (read_res.status == NetStatus::Ok && read_res.bytes > 0) {
         _read_buffer.insert(_read_buffer.end(), tmp_buf.begin(), tmp_buf.end());
     } else if (read_res.status == NetStatus::ConnectionClosed) {
+		Logger::warn("TLS read: peer closed connection");
         _state = WsState::Closed;
         return Result::failure(ErrorCode::NetworkError, "Peer closed connection");
     } else if (read_res.status != NetStatus::WouldBlock && read_res.status != NetStatus::Ok) {
+		Logger::error("TLS read failed: " + read_res.message);
         _state = WsState::Closed;
         _last_error = read_res.message;
         return Result::failure(ErrorCode::NetworkError, read_res.message);

@@ -610,6 +610,8 @@ int m_command_voir(void* _p, void* _arg)
     (void)_arg;
 
     p = (player*)_p;
+    log_msg(LOG_LEVEL_INFO, "Executing voir for player %d at (%d,%d)\n", 
+        p->id, p->pos.x, p->pos.y);
 
     lvl = p->level;
 
@@ -701,6 +703,7 @@ static int m_command_inventaire(void* _p, void* _arg)
     (void)_arg;
 
     p = (player*)_p;
+    log_msg(LOG_LEVEL_INFO, "Executing inventaire for player %d\n", p->id);
 
     root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, "type", "response");
@@ -1381,6 +1384,11 @@ static int m_command_avance(void* _p, void* _arg)
 
     p = (player*)_p;
     arg = (char*)_arg;
+    
+    // ADD THIS DEBUG
+    log_msg(LOG_LEVEL_INFO, "Executing avance for player %d at (%d,%d) facing %d\n", 
+            p->id, p->pos.x, p->pos.y, p->dir);
+    
     new_x = p->pos.x;
     new_y = p->pos.y;
     switch (p->dir)
@@ -1391,19 +1399,9 @@ static int m_command_avance(void* _p, void* _arg)
       case WEST:  new_x = (p->pos.x + m_server.map_x - 1) % m_server.map_x;  break;
     }
 
-    /* DEBUG */
-    // printf("Player %d moved from (%d,%d) to (%d,%d)\n", p->id, p->pos.x, p->pos.y, new_x, new_y);
-    // printf("Player %d dir: %d(", p->id, p->dir);
-    // switch (p->dir)
-    // {
-    //     case NORTH: printf("N)\n"); break;
-    //     case EAST:  printf("E)\n"); break;
-    //     case SOUTH: printf("S)\n"); break;
-    //     case WEST:  printf("W)\n"); break;
-    // }
-    /* DEBUG_END */
-
     m_game_move_player(p, new_x, new_y);
+    
+    log_msg(LOG_LEVEL_INFO, "Player %d moved to (%d,%d)\n", p->id, new_x, new_y);
  
     ret = server_create_response_to_command(p->id, "avance", arg, "ok");
 
@@ -1579,10 +1577,13 @@ int game_execute_command(int fd, char *cmd, char *_arg)
     command_type command;
     char* arg;
 
+    // ADD THIS DEBUG
+    log_msg(LOG_LEVEL_INFO, "Received command from fd=%d: cmd='%s', arg='%s'\n", fd, cmd, _arg ? _arg : "NULL");
+
     ret = m_game_get_client_from_fd(fd, &c);
     if (ret == ERROR)
     {
-        /* Assume client has died */
+        log_msg(LOG_LEVEL_WARN, "Client fd=%d not found for command '%s'\n", fd, cmd);
         return SUCCESS;
     }
 
@@ -1598,7 +1599,7 @@ int game_execute_command(int fd, char *cmd, char *_arg)
 
     if (command == MAX_COMMANDS)
     {
-        log_msg(LOG_LEVEL_WARN, "Unknown command %s\n", cmd);
+        log_msg(LOG_LEVEL_WARN, "Unknown command %s from fd=%d\n", cmd, fd);
         return ERROR;
     }
 
@@ -1607,10 +1608,12 @@ int game_execute_command(int fd, char *cmd, char *_arg)
     else
         arg = NULL;
 
-    ret = time_api_schedule_client_event(NULL, &c->event_buffer,\
-     command_prototypes[command].delay,\
-     command_prototypes[command].prototype, c->player, arg);
+    log_msg(LOG_LEVEL_DEBUG, "Scheduling command '%s' with delay %d for fd=%d\n", 
+            cmd, command_prototypes[command].delay, fd);
 
+    ret = time_api_schedule_client_event(NULL, &c->event_buffer,\
+    command_prototypes[command].delay,\
+    command_prototypes[command].prototype, c->player, arg);
 
     return SUCCESS;
 }

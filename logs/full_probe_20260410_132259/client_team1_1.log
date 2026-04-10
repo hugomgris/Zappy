@@ -1,0 +1,308 @@
+[2026-04-10 13:23:01] [INFO] Zappy Client starting...
+[2026-04-10 13:23:01] [INFO] Team: team1
+[2026-04-10 13:23:01] [INFO] Target Level: 8
+[2026-04-10 13:23:01] [INFO] Fork enabled: yes
+[2026-04-10 13:23:01] [INFO] Connecting to localhost:8674
+[2026-04-10 13:23:01] [WARN] TLS: Certificate verification disabled (insecure mode)
+[2026-04-10 13:23:01] [INFO] TLS context initialized successfully
+[2026-04-10 13:23:01] [INFO] WebSocket: Starting connection to localhost:8674
+[2026-04-10 13:23:01] [INFO] TLS handshake completed successfully
+[2026-04-10 13:23:01] [INFO] WebSocket: HTTP 101 Upgrade successful
+[2026-04-10 13:23:01] [INFO] WebSocket: Handshake complete, connection established
+[2026-04-10 13:23:01] [INFO] Websocket connected
+[2026-04-10 13:23:01] [INFO] Received bienvenue: {"type":"bienvenue","msg":"Whoa! Knock knock, whos there?"}
+[2026-04-10 13:23:01] [INFO] Map size: 10x10
+[2026-04-10 13:23:01] [INFO] Remaining team slots: 9
+[2026-04-10 13:23:01] [INFO] Login successful! {"type":"welcome","remaining_clients":9,"map_size":{"x":10,"y":10}}
+[2026-04-10 13:23:01] [INFO] Successfully logged in as team1
+[2026-04-10 13:23:01] [INFO] Connected! Starting main loop...
+[2026-04-10 13:23:01] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:01] [INFO] Status: Level=1 Food=10 Forks=0
+[2026-04-10 13:23:02] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:02] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:03] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:03] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:04] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:04] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:05] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:05] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:05] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:06] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:07] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:07] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:07] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:08] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:09] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:09] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:09] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:10] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:10] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:11] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:11] [INFO] Status: Level=1 Food=10 Forks=0
+[2026-04-10 13:23:11] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:12] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:12] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:13] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:13] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:14] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:14] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:15] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:15] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:16] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:16] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:17] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:17] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:17] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:18] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:19] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:19] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:19] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:20] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:21] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:21] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:21] [INFO] Status: Level=1 Food=10 Forks=0
+[2026-04-10 13:23:22] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:22] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:22] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:23] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:24] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:24] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:24] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:25] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:26] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:29] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:30] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:30] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:31] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:31] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:32] [INFO] Status: Level=1 Food=10 Forks=0
+[2026-04-10 13:23:32] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:32] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:33] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:33] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:34] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:34] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:34] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:35] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:36] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:36] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:36] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:37] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:37] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:38] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:38] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:38] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:39] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:39] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:40] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:40] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:41] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:41] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:42] [INFO] Status: Level=1 Food=10 Forks=0
+[2026-04-10 13:23:42] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:42] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:43] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:43] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:44] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:44] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:44] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:45] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:46] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:46] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:46] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:47] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:48] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:48] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:49] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:49] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:49] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:50] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:51] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:51] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:51] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:52] [INFO] Status: Level=1 Food=10 Forks=0
+[2026-04-10 13:23:52] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:53] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:53] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:53] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:54] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:54] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:55] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:55] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:56] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:56] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:57] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:57] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:58] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:58] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:23:59] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:02] [INFO] Status: Level=1 Food=10 Forks=0
+[2026-04-10 13:24:02] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:03] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:03] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:04] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:04] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:05] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:05] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:06] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:06] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:06] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:07] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:24:09] [WARN] AI: Command failed: prend
+[2026-04-10 13:24:09] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:24:10] [WARN] AI: Command failed: prend
+[2026-04-10 13:24:10] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:24:10] [WARN] AI: Command failed: prend
+[2026-04-10 13:24:10] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:24:11] [WARN] AI: Command failed: prend
+[2026-04-10 13:24:11] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:24:11] [WARN] AI: Command failed: prend
+[2026-04-10 13:24:11] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:24:11] [WARN] AI: Command failed: prend
+[2026-04-10 13:24:11] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:24:12] [INFO] Status: Level=1 Food=9 Forks=0
+[2026-04-10 13:24:13] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:13] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:14] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:14] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:15] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:15] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:16] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:16] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:17] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:17] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:18] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:18] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:19] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:19] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:19] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:20] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:21] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:21] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:21] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:22] [INFO] Status: Level=1 Food=11 Forks=0
+[2026-04-10 13:24:22] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:23] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:23] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:24] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:25] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:27] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:27] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:27] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:28] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:29] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:29] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:29] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:30] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:31] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:31] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:31] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:32] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:32] [INFO] Status: Level=1 Food=10 Forks=0
+[2026-04-10 13:24:32] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:24:34] [WARN] AI: Command failed: prend
+[2026-04-10 13:24:34] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:24:35] [WARN] AI: Command failed: prend
+[2026-04-10 13:24:35] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:24:35] [WARN] AI: Command failed: prend
+[2026-04-10 13:24:35] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:24:36] [WARN] AI: Command failed: prend
+[2026-04-10 13:24:36] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:24:37] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:24:39] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:40] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:40] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:40] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:41] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:41] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:42] [INFO] Status: Level=1 Food=12 Forks=0
+[2026-04-10 13:24:42] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:42] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:43] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:43] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:44] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:45] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:45] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:45] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:46] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:46] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:47] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:47] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:48] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:48] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:49] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:49] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:50] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:50] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:51] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:51] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:52] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:52] [INFO] Status: Level=1 Food=11 Forks=0
+[2026-04-10 13:24:52] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:53] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:53] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:53] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:54] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:55] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:55] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:55] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:56] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:57] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:57] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:24:57] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:24:58] [WARN] AI: Command failed: prend
+[2026-04-10 13:24:58] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:24:59] [WARN] AI: Command failed: prend
+[2026-04-10 13:24:59] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:25:00] [WARN] AI: Command failed: prend
+[2026-04-10 13:25:00] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:25:01] [WARN] AI: Command failed: prend
+[2026-04-10 13:25:01] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:25:01] [WARN] AI: Command failed: prend
+[2026-04-10 13:25:01] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:25:01] [WARN] AI: Command failed: prend
+[2026-04-10 13:25:01] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:25:02] [WARN] AI: Command failed: prend
+[2026-04-10 13:25:02] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:25:02] [INFO] Status: Level=1 Food=9 Forks=0
+[2026-04-10 13:25:02] [WARN] AI: Command failed: prend
+[2026-04-10 13:25:02] [INFO] AI: Low food (9), seeking nourriture
+[2026-04-10 13:25:03] [WARN] AI: Command failed: prend
+[2026-04-10 13:25:03] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:03] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:03] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:04] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:05] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:05] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:05] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:06] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:07] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:07] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:07] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:08] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:08] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:09] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:09] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:10] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:10] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:11] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:11] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:12] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:12] [INFO] Status: Level=1 Food=12 Forks=0
+[2026-04-10 13:25:12] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:13] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:13] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:14] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:14] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:15] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:15] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:16] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:16] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:17] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:17] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:18] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:18] [INFO] AI: Need 1 stones for next level
+[2026-04-10 13:25:18] [WARN] TLS read: peer closed connection
+[2026-04-10 13:25:18] [ERROR] Websocket error: Peer closed connection
+[2026-04-10 13:25:18] [INFO] Network loop ended
+[2026-04-10 13:25:19] [INFO] Client exited. Final level: 1
