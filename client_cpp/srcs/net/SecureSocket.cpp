@@ -5,6 +5,8 @@
 #include <openssl/err.h>
 #include <cstring>
 
+using SecureSocket = zappy::SecureSocket;
+
 SecureSocket::SecureSocket()
     : _tcp(std::make_unique<TcpSocket>()) {
 }

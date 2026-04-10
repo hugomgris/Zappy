@@ -1,10 +1,11 @@
-        #pragma once
+#pragma once
 
-        #include "../../incs/result.hpp"
-        #include <openssl/ssl.h>
-        #include <memory>
+#include "../../incs/Result.hpp"
+#include <openssl/ssl.h>
+#include <memory>
 
-        class TlsContext {
+namespace zappy {
+    class TlsContext {
         public:
             ~TlsContext();
 
@@ -22,4 +23,5 @@
 
             SSL_CTX* _ctx = nullptr;
             bool _initialized = false;
-        };
+    };
+} // namespae zappy

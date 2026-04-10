@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../incs/result.hpp"
+#include "../../incs/Result.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -22,31 +22,32 @@ struct WebSocketFrame {
 };
 
 class FrameCodec {
-public:
-    // Encode a frame to bytes (client frames are masked)
-    static Result encodeFrame(const WebSocketFrame& frame, std::vector<std::uint8_t>& out);
+    using Result = zappy::Result;
+    public:
+        // Encode a frame to bytes (client frames are masked)
+        static Result encodeFrame(const WebSocketFrame& frame, std::vector<std::uint8_t>& out);
 
-    // Decode bytes to a frame (returns WantMore if incomplete)
-    static Result decodeFrame(const std::vector<std::uint8_t>& data, std::size_t& offset, WebSocketFrame& out);
+        // Decode bytes to a frame (returns WantMore if incomplete)
+        static Result decodeFrame(const std::vector<std::uint8_t>& data, std::size_t& offset, WebSocketFrame& out);
 
-    // Helper: create text frame
-    static WebSocketFrame createTextFrame(const std::string& text);
+        // Helper: create text frame
+        static WebSocketFrame createTextFrame(const std::string& text);
 
-    // Helper: create ping frame
-    static WebSocketFrame createPingFrame();
+        // Helper: create ping frame
+        static WebSocketFrame createPingFrame();
 
-    // Helper: create pong frame
-    static WebSocketFrame createPongFrame();
+        // Helper: create pong frame
+        static WebSocketFrame createPongFrame();
 
-    // Helper: create close frame
-    static WebSocketFrame createCloseFrame(uint16_t code = 1000, const std::string& reason = "");
+        // Helper: create close frame
+        static WebSocketFrame createCloseFrame(uint16_t code = 1000, const std::string& reason = "");
 
-private:
-    static constexpr uint32_t MASKING_KEY_SIZE = 4;
+    private:
+        static constexpr uint32_t MASKING_KEY_SIZE = 4;
 
-    // Generate random masking key
-    static std::vector<std::uint8_t> generateMaskingKey();
+        // Generate random masking key
+        static std::vector<std::uint8_t> generateMaskingKey();
 
-    // Apply/remove XOR masking
-    static void applyMask(std::vector<std::uint8_t>& data, const std::uint8_t* mask);
+        // Apply/remove XOR masking
+        static void applyMask(std::vector<std::uint8_t>& data, const std::uint8_t* mask);
 };

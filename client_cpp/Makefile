@@ -39,9 +39,9 @@ GTEST_MAIN_LIB  := $(GTEST_DIR)/build/lib/libgtest_main.a
 
 # -=-=-=-=-    SOURCES -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 
-MAIN_SRC        := simpleClient.cpp
+MAIN_SRC        := main.cpp
 HELPER_SRC		:= helpers/Parser.cpp helpers/Logger.cpp
-APP_SRC			:= app/ProtocolTypes.cpp
+APP_SRC			:= app/ProtocolTypes.cpp app/CommandSender.cpp app/WorldState.cpp app/NavigationPlanner.cpp app/SimpleAI.cpp app/Client.cpp
 NET_SRC			:= net/FrameCodec.cpp net/SecureSocket.cpp net/TcpSocket.cpp net/TlsContext.cpp net/WebsocketClient.cpp
 ALL_SRC         := $(MAIN_SRC) $(CORE_SRC) $(HELPER_SRC) $(NET_SRC) $(APP_SRC)
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../incs/result.hpp"
+#include "../../incs/Result.hpp"
 #include "../../incs/DataStructs.hpp"
 #include "Logger.hpp"
 
@@ -10,6 +10,8 @@
 #include <sstream>
 
 class Parser {
+	using Result = zappy::Result;
+	
 	public:
 		static Result parseArguments(char** argv, Arguments& parsedArguments);
 		static Result evaluateArguments(Arguments& parsedArguments);

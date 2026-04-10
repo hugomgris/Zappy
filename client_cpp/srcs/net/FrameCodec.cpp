@@ -5,6 +5,9 @@
 #include <random>
 #include <stdexcept>
 
+using Result = zappy::Result;
+using ErrorCode = zappy::ErrorCode;
+
 // Encode Frame (Client -> Server, with masking)
 Result FrameCodec::encodeFrame(const WebSocketFrame& frame, std::vector<std::uint8_t>& out) {
     std::vector<std::uint8_t> header;

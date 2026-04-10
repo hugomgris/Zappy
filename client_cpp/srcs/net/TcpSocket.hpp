@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../incs/result.hpp"
+#include "../../incs/Result.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -31,6 +31,8 @@ struct IoResult {
 };
 
 class TcpSocket {
+	using Result = zappy::Result;
+
 	private:
 		int			_fd = -1;
 		TcpState	_state = TcpState::Disconnected;

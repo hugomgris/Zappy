@@ -29,6 +29,7 @@ namespace zappy {
 		int							x = 0;
 		int							y = 0;
 		int							orientation = 1; // CLOCKWISE 1=N, 2=E, 3=S, 4=W
+		int							level = 1;
 		std::map<std::string, int>	inventory;
 		int							remainingSlots = 0;
 		int64_t						lastFoodEaten = 0;
