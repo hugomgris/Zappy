@@ -6,9 +6,10 @@
 
 #include <cJSON.h>
 #include <functional>
-#include <queue>
+#include <deque>
 #include <chrono>
 #include <mutex>
+#include <algorithm>
 
 namespace zappy {
 	class CommandSender {
@@ -22,7 +23,7 @@ namespace zappy {
 		
 		private:
 			WebsocketClient&			_ws;
-			std::queue<PendingCommand>	_pending;
+			std::deque<PendingCommand>	_pending;  // FIXED: Changed from queue to deque for search
 			std::mutex					_mutex;
 			uint64_t					_nextId = 1;
 
@@ -33,7 +34,7 @@ namespace zappy {
 			explicit CommandSender(WebsocketClient& ws);
 			~CommandSender() = default;
 
-			//auth
+			// auth
 			Result sendLogin(const std::string& teamName, const std::string& key = "SOME_KEY");
 
 			// movement

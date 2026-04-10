@@ -1,5 +1,6 @@
 #include "CommandSender.hpp"
 #include "helpers/Logger.hpp"
+#include <algorithm>
 
 namespace zappy {
 	CommandSender::CommandSender(WebsocketClient& ws) : _ws(ws) {}
@@ -120,46 +121,60 @@ namespace zappy {
 	uint64_t CommandSender::expectResponse(const std::string& cmd, std::function<void(const ServerMessage&)> cb) {
 		std::lock_guard<std::mutex> lock(_mutex);
 		uint64_t id = _nextId++;
-		_pending.push({id, cmd, std::chrono::steady_clock::now(), cb});
+		_pending.push_back({id, cmd, std::chrono::steady_clock::now(), cb});
 		Logger::debug("Expecting response for: " + cmd + " (id=" + std::to_string(id) + ")");
 		return id;
 	}
 
+	// FIXED: Search entire queue for matching command, not just front
 	void CommandSender::processResponse(const ServerMessage& msg) {
 		if (msg.type != ServerMessageType::Response) return;
 
 		std::lock_guard<std::mutex> lock(_mutex);
-		if (_pending.empty()) return;
-
-		auto& pending = _pending.front();
-		if (pending.cmd == msg.cmd) {
-			Logger::debug("Matched response for: " + msg.cmd + " (id=" + std::to_string(pending.id) + ")");
-			if (pending.callback) pending.callback(msg);
-			_pending.pop();
+		
+		// Find matching pending command
+		auto it = std::find_if(_pending.begin(), _pending.end(),
+			[&msg](const PendingCommand& p) { return p.cmd == msg.cmd; });
+		
+		if (it != _pending.end()) {
+			Logger::debug("Matched response for: " + msg.cmd + " (id=" + std::to_string(it->id) + ")");
+			if (it->callback) it->callback(msg);
+			_pending.erase(it);
 		} else {
-			Logger::debug("Response cmd mismatch: expected " + pending.cmd + ", got " + msg.cmd);
+			Logger::debug("No pending command found for response: " + msg.cmd);
 		}
 	}
 
+	// FIXED: Invoke callback on timeout with error message
 	void CommandSender::checkTimeouts(int timeoutMs) {
 		std::lock_guard<std::mutex> lock(_mutex);
 		auto now = std::chrono::steady_clock::now();
-		while (!_pending.empty()) {
-			auto& p = _pending.front();
-			auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - p.sentAt).count();
-			if (elapsed > timeoutMs) {
-				Logger::warn("Command timeout: " + p.cmd + " (id=" + std::to_string(p.id) + ")");
-				_pending.pop();
+		
+		auto it = _pending.begin();
+		while (it != _pending.end()) {
+			auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - it->sentAt).count();
+			if (elapsed >= timeoutMs) {
+				Logger::warn("Command timeout: " + it->cmd + " (id=" + std::to_string(it->id) + ")");
+				
+				// Create timeout message and invoke callback
+				ServerMessage timeoutMsg;
+				timeoutMsg.type = ServerMessageType::Error;
+				timeoutMsg.cmd = it->cmd;
+				timeoutMsg.status = "timeout";
+				
+				if (it->callback) {
+					it->callback(timeoutMsg);
+				}
+				
+				it = _pending.erase(it);
 			} else {
-				break;
+				++it;
 			}
 		}
 	}
 
 	void CommandSender::cancelAll() {
 		std::lock_guard<std::mutex> lock(_mutex);
-		while (!_pending.empty()) {
-			_pending.pop();
-		}
+		_pending.clear();
 	}
 } // namespace zappy

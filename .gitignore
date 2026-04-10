@@ -1,1 +1,3 @@
-run_session.local.env
+run_session.local.env.vscode/
+.gitignore
+log.txt

@@ -21,7 +21,7 @@ namespace zappy {
 
 	class SimpleAI {
 		private:
-			WorldState&			_state; // TODO: AIState or WorldState???
+			WorldState&			_state;
 			CommandSender&		_sender;
 			NavigationPlanner	_planner;
 
@@ -72,8 +72,11 @@ namespace zappy {
 			SimpleAI(WorldState& state, CommandSender& sender);
 			~SimpleAI() = default;
 
-			//main tick func
+			// main tick func
 			void tick(int64_t nowMs);
+			
+			// FIXED: Handle incoming messages for coordination
+			void onMessage(const ServerMessage& msg);
 
 			// conf
 			void setForkEnabled(bool enabled) { _forkEnabled = enabled; }

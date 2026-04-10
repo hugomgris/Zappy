@@ -16,7 +16,7 @@ namespace zappy {
         int							playerCount = 0;
 
         bool hasItem(const std::string& item) const;
-        bool countItem(const std::string& item) const;
+        int countItem(const std::string& item) const;
     };
 
 	struct MapSize {
@@ -72,8 +72,14 @@ namespace zappy {
 
 		bool isOk() const { return status == "ok" || arg == "ok"; }
 		bool isKo() const { return status == "ko" || arg == "ko"; }
-		bool isLevelUp() const { return type == ServerMessageType::Event && arg == "Level up!"; }
-		bool isDeath() const { return type == ServerMessageType::Event && arg == "die"; }
+		bool isLevelUp() const {
+			return type == ServerMessageType::Event
+				&& (arg == "Level up!" || (eventType.has_value() && *eventType == "Level up!"));
+		}
+		bool isDeath() const {
+			return type == ServerMessageType::Event
+				&& (arg == "die" || (eventType.has_value() && *eventType == "die"));
+		}
 	};
 
 	ServerMessage parseServerMessage(const std::string& json);

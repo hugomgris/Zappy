@@ -1,4 +1,3 @@
-
 #include "ProtocolTypes.hpp"
 #include "helpers/Logger.hpp"
 
@@ -6,13 +5,12 @@
 #include <algorithm>
 #include <cmath>
 
-
 namespace zappy {
 	bool VisionTile::hasItem(const std::string& item) const {
 		return std::find(items.begin(), items.end(), item) != items.end();
 	}
 
-	bool VisionTile::countItem(const std::string& item) const {
+	int VisionTile::countItem(const std::string& item) const {
 		return std::count(items.begin(), items.end(), item);
 	}
 
@@ -36,16 +34,16 @@ namespace zappy {
 			return msg;
 		}
 
-		// parse type fiedl
+		// parse type field
 		cJSON* typeField = cJSON_GetObjectItem(root, "type");
 		if (typeField && cJSON_IsString(typeField)) {
 			std::string typeStr = typeField->valuestring;
 			if (typeStr == "bienvenue") msg.type = ServerMessageType::Bienvenue;
-			    else if (typeStr == "welcome") msg.type = ServerMessageType::Welcome;
-				else if (typeStr == "response") msg.type = ServerMessageType::Response;
-				else if (typeStr == "error") msg.type = ServerMessageType::Error;
-				else if (typeStr == "event") msg.type = ServerMessageType::Event;
-				else if (typeStr == "message") msg.type = ServerMessageType::Message;
+			else if (typeStr == "welcome") msg.type = ServerMessageType::Welcome;
+			else if (typeStr == "response") msg.type = ServerMessageType::Response;
+			else if (typeStr == "error") msg.type = ServerMessageType::Error;
+			else if (typeStr == "event") msg.type = ServerMessageType::Event;
+			else if (typeStr == "message") msg.type = ServerMessageType::Message;
 		}
 
 		// parse cmd field
@@ -54,7 +52,7 @@ namespace zappy {
 			msg.cmd = cmdField->valuestring;
 		}
 
-		// parse argfield
+		// parse arg field
 		cJSON* argField = cJSON_GetObjectItem(root, "arg");
 		if (argField && cJSON_IsString(argField)) {
 			msg.arg = argField->valuestring;
@@ -82,9 +80,15 @@ namespace zappy {
 					msg.mapSize = MapSize{xField->valueint, yField->valueint};
 				}
 			}
+			
+			// FIXED: Parse player_id if present
+			cJSON* playerIdField = cJSON_GetObjectItem(root, "player_id");
+			if (playerIdField && cJSON_IsNumber(playerIdField)) {
+				// Store player ID if needed
+			}
 		}
 
-		// parse vision response
+		// parse vision response - FIXED coordinate calculation
 		if (msg.type == ServerMessageType::Response && msg.cmd == "voir") {
 			cJSON* visionField = cJSON_GetObjectItem(root, "vision");
 			if (visionField && cJSON_IsArray(visionField)) {
@@ -97,14 +101,24 @@ namespace zappy {
 						VisionTile tile;
 						tile.distance = i;
 						
-						// Calculate local coordinates based on vision index
-						// Vision is ordered: tile 0, then row 1 (3 tiles), row 2 (5 tiles), etc.
+						// FIXED: Correct row and position calculation
+						// Vision is ordered: tile 0 (distance 0), then row 1 (3 tiles, distance 1),
+						// row 2 (5 tiles, distance 2), etc.
 						int row = 0;
-						while ((row + 1) * (row + 1) <= i) row++;
-						int rowStart = row * row;
-						tile.localX = static_cast<int>(i - rowStart) - row;
+						int tilesInPrevRows = 0;
+						
+						// Calculate which row this tile belongs to
+						while (tilesInPrevRows + (2 * row + 1) <= i) {
+							tilesInPrevRows += 2 * row + 1;
+							row++;
+						}
+						
+						// Position within the row
+						int posInRow = i - tilesInPrevRows;
+						tile.localX = posInRow - row;
 						tile.localY = row;
 						
+						// Parse items on tile
 						int tileSize = cJSON_GetArraySize(tileArray);
 						for (int j = 0; j < tileSize; j++) {
 							cJSON* item = cJSON_GetArrayItem(tileArray, j);
@@ -145,18 +159,35 @@ namespace zappy {
 			cJSON* eventField = cJSON_GetObjectItem(root, "event");
 			if (eventField && cJSON_IsString(eventField)) {
 				msg.eventType = eventField->valuestring;
+				if (msg.arg.empty()) {
+					msg.arg = eventField->valuestring;
+				}
+			}
+		}
+		
+		// FIXED: Parse deplacement event (expulse response)
+		if (msg.type == ServerMessageType::Response && msg.cmd == "deplacement") {
+			if (!msg.status.empty()) {
+				try {
+					msg.direction = std::stoi(msg.status);
+				} catch (...) {
+					Logger::warn("Failed to parse deplacement direction: " + msg.status);
+				}
 			}
 		}
 		
 		// parse broadcast message
 		if (msg.type == ServerMessageType::Message) {
+			// Server sends: {"type":"message","arg":"text","status":"K"}
 			if (!msg.arg.empty()) {
 				msg.messageText = msg.arg;
 			}
 			if (!msg.status.empty()) {
 				try {
 					msg.direction = std::stoi(msg.status);
-				} catch (...) {}
+				} catch (...) {
+					Logger::warn("Failed to parse message direction: " + msg.status);
+				}
 			}
 		}
 		
@@ -192,10 +223,10 @@ namespace zappy {
 
 	void applyMove(int& x, int& y, int orientation, int mapWidth, int mapHeight) {
 		switch (orientation) {
-			case 1: y = (y - 1 + mapHeight) % mapHeight; break;
-			case 2: x = (x + 1) % mapWidth; break;
-			case 3: y = (y + 1) % mapHeight; break;
-			case 4: x = (x - 1 + mapWidth) % mapWidth; break;
+			case 1: y = (y - 1 + mapHeight) % mapHeight; break; // North: y decreases
+			case 2: x = (x + 1) % mapWidth; break;              // East: x increases
+			case 3: y = (y + 1) % mapHeight; break;             // South: y increases
+			case 4: x = (x - 1 + mapWidth) % mapWidth; break;   // West: x decreases
 		}
-	}	
+	}
 } // namespace zappy

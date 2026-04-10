@@ -27,6 +27,9 @@ void printUsage(const char* progName) {
 }
 
 int main(int argc, char** argv) {
+	// FIXED: Ignore SIGPIPE to prevent crash on broken pipe
+	signal(SIGPIPE, SIG_IGN);
+
 	// command line parsing
 	bool forkEnabled = false;
 	int targetLevel = 8;
@@ -64,7 +67,7 @@ int main(int argc, char** argv) {
 	int port = std::stoi(argv[optind + 1]);
 	std::string teamName = argv[optind + 2];
 
-	// setup loging
+	// setup logging
 	Logger::setLevel(debugMode ? LogLevel::Debug : LogLevel::Info);
 
 	// setup signal handling
@@ -76,7 +79,7 @@ int main(int argc, char** argv) {
 	Logger::info("Target Level: " + std::to_string(targetLevel));
 	Logger::info("Fork enabled: " + std::string(forkEnabled ? "yes" : "no"));
 	
-	// Create and configure clien
+	// Create and configure client
 	zappy::Client client(host, port, teamName);
 	g_client = &client;
 

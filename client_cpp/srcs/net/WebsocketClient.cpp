@@ -85,7 +85,7 @@ Result WebsocketClient::tick(int64_t now_ms) {
         return Result::failure(ErrorCode::InternalError, "WebSocket not connected");
     }
 
-    // this is were a connecting status is polled to finish connectiona ttempts
+    // this is where a connecting status is polled to finish connection attempts
     if (_state == WsState::Connecting) {
         Result res = _secure_socket->pollConnect(0);
         if (!res.ok()) {
@@ -94,7 +94,7 @@ Result WebsocketClient::tick(int64_t now_ms) {
         }
 
         if (_secure_socket->isConnected()) {
-            // if this point is reached, TSL handshake succedded and the scoket goes to HTTP upgrade
+            // if this point is reached, TLS handshake succeeded and the socket goes to HTTP upgrade
             _state = WsState::Handshaking;
         }
 
@@ -111,6 +111,12 @@ Result WebsocketClient::tick(int64_t now_ms) {
 
     if (_state != WsState::Connected) {
         return Result::success();
+    }
+
+    // FIXED: Send ping to keep connection alive
+    if (shouldSendPing(now_ms)) {
+        sendPing();
+        _last_ping_time_ms = now_ms;
     }
 
     Result flush_res = flushSendQueue();
@@ -133,8 +139,6 @@ Result WebsocketClient::tick(int64_t now_ms) {
         _last_error = read_res.message;
         return Result::failure(ErrorCode::NetworkError, read_res.message);
     }
-
-    (void)now_ms;
 
     return Result::success();
 }
@@ -255,7 +259,7 @@ IoResult WebsocketClient::recvFrame(WebSocketFrame& out_frame) {
     Result decode_res = FrameCodec::decodeFrame(_read_buffer, _frame_parse_offset, out_frame);
 
     if (!decode_res.ok()) {
-        // need more data typa check
+        // need more data type check
         if (decode_res.message.find("Not enough data") != std::string::npos ||
             decode_res.message.find("Incomplete") != std::string::npos) {
             res.status = NetStatus::WouldBlock;
@@ -320,15 +324,13 @@ Result WebsocketClient::performHandshake() {
     std::string request = oss.str();
     std::vector<std::uint8_t> request_bytes(request.begin(), request.end());
 
-    Logger::debug("WebSocket: Sending HTTP upgrade request (" + std::to_string(request_bytes.size()) + " bytes)");
+    Logger::debug("WebSocket: Sending HTTP upgrade request");
     IoResult write_res = _secure_socket->tlsWrite(request_bytes, 0);
     if (write_res.status != NetStatus::Ok) {
         return Result::failure(ErrorCode::NetworkError, "Failed to send WebSocket upgrade: " + write_res.message);
     }
-    Logger::debug("WebSocket: HTTP upgrade request sent successfully");
 
-    // HTTP response recieve
-    Logger::debug("WebSocket: Waiting for HTTP 101 response...");
+    // HTTP response receive
     std::vector<std::uint8_t> response_buf;
     for (int attempt = 0; attempt < 100; ++attempt) {
         std::vector<std::uint8_t> tmp;
@@ -336,56 +338,33 @@ Result WebsocketClient::performHandshake() {
 
         if (read_res.status == NetStatus::Ok && read_res.bytes > 0) {
             response_buf.insert(response_buf.end(), tmp.begin(), tmp.end());
-            Logger::debug("WebSocket: Attempt " + std::to_string(attempt) + " read " + std::to_string(read_res.bytes) + " bytes, total: " + std::to_string(response_buf.size()));
 
             std::string response_str(response_buf.begin(), response_buf.end());
             size_t term_pos = response_str.find("\r\n\r\n");
-            Logger::debug("WebSocket: Searching for terminator in " + std::to_string(response_str.size()) + " bytes, found at: " + (term_pos == std::string::npos ? "npos" : std::to_string(term_pos)));
             
             if (term_pos != std::string::npos) {
                 size_t header_end = term_pos + 4;
-                Logger::debug("WebSocket: Found terminator! Trimming from " + std::to_string(response_buf.size()) + " to " + std::to_string(header_end) + " bytes");
                 response_buf.resize(header_end);
                 break;  // full header
             }
         } else if (read_res.status == NetStatus::ConnectionClosed) {
-            Logger::debug("WebSocket: Connection closed on attempt " + std::to_string(attempt));
             return Result::failure(ErrorCode::NetworkError, "Peer closed during handshake");
         } else if (read_res.status == NetStatus::WouldBlock) {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         } else {
-            Logger::debug("WebSocket: Read error on attempt " + std::to_string(attempt) + ": " + read_res.message);
             return Result::failure(ErrorCode::NetworkError, "Read error during handshake: " + read_res.message);
         }
     }
-    Logger::debug("WebSocket: Response reading loop completed, buffer size: " + std::to_string(response_buf.size()));
 
     // HTTP 101 response validation
     std::string response_str(response_buf.begin(), response_buf.end());
-    Logger::debug("WebSocket: HTTP response received (" + std::to_string(response_buf.size()) + " bytes)");
-    
-    // debugging raw byte dump
-    std::ostringstream byte_dump;
-    for (size_t i = 0; i < std::min(response_buf.size(), size_t(140)); ++i) {
-        uint8_t b = response_buf[i];
-        if (b >= 32 && b < 127) {
-            byte_dump << (char)b;
-        } else if (b == '\r') {
-            byte_dump << "\\r";
-        } else if (b == '\n') {
-            byte_dump << "\\n";
-        } else {
-            byte_dump << "[" << (int)b << "]";
-        }
-    }
-    Logger::debug("WebSocket: Bytes: " + byte_dump.str());
     
     if (response_str.find("101") == std::string::npos) {
-        Logger::error("WebSocket: Response does not contain '101'.");
+        Logger::error("WebSocket: Response does not contain '101'. Response: " + response_str.substr(0, 100));
         return Result::failure(ErrorCode::ProtocolError, "Server did not respond with HTTP 101");
     }
 
-    // Sec-Websocket-Accpet
+    // Sec-Websocket-Accept
     std::string challenge = ws_key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
     std::string expected_accept = sha1Hash(challenge);
 
@@ -421,13 +400,8 @@ Result WebsocketClient::flushSendQueue() {
     return Result::success();
 }
 
-void WebsocketClient::updatePingTimer(int64_t now_ms) {
-    (void)now_ms;
-}
-
 bool WebsocketClient::shouldSendPing(int64_t now_ms) {
-    (void)now_ms;
-    return false;
+    return (now_ms - _last_ping_time_ms) > (PING_INTERVAL_SECONDS * 1000);
 }
 
 } // namespace zappy

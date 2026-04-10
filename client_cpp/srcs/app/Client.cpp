@@ -18,7 +18,7 @@ namespace zappy {
 	Result Client::connect(int timeoutMs) {
 		Logger::info("Connecting to " + _host + ":" + std::to_string(_port));
 
-		// 1 wbesocket connection
+		// 1 websocket connection
 		Result res = _ws.connect(_host, _port, true); // insecure for testing. TODO: handle secure
 		if (!res.ok()) {
 			return res;
@@ -49,7 +49,7 @@ namespace zappy {
 		res = performLogin(nowMs, timeoutMs);
 		if (!res.ok()) return res;
 
-		Logger::info("Succesfully logged in as " + _teamName);
+		Logger::info("Successfully logged in as " + _teamName);
 		return Result::success();
 	}
 
@@ -137,6 +137,8 @@ namespace zappy {
 	void Client::networkLoop() {
 		int64_t nowMs = 0;
 		int64_t lastStatusTime = 0;
+		int reconnectAttempts = 0;
+		const int MAX_RECONNECT_ATTEMPTS = 5;
 
 		while (_running) {
 			nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -152,10 +154,27 @@ namespace zappy {
 			// process incoming message
 			processIncomingMessages(nowMs);
 
-			// still connected???
-			if (_ws.isConnected()) {
-				Logger::error("Websocket disconnected");
-				break;
+			// FIXED: Check if disconnected (was inverted)
+			if (!_ws.isConnected()) {
+				Logger::warn("WebSocket disconnected, attempting reconnect...");
+				
+				if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+					Logger::error("Max reconnect attempts reached, giving up");
+					break;
+				}
+				
+				reconnectAttempts++;
+				std::this_thread::sleep_for(std::chrono::seconds(2));
+				
+				Result res = connect();
+				if (!res.ok()) {
+					Logger::error("Reconnection failed: " + res.message);
+					continue;
+				}
+				
+				reconnectAttempts = 0;
+				Logger::info("Reconnected successfully");
+				continue;
 			}
 
 			// run AI
@@ -178,7 +197,7 @@ namespace zappy {
 			std::this_thread::sleep_for(std::chrono::milliseconds(50));
 		}
 		
-    	Logger::info("Network loop ended");
+		Logger::info("Network loop ended");
 	}
 
 	void Client::processIncomingMessages(int64_t nowMs) {
@@ -203,6 +222,10 @@ namespace zappy {
 						break;
 					case ServerMessageType::Message:
 						_state.onMessage(msg);
+						_ai.onMessage(msg);  // FIXED: Forward to AI for coordination
+						break;
+					case ServerMessageType::Error:
+						Logger::error("Server error: " + msg.raw);
 						break;
 					default:
 						break;

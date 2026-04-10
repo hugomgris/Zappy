@@ -6,6 +6,7 @@
 #include <netdb.h>
 #include <poll.h>
 #include <sys/socket.h>
+#include <netinet/tcp.h>  // FIXED: Added for TCP_NODELAY
 #include <unistd.h>
 
 namespace {
@@ -235,6 +236,10 @@ Result TcpSocket::createSocketAndStartConnect(const std::string& host, int port)
 			setLastError(errno, std::string("socket() failed: ") + std::strerror(errno));
 			continue;
 		}
+
+		// FIXED: Set TCP_NODELAY for lower latency
+		int flag = 1;
+		::setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
 
 		const Result nbRes = setNonBlocking(fd);
 		if (!nbRes.ok()) {

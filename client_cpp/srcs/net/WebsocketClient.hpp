@@ -10,17 +10,17 @@
 #include <memory>
 
 namespace zappy {
+	// FIXED: Made WsState public for debugging
+	enum class WsState {
+		Disconnected,
+		Connecting,
+		Handshaking,
+		Connected,
+		Closed
+	};
+
 	class WebsocketClient {
 		private:
-			// State machine
-			enum class WsState {
-				Disconnected,
-				Connecting,
-				Handshaking,
-				Connected,
-				Closed
-			};
-
 			std::unique_ptr<SecureSocket> _secure_socket;
 			WsState _state = WsState::Disconnected;
 			std::string _host;
@@ -45,34 +45,34 @@ namespace zappy {
 		private:
 			Result performHandshake();
 			Result flushSendQueue();
-			Result processPendingFrames();
-			void updatePingTimer(int64_t now_ms);
 			bool shouldSendPing(int64_t now_ms);
 
 		public:
 			WebsocketClient();
-			~WebsocketClient();
+			virtual ~WebsocketClient();
 
 			WebsocketClient(const WebsocketClient&) = delete;
 			WebsocketClient& operator=(const WebsocketClient&) = delete;
 
-			Result connect(const std::string& host, int port, bool insecure = false);
-			Result tick(int64_t now_ms);
-			void close();
+			virtual Result connect(const std::string& host, int port, bool insecure = false);
+			virtual Result tick(int64_t now_ms);
+			virtual void close();
 
-			bool isConnected() const;
-			bool isConnecting() const;
-			bool isOpen() const;
+			virtual bool isConnected() const;
+			virtual bool isConnecting() const;
+			virtual bool isOpen() const;
 
-			IoResult sendText(const std::string& text);
-			IoResult sendPing();
-			IoResult sendPong();
+			virtual WsState state() const { return _state; }
 
-			IoResult recvFrame(WebSocketFrame& out_frame);
+			virtual IoResult sendText(const std::string& text);
+			virtual IoResult sendPing();
+			virtual IoResult sendPong();
 
-			std::string lastErrorString() const;
-			int lastErrno() const;
+			virtual IoResult recvFrame(WebSocketFrame& out_frame);
 
-			std::size_t sendQueueSize() const;
+			virtual std::string lastErrorString() const;
+			virtual int lastErrno() const;
+
+			virtual std::size_t sendQueueSize() const;
 	};
 } //namespace zappy

@@ -16,7 +16,7 @@ namespace zappy {
 		}
 		if (msg.remainingClients.has_value()) {
 			_player.remainingSlots = *msg.remainingClients;
-			        Logger::info("Remaining team slots: " + std::to_string(_player.remainingSlots));
+			Logger::info("Remaining team slots: " + std::to_string(_player.remainingSlots));
 		}
 	}
 
@@ -58,6 +58,10 @@ namespace zappy {
 				Logger::info("Incantation in progress...");
 			}
 		}
+		// FIXED: Handle deplacement (expulse response)
+		else if (msg.cmd == "deplacement" && msg.direction.has_value()) {
+			Logger::debug("Expulsed! New direction relative: " + std::to_string(*msg.direction));
+		}
 	}
 
 	void WorldState::onEvent(const ServerMessage& msg) {
@@ -84,10 +88,10 @@ namespace zappy {
 
 	void WorldState::updateInventory(const std::map<std::string, int>& inv) {
 		_player.inventory = inv;
-		_lastInventoryTime = std::chrono::duration_cast<std::chrono::milliseconds> ( std::chrono::steady_clock::now().time_since_epoch()).count();
+		_lastInventoryTime = std::chrono::duration_cast<std::chrono::milliseconds>(
+			std::chrono::steady_clock::now().time_since_epoch()).count();
 
 		std::string invStr;
-
 		for (const auto& [item, count] : _player.inventory) {
 			if (!invStr.empty()) invStr += ", ";
 			invStr += item + "=" + std::to_string(count);
@@ -97,14 +101,14 @@ namespace zappy {
 
 	void WorldState::updateVision(const std::vector<VisionTile>& vision) {
 		_vision = vision;
+		_visionHistory.push_back(vision);  // FIXED: Keep history
+		if (_visionHistory.size() > 10) {
+			_visionHistory.pop_front();
+		}
+		
 		_lastVisionTime = std::chrono::duration_cast<std::chrono::milliseconds>(
 			std::chrono::steady_clock::now().time_since_epoch()
 		).count();
-		
-		if (!_vision.empty()) {
-			_player.x = 0;  // Relative to vision, actual position tracked via moves
-			_player.y = 0;
-		}
 		
 		Logger::debug("Vision updated: " + std::to_string(_vision.size()) + " tiles");
 	}
@@ -164,7 +168,8 @@ namespace zappy {
 		auto req = getLevelRequirement(_player.level);
 
 		// check players on tile
-		if (getPlayersOnTile() < req.playersNeeded) return false;
+		int playersOnTile = _vision.empty() ? 0 : _vision[0].playerCount;
+		if (playersOnTile < req.playersNeeded) return false;
 
 		// check stones in inv (assuming placed on tile)
 		for (const auto& [stone, needed] : req.stonesNeeded) {
@@ -177,18 +182,33 @@ namespace zappy {
 		return true;
 	}
 
+	// FIXED: Consider stones already on tile when calculating missing stones
 	std::vector<std::string> WorldState::getMissingStones() const {
 		std::lock_guard<std::mutex> lock(_mutex);
 		std::vector<std::string> missing;
 		
 		if (_player.level >= 8) return missing;
 		
+		// Check stones on current tile
+		std::map<std::string, int> availableOnTile;
+		if (!_vision.empty()) {
+			for (const auto& item : _vision[0].items) {
+				availableOnTile[item]++;
+			}
+		}
+		
 		auto req = getLevelRequirement(_player.level);
 		for (const auto& [stone, needed] : req.stonesNeeded) {
 			auto it = _player.inventory.find(stone);
 			int have = (it != _player.inventory.end()) ? it->second : 0;
-			if (have < needed) {
-				for (int i = 0; i < needed - have; i++) {
+			int onTile = availableOnTile[stone];
+			
+			// Only need stones we don't have on tile or in inventory
+			int totalNeeded = needed - onTile;
+			if (totalNeeded < 0) totalNeeded = 0;
+			
+			if (have < totalNeeded) {
+				for (int i = 0; i < totalNeeded - have; i++) {
 					missing.push_back(stone);
 				}
 			}
@@ -201,7 +221,8 @@ namespace zappy {
 		std::lock_guard<std::mutex> lock(_mutex);
 		if (_player.level >= 8) return false;
 		auto req = getLevelRequirement(_player.level);
-		return getPlayersOnTile() >= req.playersNeeded;
+		int playersOnTile = _vision.empty() ? 0 : _vision[0].playerCount;
+		return playersOnTile >= req.playersNeeded;
 	}
 
 	void WorldState::clear() {
@@ -211,6 +232,7 @@ namespace zappy {
 		_player = PlayerState{};
 		_player.inventory["nourriture"] = 10;
 		_vision.clear();
+		_visionHistory.clear();
 		_lastVisionTime = 0;
 		_lastInventoryTime = 0;
 		_forkCount = 0;

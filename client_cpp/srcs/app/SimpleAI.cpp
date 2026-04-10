@@ -2,6 +2,7 @@
 #include "helpers/Logger.hpp"
 
 #include <chrono>
+#include <sstream>
 
 namespace zappy {
 	SimpleAI::SimpleAI(WorldState& state, CommandSender& sender)
@@ -11,7 +12,7 @@ namespace zappy {
 		// timeout processing
 		_sender.checkTimeouts();
 
-		// preiodic sensor updates
+		// periodic sensor updates
 		if (nowMs - _lastVoirTime > 3000) {
 			requestVision();
 		}
@@ -68,7 +69,7 @@ namespace zappy {
 		}
 
 		// exploration
-		Logger::debug("AI:: Exploring");
+		Logger::debug("AI: Exploring");
 		_AIstate = AIState::Exploring;
 		auto plan = _planner.planExploration(_state);
 		for (const auto& step : plan) {
@@ -78,8 +79,19 @@ namespace zappy {
 		executeNextAction();
 	}
 
+	// FIXED: Improved food priority with distance consideration
 	bool SimpleAI::shouldGetFood() const {
-		return _state.getFood() < _foodEmergencyThreshold;
+		int food = _state.getFood();
+		if (food < _foodEmergencyThreshold) return true;
+		
+		// Also check if we see food nearby and have low inventory
+		if (food < _foodComfortThreshold && _state.seesItem("nourriture")) {
+			auto nearest = _state.getNearestItem("nourriture");
+			if (nearest.has_value() && nearest->distance <= 2) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	bool SimpleAI::shouldFork(int64_t nowMs) const {
@@ -231,17 +243,19 @@ namespace zappy {
 		Logger::debug("AI: Executing " + step.toString());
 	}
 
+	// FIXED: Clear queue properly on failure
 	void SimpleAI::onCommandComplete(const ServerMessage& msg) {
 		if (!msg.isOk()) {
 			Logger::warn("AI: Command failed: " + msg.cmd);
 
-			// queue needs to be cleard on failure
-			while (!_actionQueue.empty()) _actionQueue.pop();
+			// Clear queue on failure
+			std::queue<NavigationStep> empty;
+			std::swap(_actionQueue, empty);
 			_AIstate = AIState::Idle;
 			return;
 		}
 
-		// state update based con cmd
+		// state update based on cmd
 		_state.onResponse(msg);
 
 		if (!_actionQueue.empty()) {
@@ -250,4 +264,20 @@ namespace zappy {
 			_AIstate = AIState::Idle;
 		}
 	}
-} // namspace zappy
+	
+	// FIXED: Handle broadcast messages for incantation coordination
+	void SimpleAI::onMessage(const ServerMessage& msg) {
+		if (msg.messageText.has_value()) {
+			std::string text = *msg.messageText;
+			
+			if (text.find("INCANT_READY") != std::string::npos) {
+				// Someone is ready to incantate
+				Logger::info("AI: Received incantation ready signal");
+				if (_state.canIncantate() && _AIstate == AIState::Idle) {
+					Logger::info("AI: Joining incantation");
+					startIncantation();
+				}
+			}
+		}
+	}
+} // namespace zappy

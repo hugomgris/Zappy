@@ -8,9 +8,10 @@
 #include <optional>
 #include <cstdint>
 #include <mutex>
+#include <deque>
 
 namespace zappy {
-	// level requriments for incantation
+	// level requirements for incantation
 	struct LevelRequirement {
 		int							playersNeeded;
 		std::map<std::string, int>	stonesNeeded;
@@ -22,6 +23,7 @@ namespace zappy {
 			std::optional<MapSize>	_mapSize;
 			PlayerState				_player;
 			std::vector<VisionTile> _vision;
+			std::deque<std::vector<VisionTile>> _visionHistory;  // FIXED: Added history
 
 			int64_t	_lastVisionTime = 0;
 			int64_t	_lastInventoryTime = 0;
@@ -58,7 +60,7 @@ namespace zappy {
 			int getPlayersOnTile() const;
 
 			// vision queries
-			bool seesItem(const std::string& tiem) const;
+			bool seesItem(const std::string& item) const;
 			std::optional<VisionTile> getNearestItem(const std::string& item) const;
 			std::vector<VisionTile> getTilesWithItem(const std::string& item) const;
 
@@ -76,6 +78,5 @@ namespace zappy {
 
 			// reset!
 			void clear();
-
 	};
 } //namespace zappy

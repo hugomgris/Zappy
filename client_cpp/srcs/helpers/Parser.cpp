@@ -15,7 +15,19 @@ Result Parser::parseArguments(char** argv, Arguments& parsedArguments) {
 
 	for (size_t i = 0; i < args.size(); ++i) {
 		const std::string& arg = args[i];
-		if (arg == "-n" || arg == "-p" || arg == "-h" || arg == "-c" || arg == "--insecure") {
+		
+		// FIXED: Handle --insecure as a flag, not consuming next argument
+		if (arg == "--insecure") {
+			parsedArguments.insecure = true;
+			continue;
+		}
+		
+		if (arg == "--loop") {
+			parsedArguments.loopMode = true;
+			continue;
+		}
+		
+		if (arg == "-n" || arg == "-p" || arg == "-h" || arg == "-c") {
 			if (i + 1 >= args.size()) {
 				return Result::failure(ErrorCode::InvalidArgs, "Error: Missing value for argument: " + arg);
 			}
@@ -28,15 +40,8 @@ Result Parser::parseArguments(char** argv, Arguments& parsedArguments) {
 				parsedArguments.hostname = value;
 			} else if (arg == "-c") {
 				parsedArguments.clientCount = std::stoi(value);
-			} else if (arg == "--insecure") {
-				parsedArguments.insecure = (value == "true");
 			}
 			++i;
-			continue;
-		}
-
-		if (arg == "--loop") {
-			parsedArguments.loopMode = true;
 			continue;
 		}
 
@@ -67,11 +72,11 @@ void Parser::printParsedArguments(Arguments& parsedArguments) {
 }
 
 void Parser::printUsage() {
-	std::cout << "Usage: ./client -n <team> -p <port> [-h <hostname>] [-c <count>] [--insecure true|false] [--loop]" << std::endl
-				<< "-n <teamName>  : Name of the team (required)" << std::endl
-				<< "-p <port>       : Port number (required)" << std::endl
-				<< "-h <hostname>   : Hostname (default: localhost)" << std::endl
-				<< "-c <client_cnt> : Number of clients to run (default: 1)" << std::endl
-				<< "--insecure <bool> : Disable TLS cert verification (test only)" << std::endl
-				<< "--loop            : Keep connected and send periodic voir commands" << std::endl;
+	std::cout << "Usage: ./client -n <team> -p <port> [-h <hostname>] [-c <count>] [--insecure] [--loop]" << std::endl
+				<< "-n <teamName>   : Name of the team (required)" << std::endl
+				<< "-p <port>        : Port number (required)" << std::endl
+				<< "-h <hostname>    : Hostname (default: localhost)" << std::endl
+				<< "-c <client_cnt>  : Number of clients to run (default: 1)" << std::endl
+				<< "--insecure       : Disable TLS cert verification (test only)" << std::endl
+				<< "--loop           : Keep connected and send periodic voir commands" << std::endl;
 }
