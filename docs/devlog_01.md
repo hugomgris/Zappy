@@ -803,4 +803,4 @@ And some extra terms worth keeping in mind for this project:
 - `in-flight command`: a command that was sent but has not yet been acknowledged by the server.
 - `heartbeat`: the periodic liveness check that prevents idle disconnections.
 
-> *Next episode: building a proper command manager!*~
+> *Next episode: building a proper AI!*~

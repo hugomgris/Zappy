@@ -5,7 +5,7 @@
 #include <openssl/err.h>
 #include <cstring>
 
-using SecureSocket = zappy::SecureSocket;
+namespace zappy {
 
 SecureSocket::SecureSocket()
     : _tcp(std::make_unique<TcpSocket>()) {
@@ -302,3 +302,5 @@ void SecureSocket::setLastError(int ssl_err, const std::string& msg) {
     _last_ssl_error = ssl_err;
     _last_error = msg;
 }
+
+} // namespace zappy
