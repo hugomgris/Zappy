@@ -238,6 +238,22 @@ WINNER_LINE=""
 HEARTBEAT_INTERVAL=10
 NEXT_HEARTBEAT=10
 
+count_level_players() {
+    local level="$1"
+    grep -l "LEVEL UP .*${level}" "$LOG_DIR"/client_*.log 2>/dev/null | wc -l
+}
+
+format_level_counts() {
+    local out=""
+    local level
+    for level in 2 3 4 5 6 7 8; do
+        local count
+        count=$(count_level_players "$level")
+        out+=" lvl${level}_players=${count}"
+    done
+    echo "$out"
+}
+
 while true; do
     NOW_TS=$(date +%s)
     ELAPSED=$((NOW_TS - START_TS))
@@ -252,11 +268,10 @@ while true; do
     if [ "$ELAPSED" -ge "$MAX_SECONDS" ]; then
         echo -e "${RED}Timeout after ${ELAPSED}s without winner condition.${NC}" | tee -a "$RUN_LOG"
         LEVEL_UP_EVENTS=$(grep -h "LEVEL UP" "$LOG_DIR"/client_*.log 2>/dev/null | wc -l)
-        LEVEL2_PLAYERS=$(grep -l "LEVEL UP .*2" "$LOG_DIR"/client_*.log 2>/dev/null | wc -l)
-        LEVEL3_PLAYERS=$(grep -l "LEVEL UP .*3" "$LOG_DIR"/client_*.log 2>/dev/null | wc -l)
+        LEVEL_COUNTS=$(format_level_counts)
         DEATH_EVENTS=$(grep -h "Player died" "$LOG_DIR"/client_*.log 2>/dev/null | wc -l)
         INCANT_KO_EVENTS=$(grep -h "incantation failed" "$LOG_DIR"/client_*.log 2>/dev/null | wc -l)
-        echo "Probe summary: level_up_events=${LEVEL_UP_EVENTS} level2_players=${LEVEL2_PLAYERS} level3_players=${LEVEL3_PLAYERS} death_events=${DEATH_EVENTS} incantation_ko=${INCANT_KO_EVENTS}" | tee -a "$RUN_LOG"
+        echo "Probe summary: level_up_events=${LEVEL_UP_EVENTS}${LEVEL_COUNTS} death_events=${DEATH_EVENTS} incantation_ko=${INCANT_KO_EVENTS}" | tee -a "$RUN_LOG"
         echo "Last server game-log lines:" | tee -a "$RUN_LOG"
         tail -40 "$SERVER_GAME_LOG" 2>/dev/null | tee -a "$RUN_LOG"
         exit 5
@@ -264,10 +279,9 @@ while true; do
 
     if [ "$ELAPSED" -ge "$NEXT_HEARTBEAT" ]; then
         ALIVE_TOTAL=$(pgrep -f "client localhost ${PORT}" | wc -l)
-        LEVEL2_PLAYERS=$(grep -l "LEVEL UP .*2" "$LOG_DIR"/client_*.log 2>/dev/null | wc -l)
-        LEVEL3_PLAYERS=$(grep -l "LEVEL UP .*3" "$LOG_DIR"/client_*.log 2>/dev/null | wc -l)
+        LEVEL_COUNTS=$(format_level_counts)
         DEATH_EVENTS=$(grep -h "Player died" "$LOG_DIR"/client_*.log 2>/dev/null | wc -l)
-        echo "[${ELAPSED}s] probing... alive=${ALIVE_TOTAL} lvl2_players=${LEVEL2_PLAYERS} lvl3_players=${LEVEL3_PLAYERS} deaths=${DEATH_EVENTS}" | tee -a "$RUN_LOG"
+        echo "[${ELAPSED}s] probing... alive=${ALIVE_TOTAL}${LEVEL_COUNTS} deaths=${DEATH_EVENTS}" | tee -a "$RUN_LOG"
         NEXT_HEARTBEAT=$((ELAPSED + HEARTBEAT_INTERVAL))
 
         if [ "$ALIVE_TOTAL" -eq 0 ]; then
