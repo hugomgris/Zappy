@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define MAX_EVENTS 10
+#define MAX_EVENTS 100
 
 typedef enum
 {

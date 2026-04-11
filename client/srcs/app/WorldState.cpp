@@ -14,7 +14,7 @@
  */
 
 #include "WorldState.hpp"
-#include "helpers/Logger.hpp"
+#include "../helpers/Logger.hpp"
 #include <algorithm>
 
 namespace zappy {

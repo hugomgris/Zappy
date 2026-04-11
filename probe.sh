@@ -217,12 +217,13 @@ done
 if [[ -x "${SERVER_DIR}/run.sh" ]]; then
     info "Calling server/run.sh..."
     (cd "$SERVER_DIR" && bash run.sh) >> "$RUNNER_LOG" 2>&1 || true
-fi
-
-if kill -USR1 "$SERVER_PID" 2>/dev/null; then
-    ok "Sent SIGUSR1 to server (pid=${SERVER_PID}) — time API resumed."
 else
-    warn "SIGUSR1 delivery failed — server may start time automatically."
+    # Only send SIGUSR1 if run.sh doesn't exist
+    if kill -USR1 "$SERVER_PID" 2>/dev/null; then
+        ok "Sent SIGUSR1 to server (pid=${SERVER_PID}) — time API resumed."
+    else
+        warn "SIGUSR1 delivery failed — server may start time automatically."
+    fi
 fi
 
 sleep 0.5

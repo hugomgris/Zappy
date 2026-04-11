@@ -1,5 +1,5 @@
 #include "ProtocolTypes.hpp"
-#include "helpers/Logger.hpp"
+#include "../helpers/Logger.hpp"
 
 #include <cJSON.h>
 #include <algorithm>

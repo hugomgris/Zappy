@@ -29,7 +29,7 @@
  */
 
 #include "AI.hpp"
-#include "helpers/Logger.hpp"
+#include "../helpers/Logger.hpp"
 #include "ProtocolTypes.hpp"
 
 #include <algorithm>

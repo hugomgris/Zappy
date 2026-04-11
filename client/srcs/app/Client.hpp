@@ -1,10 +1,10 @@
 #pragma once
 
-#include "net/WebsocketClient.hpp"
+#include "../net/WebsocketClient.hpp"
 #include "CommandSender.hpp"
 #include "WorldState.hpp"
 #include "AI.hpp"
-#include "Result.hpp"
+#include "../../incs/Result.hpp"
 
 #include <string>
 #include <atomic>

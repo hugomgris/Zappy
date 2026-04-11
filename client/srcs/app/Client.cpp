@@ -15,7 +15,7 @@
  */
 
 #include "Client.hpp"
-#include "helpers/Logger.hpp"
+#include "../helpers/Logger.hpp"
 
 #include <chrono>
 #include <thread>

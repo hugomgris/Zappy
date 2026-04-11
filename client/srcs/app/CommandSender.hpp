@@ -1,7 +1,7 @@
 #pragma once
 
-#include "net/WebsocketClient.hpp"
-#include "Result.hpp"
+#include "../net/WebsocketClient.hpp"
+#include "../../incs/Result.hpp"
 #include "ProtocolTypes.hpp"
 
 #include <cJSON.h>
