@@ -4,3 +4,12 @@ log.txt
 .vscode/
 .gitignore
 log.txt
+*.log
+log.txt
+*.blend1
+*.a
+*.o
+*.so
+server/log.txt
+server_stdout.txt
+client_cpp/test.log
