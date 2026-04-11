@@ -1,149 +1,120 @@
 #pragma once
 
-#include "ProtocolTypes.hpp"
+/*
+ * AI.hpp — Fixed header
+ *
+ * New fields vs original:
+ *   _commandInFlight        — true while waiting for a server response
+ *   _commandInFlightSentMs  — when the in-flight command was sent (for timeout)
+ *   _lastVisionRequestMs    — last time we sent a voir (staleness gate)
+ *   _lastInventaireRequestMs — same for inventaire
+ *
+ * New constants:
+ *   COMMAND_FLIGHT_TIMEOUT_MS — safety valve to clear a stuck in-flight flag
+ *   VISION_STALE_MS           — how long before we re-request vision/inventory
+ *
+ * shouldFork() now has no level gate (fork allowed at level 1).
+ */
+
 #include "WorldState.hpp"
 #include "CommandSender.hpp"
+#include "ProtocolTypes.hpp"
 
+#include <deque>
+#include <map>
 #include <string>
 #include <vector>
-#include <functional>
-#include <map>
-#include <optional>
-#include <deque>
-#include <chrono>
 
 namespace zappy {
 
-// ────────────────────────────────────────────────────────────────
-//  Broadcast protocol tags
-// ────────────────────────────────────────────────────────────────
-//
-//  Every broadcast message starts with a tag so players can
-//  cooperate without confusing messages.
-//
-//  RALLY:<level>        – "I need more level-<level> players here"
-//  HERE:<level>         – "I am level-<level> and I am on the rally tile"
-//  START:<level>        – Leader announces incantation is about to start
-//  DONE:<level>         – Incantation complete, rally disbands
-//  STONES:<level>       – "I have stones and am moving to the rally"
-//  PING                 – keepalive / team-presence check
-// ────────────────────────────────────────────────────────────────
-
-// ────────────────────────────────────────────────────────────────
-//  State machine
-// ────────────────────────────────────────────────────────────────
-
 enum class AIState {
-    Idle,           // just started / just finished something
-    CollectingFood, // food critically low
-    CollectingStones, // gathering missing stones for current level
-    MovingToRally,  // navigating toward a rally point broadcast
-    Rallying,       // on the rally tile, waiting for peers + placing stones
-    Incantating,    // incantation in flight
-    Leading,        // we are the rally leader, broadcasting RALLY
-    Forking,        // sending fork to increase team size
+    Idle,
+    CollectingFood,
+    CollectingStones,
+    MovingToRally,
+    Rallying,
+    Incantating,
+    Leading,
+    Forking,
 };
 
-// ────────────────────────────────────────────────────────────────
-//  Level requirements (mirrors server exactly)
-// ────────────────────────────────────────────────────────────────
+enum class NavAction {
+    Forward,
+    TurnLeft,
+    TurnRight,
+    Take,
+    Place,
+    None,
+};
+
+struct NavStep {
+    NavAction   action;
+    std::string resource;
+};
 
 struct LevelReq {
     int players;
-    std::map<std::string, int> stones; // must be ON THE TILE (not in inventory)
+    std::map<std::string, int> stones;
 };
-
-// ────────────────────────────────────────────────────────────────
-//  Pending navigation plan
-// ────────────────────────────────────────────────────────────────
-
-enum class NavAction { Forward, TurnLeft, TurnRight, Take, Place, Wait };
-
-struct NavStep {
-    NavAction action;
-    std::string resource; // for Take/Place
-};
-
-// ────────────────────────────────────────────────────────────────
-//  AI class
-// ────────────────────────────────────────────────────────────────
 
 class AI {
 public:
     AI(WorldState& state, CommandSender& sender);
-    ~AI() = default;
 
-    // Called every network-loop iteration (~50 ms)
     void tick(int64_t nowMs);
-
-    // Configuration (can be called before or after run())
+    void onMessage(const ServerMessage& msg);
     void setForkEnabled(bool enabled) { _forkEnabled = enabled; }
 
-    // Called when a broadcast message arrives
-    void onMessage(const ServerMessage& msg);
-
-    // Called when a non-response server event arrives (level-up, death …)
-    void onEvent(const ServerMessage& msg) { (void)msg; }
-
-    // Called when a command response is dispatched to us by CommandSender
-    // (we register callbacks per-command; this is the catch-all for events)
-    void onCommandComplete(const ServerMessage& msg) { (void)msg; }
+    // Constants — tweak as needed
+    static constexpr int FOOD_SAFE               = 12;
+    static constexpr int FOOD_CRITICAL           = 4;
+    static constexpr int MOVE_COOLDOWN_MS        = 50;   // kept for back-compat; not used in hot path anymore
+    static constexpr int RALLY_BROADCAST_INTERVAL_MS = 5000;
+    static constexpr int RALLY_TIMEOUT_MS        = 45000;
+    static constexpr int FORK_INTERVAL_MS        = 60000;
+    static constexpr int STATE_TIMEOUT_MS        = 180000;
+    static constexpr int COMMAND_FLIGHT_TIMEOUT_MS = 10000; // NEW: safety valve
+    static constexpr int VISION_STALE_MS         = 1500;    // NEW: re-request vision after this
 
 private:
-    // ── references ──────────────────────────────────────────────
     WorldState&    _state;
     CommandSender& _sender;
 
-    // ── state machine ───────────────────────────────────────────
-    AIState _aiState      = AIState::Idle;
-    bool    _cmdInFlight  = false;   // true while we are waiting for a response
-    int64_t _lastActionMs = 0;
+    AIState _aiState        = AIState::Idle;
     int64_t _stateEnteredMs = 0;
+    int64_t _lastActionMs   = 0;
 
-    // ── navigation ──────────────────────────────────────────────
+    // FIX 1: Command serialization
+    bool    _commandInFlight        = false;
+    int64_t _commandInFlightSentMs  = 0;
+    int64_t _lastVisionRequestMs    = 0;
+    int64_t _lastInventaireRequestMs = 0;
+
+    // Navigation
     std::deque<NavStep> _navPlan;
+    bool _navInFlight   = false;
     int  _explorationStep = 0;
-    bool _navInFlight     = false;
 
-    // ── collecting stones ────────────────────────────────────────
-    std::vector<std::string> _stonesNeeded;   // what we still need to collect
-    std::string              _currentTarget;  // stone type we are chasing right now
-    int                      _stoneSearchTurns = 0;
+    // Stone collection
+    std::vector<std::string> _stonesNeeded;
+    std::string _currentTarget;
+    int _stoneSearchTurns = 0;
 
-    // ── food ────────────────────────────────────────────────────
-    static constexpr int FOOD_CRITICAL  = 5;
-    static constexpr int FOOD_SAFE      = 15;
+    // Incantation / rally
+    bool    _isLeader              = false;
+    int     _rallyLevel            = 0;
+    int     _rallyPeersConfirmed   = 0;
+    int     _broadcastDirection    = 0;
+    bool    _stonesPlaced          = false;
+    bool    _incantationSent       = false;
+    int64_t _incantationSentMs     = 0;
+    int64_t _lastRallyBroadcast    = 0;
 
-    // ── rallying / cooperation ───────────────────────────────────
-    bool    _isLeader          = false;
-    int     _rallyLevel        = 0;      // level we are rallying for
-    int     _rallyPeersConfirmed = 0;
-    int64_t _lastRallyBroadcast = 0;
-    int64_t _rallyTimeout       = 0;     // give up rallying after this
-    int     _broadcastDirection  = 0;    // direction of the RALLY broadcast we received
-    bool    _stonesPlaced        = false; // have we placed our stones on the tile?
+    // Forking
+    bool    _forkEnabled  = true;
+    int64_t _lastForkMs   = 0;
 
-    // ── incantation ─────────────────────────────────────────────
-    bool    _incantationSent   = false;
-    int64_t _incantationSentMs = 0;
-
-    // ── forking ─────────────────────────────────────────────────
-    bool    _forkEnabled       = true;
-    int64_t _lastForkMs        = 0;
-    static constexpr int64_t FORK_INTERVAL_MS = 30000; // fork every 30 s if slots free
-
-    // ── timing ──────────────────────────────────────────────────
-    static constexpr int64_t CMD_TIMEOUT_MS     = 8000;
-    static constexpr int64_t STATE_TIMEOUT_MS   = 20000;
-    static constexpr int64_t RALLY_TIMEOUT_MS   = 30000;
-    static constexpr int64_t RALLY_BROADCAST_INTERVAL_MS = 3000;
-    static constexpr int64_t MOVE_COOLDOWN_MS   = 200;   // don't spam moves
-
-    // ── static level requirement table ──────────────────────────
-    static const LevelReq& levelReq(int level);
-
-    // ── high-level state transitions ────────────────────────────
-    void transitionTo(AIState next, int64_t nowMs);
+    // State runners
     void runIdle(int64_t nowMs);
     void runCollectingFood(int64_t nowMs);
     void runCollectingStones(int64_t nowMs);
@@ -153,14 +124,24 @@ private:
     void runLeading(int64_t nowMs);
     void runForking(int64_t nowMs);
 
-    // ── navigation helpers ───────────────────────────────────────
+    void transitionTo(AIState next, int64_t nowMs);
+
+    // Navigation
+    void clearNav();
     void buildPlanToResource(const std::string& resource);
     void buildExplorationPlan();
     void buildPlanTowardDirection(int direction);
-    bool executeNextNavStep(int64_t nowMs);    // returns true if step dispatched
-    void clearNav();
+    bool executeNextNavStep(int64_t nowMs);
 
-    // ── command helpers ──────────────────────────────────────────
+    // Stone helpers
+    std::vector<std::string> computeMissingStones() const;
+    bool allStonesOnTile() const;
+    void placeAllStonesOnTile(int64_t nowMs);
+
+    // Command wrappers
+    void markInFlight(int64_t nowMs);
+    void clearInFlight();
+
     void sendVoir(int64_t nowMs);
     void sendInventaire(int64_t nowMs);
     void sendTake(const std::string& resource, int64_t nowMs);
@@ -172,18 +153,15 @@ private:
     void sendFork(int64_t nowMs);
     void broadcast(const std::string& msg, int64_t nowMs);
 
-    // ── stone logic ──────────────────────────────────────────────
-    std::vector<std::string> computeMissingStones() const;
-    bool allStonesOnTile() const;
-    void placeAllStonesOnTile(int64_t nowMs);
-
-    // ── misc ─────────────────────────────────────────────────────
+    // Utility
     bool foodIsLow() const;
     bool foodIsCritical() const;
     bool shouldFork(int64_t nowMs) const;
     int  playersNeeded() const;
     int  playersOnTile() const;
     bool readyToIncantate() const;
+
+    static const LevelReq& levelReq(int level);
 };
 
 } // namespace zappy

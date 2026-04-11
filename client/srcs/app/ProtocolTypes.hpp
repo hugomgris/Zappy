@@ -58,6 +58,7 @@ namespace zappy {
 		// parsed welcome data
 		std::optional<MapSize>	mapSize;
 		std::optional<int>		remainingClients;
+		std::optional<int>		playerOrientation;
 
 		// parsed response data
 		std::optional<std::vector<VisionTile>>		vision;
@@ -86,6 +87,7 @@ namespace zappy {
 
 	// navigation helpers
 	int orientationFromString(const std::string& dir);
+	int orientationFromServer(int serverOrientation);
 	std::string orientationToString(int orientation);
 	void applyTurn(int& orientation, bool turnRight);
 	void applyMove(int& x, int& y, int orientation, int mapWidth, int mapHeight);

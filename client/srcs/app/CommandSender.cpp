@@ -1,22 +1,16 @@
 /*
- * CommandSender.cpp — rewrite
+ * CommandSender.cpp
  *
- * Fixes vs original:
- * 1. expectResponse key for prend/pose now ALWAYS uses the compound key
- *    "prend <resource>" / "pose <resource>" to match what processResponse
- *    builds from the server reply.  The original had an inconsistency where
- *    the old executeNextAction registered "prend" (bare) but the new version
- *    registered "prend resource".  Now it is always the compound form.
+ * No new functional changes vs the previous rewrite. The fixes that matter
+ * for the "Buffer full!" problem live in AI.cpp (_commandInFlight serialization).
+ * CommandSender itself is correct — it faithfully sends and tracks pending
+ * commands. The problem was the AI sending too many commands at once.
  *
- * 2. processResponse: "in_progress" for incantation is forwarded to the
- *    callback rather than silently dropped, so the AI can stay in
- *    Incantating state.  (We skip it only for other commands.)
- *
- * 3. The FIFO fallback is kept for commands whose response carries no cmd
- *    field, but is documented clearly.
- *
- * 4. checkTimeouts signature now takes an explicit timeoutMs so the caller
- *    controls the threshold (AI passes its own _commandTimeoutMs).
+ * What's kept from the previous rewrite:
+ * 1. expectResponse key for prend/pose always uses "prend <resource>" / "pose <resource>".
+ * 2. processResponse forwards "in_progress" for incantation without removing it.
+ * 3. FIFO fallback for cmd-less server replies is documented.
+ * 4. checkTimeouts takes an explicit timeoutMs.
  */
 
 #include "CommandSender.hpp"
@@ -187,30 +181,27 @@ uint64_t CommandSender::expectResponse(
 void CommandSender::processResponse(const ServerMessage& msg) {
     if (msg.type != ServerMessageType::Response) return;
 
-    // Build the lookup key the same way we registered it.
-    // For prend/pose the key is "cmd arg" (e.g. "prend linemate").
+    // Build lookup key. For prend/pose the key includes the resource arg.
     std::string lookupKey = msg.cmd;
-    if (!msg.arg.empty() && (msg.cmd == "prend" || msg.cmd == "pose")) {
+    if (!msg.arg.empty() && (msg.cmd == "prend" || msg.cmd == "pose"))
         lookupKey = msg.cmd + " " + msg.arg;
-    }
 
-    // "in_progress" for incantation: forward the callback so the AI knows
-    // the incantation is running, but do NOT remove it from pending — we
-    // still need the final ok/ko response.
+    // Incantation "in_progress": forward to callback but keep it in pending
+    // so we can still receive the final ok/ko.
     if (msg.status == "in_progress" && msg.cmd == "incantation") {
         Logger::debug("CommandSender: incantation in_progress, forwarding but keeping pending");
         std::function<void(const ServerMessage&)> cb;
         {
             std::lock_guard<std::mutex> lock(_mutex);
             auto it = std::find_if(_pending.begin(), _pending.end(),
-                [&](const PendingCommand& p) { return p.cmd == "incantation"; });
+                [](const PendingCommand& p) { return p.cmd == "incantation"; });
             if (it != _pending.end()) cb = it->callback;
         }
-        if (cb) cb(msg); // inform but do not remove
+        if (cb) cb(msg);
         return;
     }
 
-    // For all other in_progress (shouldn't happen, but be safe): ignore
+    // Any other "in_progress" is unexpected — ignore
     if (msg.status == "in_progress") {
         Logger::debug("CommandSender: ignoring in_progress for " + msg.cmd);
         return;
@@ -225,12 +216,11 @@ void CommandSender::processResponse(const ServerMessage& msg) {
         auto it = _pending.end();
 
         if (!lookupKey.empty()) {
-            // Exact key match (cmd or "cmd arg")
             it = std::find_if(_pending.begin(), _pending.end(),
                 [&](const PendingCommand& p) { return p.cmd == lookupKey; });
         }
 
-        // Fallback: if the server reply carries no cmd field, match FIFO
+        // FIFO fallback: if the server reply carries no cmd field
         if (it == _pending.end() && msg.cmd.empty() && !_pending.empty()) {
             it = _pending.begin();
             Logger::debug("CommandSender: FIFO fallback for cmd-less response");
@@ -248,7 +238,6 @@ void CommandSender::processResponse(const ServerMessage& msg) {
     }
 
     if (callback) {
-        // Patch the message if needed so the callback sees the right cmd
         ServerMessage out = msg;
         if (out.cmd.empty()) out.cmd = matchedCmd;
         callback(out);

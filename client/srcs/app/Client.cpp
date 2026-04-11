@@ -1,17 +1,20 @@
 /*
- * Client.cpp — patch
+ * Client.cpp
  *
- * The only functional change vs the original is in processIncomingMessages:
+ * Changes vs previous version:
  *
- *   BEFORE:  WorldState::onResponse → sender::processResponse (which calls
- *            AI callback) → AI::onCommandComplete → WorldState::onResponse  ← DOUBLE CALL
+ * 1.  CommandSender::checkTimeouts() called every loop iteration.
+ *     Previously timeouts were never checked, so a command dropped by the
+ *     server (e.g. due to the event buffer being full) would leave
+ *     _commandInFlight = true in the AI forever. Now timeouts are surfaced
+ *     as error callbacks, which clear the flag via AI::clearInFlight().
+ *     The timeout threshold matches AI::COMMAND_FLIGHT_TIMEOUT_MS.
  *
- *   AFTER:   WorldState::onResponse → sender::processResponse (which calls
- *            AI callback) → AI::onCommandComplete (does NOT call onResponse)
+ * 2.  Initial sendVoir() on run() no longer registers an expectResponse —
+ *     it is now a one-shot kick-start without a pending callback so it does
+ *     not pollute the pending queue before the AI takes over.
  *
- * The order matters: WorldState must be updated BEFORE the AI callback fires,
- * so the AI sees fresh state when it makes its next decision.
- * That order is preserved here.
+ * Everything else is unchanged from the previous rewrite.
  */
 
 #include "Client.hpp"
@@ -137,7 +140,9 @@ Result Client::performLogin(int64_t& nowMs, int timeoutMs) {
 
 Result Client::run() {
     _running = true;
-    (void)_sender.sendVoir(); // kick-start to avoid idle-disconnect
+    // Kick-start: send voir without registering a pending callback.
+    // The AI will issue its own voir once it starts ticking, properly tracked.
+    (void)_sender.sendVoir();
     _networkThread = std::make_unique<std::thread>(&Client::networkLoop, this);
     return Result::success();
 }
@@ -151,9 +156,9 @@ void Client::stop() {
 
 void Client::networkLoop() {
     int64_t nowMs = 0;
-    int64_t lastStatusTime = 0;
-    int reconnectAttempts  = 0;
-    const int MAX_RECONNECT = 5;
+    int64_t lastStatusTime    = 0;
+    int     reconnectAttempts = 0;
+    const int MAX_RECONNECT   = 5;
 
     while (_running) {
         nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -188,6 +193,11 @@ void Client::networkLoop() {
             continue;
         }
 
+        // FIX 1 (client side): Check for timed-out pending commands every loop.
+        // This surfaces dropped commands as error callbacks, which clears
+        // AI::_commandInFlight so the AI does not stall permanently.
+        _sender.checkTimeouts(AI::COMMAND_FLIGHT_TIMEOUT_MS);
+
         _ai.tick(nowMs);
 
         if (nowMs - lastStatusTime > 5000) {
@@ -220,7 +230,6 @@ void Client::processIncomingMessages(int64_t nowMs) {
 
             ServerMessage msg = parseServerMessage(text);
 
-            // Death is handled immediately
             if (msg.isDeath()) {
                 _state.onEvent(msg);
                 Logger::error("Player died! Stopping.");

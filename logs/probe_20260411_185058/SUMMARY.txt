@@ -1,0 +1,86 @@
+════════════════════════════════════════════════════════════
+  ZAPPY PROBE SESSION SUMMARY
+  Sat Apr 11 07:01:00 PM CEST 2026
+════════════════════════════════════════════════════════════
+
+OUTCOME       : timeout
+ELAPSED       : 600s / 600s
+
+── Configuration ────────────────────────────────────────────
+  Port        : 8674
+  Team1       : 12 concurrent clients
+  Team2       : 12 concurrent clients
+  Server slots: 72
+  Time unit   : 100
+  Forking     : enabled
+  Easy ascend : YES
+  Respawn     : yes
+
+── Client statistics ────────────────────────────────────────
+  Client log files : 330
+  Total deaths     : 301
+  Incantations OK  : 313
+  Incantations KO  : 0
+0
+  Forks succeeded  : 0
+0
+  RALLY broadcasts : 12877
+
+── Level-up events per level ─────────────────────────────────
+  Level 2  reached  : 282 times
+  Level 3  reached  : 26 times
+  Level 4  reached  : 5 times
+  Level 5  reached  : 0
+0 times
+  Level 6  reached  : 0
+0 times
+  Level 7  reached  : 0
+0 times
+  Level 8  reached  : 0
+0 times
+
+── Highest level reached per team ───────────────────────────
+  team1: level 1
+  team2: level 1
+
+── Server winner line ───────────────────────────────────────
+  (no winner condition reached)
+
+── Last 20 server log lines ─────────────────────────────────
+  [0m[1;33m[2898][WARN ] Client fd=9 not found for command 'voir'
+  [0m[1;33m[2958][WARN ] Client fd=14 not found for command 'avance'
+  [0m[1;33m[2990][WARN ] Client fd=15 not found for command 'droite'
+  [0m[1;33m[3019][WARN ] Client fd=18 not found for command 'droite'
+  [0m[1;33m[3081][WARN ] Client fd=21 not found for command 'droite'
+  [0m[1;33m[6057][WARN ] Client fd=15 not found for command 'droite'
+  [0m[1;33m[9143][WARN ] Client fd=12 not found for command 'avance'
+  [0m[1;33m[13448][WARN ] Client fd=9 not found for command 'avance'
+  [0m[1;33m[20405][WARN ] Client fd=9 not found for command 'avance'
+  [0m[1;33m[20958][WARN ] [MAIN_LOOP] Server exhausted — may lose events. select=0 time_units, play=6 time_units, total=6, now=20958
+  [0m[1;33m[24264][WARN ] Client fd=13 not found for command 'avance'
+  [0m[1;33m[24264][WARN ] Client fd=28 not found for command 'voir'
+  [0m[1;33m[27808][WARN ] Client fd=18 not found for command 'avance'
+  [0m[1;33m[33335][WARN ] Client fd=21 not found for command 'voir'
+  [0m[1;33m[40862][WARN ] Client fd=18 not found for command 'voir'
+  [0m[1;33m[40904][WARN ] Client fd=6 not found for command 'voir'
+  [0m[1;33m[49031][WARN ] [MAIN_LOOP] Server exhausted — may lose events. select=0 time_units, play=11 time_units, total=11, now=49031
+  [0m[1;33m[52896][WARN ] Client fd=28 not found for command 'avance'
+  [0m[1;33m[55278][WARN ] [MAIN_LOOP] Server exhausted — may lose events. select=0 time_units, play=29 time_units, total=29, now=55278
+  [0m
+── Files ────────────────────────────────────────────────────
+  Log directory  : /home/jareste/hugo/zappy/logs/probe_20260411_185058
+  Server log     : /home/jareste/hugo/zappy/logs/probe_20260411_185058/server.log
+  Runner log     : /home/jareste/hugo/zappy/logs/probe_20260411_185058/runner.log
+  Client logs    : /home/jareste/hugo/zappy/logs/probe_20260411_185058/client_<team>_<N>.log
+
+  Useful one-liners for post-game analysis:
+    # All incantation failures with context:
+    grep -rh 'incantation' /home/jareste/hugo/zappy/logs/probe_20260411_185058/client_*.log | grep -i 'fail\|ko'
+
+    # Timeline of level-ups across all clients:
+    grep -rh 'LEVEL UP' /home/jareste/hugo/zappy/logs/probe_20260411_185058/client_*.log | sort
+
+    # Clients that reached level 4+:
+    grep -rl 'LEVEL UP.*[4-8]' /home/jareste/hugo/zappy/logs/probe_20260411_185058/client_*.log
+
+════════════════════════════════════════════════════════════

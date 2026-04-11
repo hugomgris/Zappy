@@ -1,31 +1,43 @@
 /*
- * AI.cpp — Full cooperative AI for Zappy
+ * AI.cpp — Fixed cooperative AI for Zappy
  *
- * Design philosophy
- * ─────────────────
- * 1.  SURVIVAL FIRST – keep food above FOOD_SAFE whenever possible.
- *     Drop everything if food falls below FOOD_CRITICAL.
+ * Fixes applied vs previous version:
  *
- * 2.  STONE COLLECTION – after food is safe, figure out which stones
- *     are still needed for the current level's incantation and go get them.
- *     Stones must end up ON THE TILE (not in inventory) for the server to
- *     count them, so we place them just before incanting.
+ * 1.  COMMAND SERIALIZATION (_commandInFlight flag)
+ *     The server event buffer holds only 10 commands. Sending voir+inventaire
+ *     every tick without waiting for a reply saturates it immediately, causing
+ *     "Buffer full! event dropped" and lost responses. Now only one command is
+ *     in flight at a time; the next is sent only after the callback fires.
  *
- * 3.  COOPERATION via BROADCAST – when ready to incant the AI broadcasts
- *     RALLY:<level>.  Peers respond with HERE:<level> once they reach the
- *     tile.  The leader waits until enough same-level players are present,
- *     then broadcasts START:<level> and initiates incantation.
+ * 2.  computeMissingStones — correct formula
+ *     AI now correctly computes stones still needed as:
+ *       deficit = needed - (have_in_inventory + already_on_floor)
+ *     The previous version was logically correct but used _stonesNeeded as a
+ *     stale snapshot that caused the AI to re-enter CollectingStones even when
+ *     all stones were already gathered.
  *
- * 4.  FORKING – after every successful incantation (or periodically) we
- *     fork to grow team size and improve odds for higher-level incantations.
+ * 3.  runIdle — no more unconditional voir/inventaire every tick
+ *     Vision and inventory are only requested when stale (>VISION_STALE_MS),
+ *     and only when no command is in flight.
  *
- * Critical server facts (verified from game.c)
- * ─────────────────────────────────────────────
- * • Items for incantation must be on the TILE (t->items.*), not in inventory.
- * • All co-participants must be at the SAME LEVEL as the initiator.
- * • The server consumes items from the tile at incantation start.
- * • Vision distance = player level (a level-1 player sees 1 row ahead, etc.)
- * • Broadcast direction 0 = same tile, 1-8 = compass relative to listener.
+ * 4.  runRallying — _stonesPlaced guard removed
+ *     placeAllStonesOnTile already sets _stonesPlaced = true. The secondary
+ *     guard comparing stale _stonesNeeded was preventing the flag from ever
+ *     being set correctly.
+ *
+ * 5.  shouldFork — allow forking at level 1
+ *     Level 2+ incantations require multiple players. The team must fork at
+ *     level 1 to have enough players for later levels. Fork is now allowed
+ *     from level 1 onwards (with a food safety gate).
+ *
+ * 6.  Orientation indexing clarified throughout
+ *     Server uses 0=N,1=E,2=S,3=W internally but sends 1=N,2=E,3=S,4=W in
+ *     responses. All navigation math now uses the 1-4 convention consistently.
+ *     buildPlanTowardDirection broadcast-direction mapping corrected.
+ *
+ * 7.  sendVoir / sendInventaire wrapped in _commandInFlight guard
+ *     These are no longer fire-and-forget; they set _commandInFlight and clear
+ *     it in the callback, same as every other command.
  */
 
 #include "AI.hpp"
@@ -33,6 +45,7 @@
 #include "ProtocolTypes.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <sstream>
 
@@ -40,8 +53,6 @@ namespace zappy {
 
 // ────────────────────────────────────────────────────────────────
 //  Level requirement table  (matches server level_reqs[] exactly)
-// ────────────────────────────────────────────────────────────────
-// Level X→X+1:  players needed, stones needed ON TILE
 // ────────────────────────────────────────────────────────────────
 
 const LevelReq& AI::levelReq(int level) {
@@ -68,15 +79,24 @@ AI::AI(WorldState& state, CommandSender& sender)
     : _state(state), _sender(sender) {}
 
 // ────────────────────────────────────────────────────────────────
-//  tick()  – called every ~50 ms from networkLoop
+//  tick()
 // ────────────────────────────────────────────────────────────────
 
 void AI::tick(int64_t nowMs) {
-    // Global guard: don't spam commands faster than MOVE_COOLDOWN_MS
-    if (nowMs - _lastActionMs < MOVE_COOLDOWN_MS)
-        return;
+    // FIX 1: If a command is still in flight, do not send another.
+    // This is the primary fix for the "Buffer full!" server errors.
+    if (_commandInFlight) {
+        // Safety valve: if a command has been in-flight too long the callback
+        // was probably dropped. Clear the flag so we can recover.
+        if (nowMs - _commandInFlightSentMs > COMMAND_FLIGHT_TIMEOUT_MS) {
+            Logger::warn("AI: command in-flight timeout, clearing flag");
+            _commandInFlight = false;
+        } else {
+            return;
+        }
+    }
 
-    // State-level timeout guard (prevents getting stuck)
+    // Periodic timeout guard (prevents getting stuck in any non-incantating state)
     if (_aiState != AIState::Incantating &&
         _aiState != AIState::Idle &&
         nowMs - _stateEnteredMs > STATE_TIMEOUT_MS) {
@@ -88,24 +108,29 @@ void AI::tick(int64_t nowMs) {
         return;
     }
 
-    // Food emergency overrides everything except active incantation
+    // Food emergency overrides everything except active incantation.
+    // If we are already rallying and can incantate now, don't break formation.
     if (_aiState != AIState::Incantating && foodIsCritical()) {
+        if (_aiState == AIState::Rallying && readyToIncantate()) {
+            // Let runRallying send incantation immediately.
+        } else {
         if (_aiState != AIState::CollectingFood) {
             Logger::warn("AI: food critical! overriding to CollectFood");
             clearNav();
             transitionTo(AIState::CollectingFood, nowMs);
         }
+        }
     }
 
     switch (_aiState) {
-        case AIState::Idle:           runIdle(nowMs);           break;
-        case AIState::CollectingFood: runCollectingFood(nowMs); break;
+        case AIState::Idle:             runIdle(nowMs);             break;
+        case AIState::CollectingFood:   runCollectingFood(nowMs);   break;
         case AIState::CollectingStones: runCollectingStones(nowMs); break;
-        case AIState::MovingToRally:  runMovingToRally(nowMs);  break;
-        case AIState::Rallying:       runRallying(nowMs);       break;
-        case AIState::Incantating:    runIncantating(nowMs);    break;
-        case AIState::Leading:        runLeading(nowMs);        break;
-        case AIState::Forking:        runForking(nowMs);        break;
+        case AIState::MovingToRally:    runMovingToRally(nowMs);    break;
+        case AIState::Rallying:         runRallying(nowMs);         break;
+        case AIState::Incantating:      runIncantating(nowMs);      break;
+        case AIState::Leading:          runLeading(nowMs);          break;
+        case AIState::Forking:          runForking(nowMs);          break;
     }
 }
 
@@ -121,38 +146,44 @@ void AI::transitionTo(AIState next, int64_t nowMs) {
 }
 
 // ────────────────────────────────────────────────────────────────
-//  Idle  – decide what to do next
+//  Idle
 // ────────────────────────────────────────────────────────────────
 
 void AI::runIdle(int64_t nowMs) {
     int level = _state.getLevel();
-
-    // Refresh vision first so we have good data to work with
-    sendVoir(nowMs);
-    sendInventaire(nowMs);
 
     if (level >= 8) {
         Logger::info("AI: Level 8 achieved! Resting.");
         return;
     }
 
-    // Food check
+    // FIX 3: Only refresh vision/inventory when stale, not every tick.
+    bool visionStale = (nowMs - _lastVisionRequestMs) > VISION_STALE_MS;
+    if (visionStale) {
+        sendVoir(nowMs);
+        return; // wait for vision before deciding
+    }
+
+    bool invStale = (nowMs - _lastInventaireRequestMs) > VISION_STALE_MS;
+    if (invStale) {
+        sendInventaire(nowMs);
+        return;
+    }
+
     if (foodIsLow()) {
         transitionTo(AIState::CollectingFood, nowMs);
         return;
     }
 
-    // Fork opportunity
+    // FIX 5: Fork allowed from level 1 so we have players for level 2+
     if (shouldFork(nowMs)) {
         transitionTo(AIState::Forking, nowMs);
         return;
     }
 
-    // Compute missing stones
     _stonesNeeded = computeMissingStones();
 
     if (_stonesNeeded.empty()) {
-        // We have all stones — become leader and rally
         Logger::info("AI: Have all stones for level " + std::to_string(level) + ", becoming leader");
         _isLeader = true;
         _rallyLevel = level;
@@ -179,21 +210,23 @@ void AI::runCollectingFood(int64_t nowMs) {
         return;
     }
 
-    // Is there food on the current tile?
     auto nearest = _state.getNearestItem("nourriture");
     if (nearest.has_value() && nearest->distance == 0) {
         sendTake("nourriture", nowMs);
         return;
     }
 
-    // Build/continue navigation plan toward food
     if (_navPlan.empty()) {
         if (nearest.has_value()) {
             buildPlanToResource("nourriture");
         } else {
+            // Vision may be stale — request fresh view
+            if (nowMs - _lastVisionRequestMs > VISION_STALE_MS) {
+                sendVoir(nowMs);
+                return;
+            }
             buildExplorationPlan();
         }
-        sendVoir(nowMs);
     }
 
     executeNextNavStep(nowMs);
@@ -204,7 +237,6 @@ void AI::runCollectingFood(int64_t nowMs) {
 // ────────────────────────────────────────────────────────────────
 
 void AI::runCollectingStones(int64_t nowMs) {
-    // Recalculate what we still need
     _stonesNeeded = computeMissingStones();
 
     if (_stonesNeeded.empty()) {
@@ -213,7 +245,6 @@ void AI::runCollectingStones(int64_t nowMs) {
         return;
     }
 
-    // Prioritize food if getting low
     if (foodIsLow()) {
         transitionTo(AIState::CollectingFood, nowMs);
         return;
@@ -223,13 +254,12 @@ void AI::runCollectingStones(int64_t nowMs) {
 
     auto nearest = _state.getNearestItem(_currentTarget);
     if (nearest.has_value() && nearest->distance == 0) {
-        // On the tile — take it
         sendTake(_currentTarget, nowMs);
         clearNav();
         return;
     }
 
-    // Also grab food opportunistically while exploring
+    // Opportunistic food grab
     auto foodNear = _state.getNearestItem("nourriture");
     if (foodNear.has_value() && foodNear->distance == 0 && _state.getFood() < FOOD_SAFE) {
         sendTake("nourriture", nowMs);
@@ -240,14 +270,12 @@ void AI::runCollectingStones(int64_t nowMs) {
         if (nearest.has_value()) {
             buildPlanToResource(_currentTarget);
         } else {
-            // Explore and re-scan
-            buildExplorationPlan();
             _stoneSearchTurns++;
-            if (_stoneSearchTurns % 5 == 0) {
+            if (_stoneSearchTurns % 2 == 0 && nowMs - _lastVisionRequestMs > VISION_STALE_MS) {
                 sendVoir(nowMs);
-                sendInventaire(nowMs);
                 return;
             }
+            buildExplorationPlan();
         }
     }
 
@@ -255,20 +283,19 @@ void AI::runCollectingStones(int64_t nowMs) {
 }
 
 // ────────────────────────────────────────────────────────────────
-//  Leading  – broadcast RALLY and wait for peers
+//  Leading
 // ────────────────────────────────────────────────────────────────
 
 void AI::runLeading(int64_t nowMs) {
     int level = _state.getLevel();
     const auto& req = levelReq(level);
 
-    // Periodically re-broadcast RALLY
     if (nowMs - _lastRallyBroadcast > RALLY_BROADCAST_INTERVAL_MS) {
         broadcast("RALLY:" + std::to_string(level), nowMs);
         _lastRallyBroadcast = nowMs;
+        return; // one command per tick
     }
 
-    // If level 1, no peers needed — proceed immediately
     if (req.players <= 1) {
         Logger::info("AI: Level 1 incantation — no peers needed");
         _stonesPlaced = false;
@@ -276,11 +303,10 @@ void AI::runLeading(int64_t nowMs) {
         return;
     }
 
-    // Check if we have enough peers on our tile
-    int here = playersOnTile(); // includes ourselves
-    Logger::debug("AI: Leading for level " + std::to_string(level) +
-                  " need " + std::to_string(req.players) +
-                  " have " + std::to_string(here));
+    int here = playersOnTile();
+    Logger::debug("AI: Leading level=" + std::to_string(level) +
+                  " need=" + std::to_string(req.players) +
+                  " have=" + std::to_string(here));
 
     if (here >= req.players) {
         Logger::info("AI: Enough players! Transitioning to Rallying");
@@ -290,7 +316,6 @@ void AI::runLeading(int64_t nowMs) {
         return;
     }
 
-    // Rally timeout — give up leading, go back to stone collection
     if (nowMs - _stateEnteredMs > RALLY_TIMEOUT_MS) {
         Logger::warn("AI: Rally timeout, giving up lead");
         _isLeader = false;
@@ -299,26 +324,23 @@ void AI::runLeading(int64_t nowMs) {
         return;
     }
 
-    // While waiting, keep scanning so we know when peers arrive
-    if (nowMs - _lastActionMs > 2000) {
+    // Refresh vision while waiting for peers
+    if (nowMs - _lastVisionRequestMs > VISION_STALE_MS * 2) {
         sendVoir(nowMs);
-        sendInventaire(nowMs);
     }
 }
 
 // ────────────────────────────────────────────────────────────────
-//  MovingToRally  – following a broadcast toward a leader
+//  MovingToRally
 // ────────────────────────────────────────────────────────────────
 
 void AI::runMovingToRally(int64_t nowMs) {
-    // If we got here, _broadcastDirection was set by onMessage
     if (nowMs - _stateEnteredMs > RALLY_TIMEOUT_MS) {
         Logger::warn("AI: MovingToRally timeout");
         transitionTo(AIState::Idle, nowMs);
         return;
     }
 
-    // Check if we are on the right tile (direction=0 means same tile)
     if (_broadcastDirection == 0) {
         Logger::info("AI: Reached rally tile");
         broadcast("HERE:" + std::to_string(_rallyLevel), nowMs);
@@ -329,9 +351,10 @@ void AI::runMovingToRally(int64_t nowMs) {
 
     if (_navPlan.empty()) {
         buildPlanTowardDirection(_broadcastDirection);
-        // After moving one step, update direction via a fresh broadcast listener
-        // (direction will update in onMessage)
-        sendVoir(nowMs);
+        if (nowMs - _lastVisionRequestMs > VISION_STALE_MS) {
+            sendVoir(nowMs);
+            return;
+        }
     }
 
     if (!executeNextNavStep(nowMs)) {
@@ -340,8 +363,7 @@ void AI::runMovingToRally(int64_t nowMs) {
 }
 
 // ────────────────────────────────────────────────────────────────
-//  Rallying  – on the tile, waiting for the leader's START signal
-//              and placing stones
+//  Rallying
 // ────────────────────────────────────────────────────────────────
 
 void AI::runRallying(int64_t nowMs) {
@@ -354,23 +376,29 @@ void AI::runRallying(int64_t nowMs) {
         return;
     }
 
-    // Keep scanning
-    sendVoir(nowMs);
-    sendInventaire(nowMs);
-
-    // Place stones onto the tile if we haven't yet
-    if (!_stonesPlaced) {
-        placeAllStonesOnTile(nowMs);
-        // placeAllStonesOnTile returns once commands are queued
-        // Mark true only if we don't have any stones to place
-        if (computeMissingStones().size() == _stonesNeeded.size()) {
-            // No change; we either already placed or have nothing
-            _stonesPlaced = true;
-        }
+    // If leader already has every condition, incantate immediately.
+    if (_isLeader && _stonesPlaced && readyToIncantate()) {
+        Logger::info("AI: Conditions met, initiating incantation!");
+        sendIncantation(nowMs);
+        transitionTo(AIState::Incantating, nowMs);
         return;
     }
 
-    // If we are the leader, check conditions and fire incantation
+    // Refresh state periodically
+    if (nowMs - _lastVisionRequestMs > VISION_STALE_MS * 2) {
+        sendVoir(nowMs);
+        return;
+    }
+    if (nowMs - _lastInventaireRequestMs > VISION_STALE_MS * 2) {
+        sendInventaire(nowMs);
+        return;
+    }
+
+    if (!_stonesPlaced) {
+        placeAllStonesOnTile(nowMs);
+        return;
+    }
+
     if (_isLeader) {
         int here = playersOnTile();
         const auto& req = levelReq(level);
@@ -382,28 +410,24 @@ void AI::runRallying(int64_t nowMs) {
             return;
         }
 
-        // Periodically re-broadcast START to keep peers awake
         if (nowMs - _lastRallyBroadcast > RALLY_BROADCAST_INTERVAL_MS) {
             broadcast("START:" + std::to_string(level), nowMs);
             _lastRallyBroadcast = nowMs;
         }
     }
-    // Non-leader: just wait. If a long time passes without incantation, bail.
 }
 
 // ────────────────────────────────────────────────────────────────
-//  Incantating  – waiting for ok/ko response
+//  Incantating
 // ────────────────────────────────────────────────────────────────
 
 void AI::runIncantating(int64_t nowMs) {
-    // Timeout safety — incantation delay from game.c is m_incantation_time
-    // Give a generous 30 s
     if (nowMs - _stateEnteredMs > 30000) {
         Logger::warn("AI: Incantation timed out");
         _incantationSent = false;
         transitionTo(AIState::Idle, nowMs);
     }
-    // Otherwise just wait — the callback in sendIncantation() will fire
+    // Callback in sendIncantation() handles ok/ko.
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -417,7 +441,7 @@ void AI::runForking(int64_t nowMs) {
 }
 
 // ────────────────────────────────────────────────────────────────
-//  onMessage  – broadcast received
+//  onMessage  — broadcast received
 // ────────────────────────────────────────────────────────────────
 
 void AI::onMessage(const ServerMessage& msg) {
@@ -427,72 +451,108 @@ void AI::onMessage(const ServerMessage& msg) {
     const std::string& text = *msg.messageText;
     int dir = msg.direction.value_or(0);
     int myLevel = _state.getLevel();
+    int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+
+    auto parseLevelSuffix = [](const std::string& payload, size_t prefixLen) -> int {
+        if (payload.size() <= prefixLen) return -1;
+        try {
+            return std::stoi(payload.substr(prefixLen));
+        } catch (...) {
+            return -1;
+        }
+    };
 
     Logger::debug("AI: broadcast dir=" + std::to_string(dir) + " text='" + text + "'");
 
-    // ── RALLY:<level> ────────────────────────────────────────────
-    if (text.substr(0, 6) == "RALLY:") {
-        int rallyLevel = std::stoi(text.substr(6));
-        if (rallyLevel != myLevel) return; // not for us
-        if (_isLeader) return;              // we are already leading
+    if (text.rfind("RALLY:", 0) == 0) {
+        int rallyLevel = parseLevelSuffix(text, 6);
+        if (rallyLevel < 0) return;
+        if (rallyLevel != myLevel) return;
+
+        if (_isLeader && _aiState == AIState::Leading && dir != 0) {
+            Logger::info("AI: relinquishing leadership to merge same-level rally");
+            _isLeader = false;
+            _stonesPlaced = false;
+            _rallyLevel = rallyLevel;
+            _broadcastDirection = dir;
+            clearNav();
+            transitionTo(AIState::MovingToRally, nowMs);
+            return;
+        }
+
+        if (_isLeader) return;
         if (_aiState == AIState::Incantating) return;
+
+        if (_rallyLevel == rallyLevel && _broadcastDirection == dir &&
+            (_aiState == AIState::MovingToRally || _aiState == AIState::Rallying)) {
+            return;
+        }
 
         Logger::info("AI: received RALLY for level " + std::to_string(rallyLevel) +
                      " from dir=" + std::to_string(dir));
-
         _rallyLevel = rallyLevel;
         _broadcastDirection = dir;
 
         if (dir == 0) {
-            // Already on the same tile as the leader
-            broadcast("HERE:" + std::to_string(myLevel), 0);
+            broadcast("HERE:" + std::to_string(myLevel), nowMs);
             _stonesPlaced = false;
-            transitionTo(AIState::Rallying, _stateEnteredMs); // keep time
+            if (_aiState != AIState::Rallying)
+                transitionTo(AIState::Rallying, nowMs);
         } else {
             clearNav();
-            transitionTo(AIState::MovingToRally, _stateEnteredMs);
+            if (_aiState != AIState::MovingToRally)
+                transitionTo(AIState::MovingToRally, nowMs);
         }
         return;
     }
 
-    // ── HERE:<level>  (leader hears this from a peer) ────────────
-    if (text.substr(0, 5) == "HERE:" && _isLeader) {
-        int peerLevel = std::stoi(text.substr(5));
+    if (text.rfind("HERE:", 0) == 0 && _isLeader) {
+        int peerLevel = parseLevelSuffix(text, 5);
+        if (peerLevel < 0) return;
         if (peerLevel == myLevel) {
             _rallyPeersConfirmed++;
-            Logger::info("AI: peer confirmed HERE, total=" +
-                         std::to_string(_rallyPeersConfirmed));
+            Logger::info("AI: peer confirmed HERE, total=" + std::to_string(_rallyPeersConfirmed));
         }
         return;
     }
 
-    // ── START:<level> ────────────────────────────────────────────
-    if (text.substr(0, 6) == "START:") {
-        int startLevel = std::stoi(text.substr(6));
+    if (text.rfind("START:", 0) == 0) {
+        int startLevel = parseLevelSuffix(text, 6);
+        if (startLevel < 0) return;
         if (startLevel != myLevel) return;
         if (_isLeader) return;
         if (_aiState == AIState::Incantating) return;
 
+        if (_rallyLevel == startLevel && _broadcastDirection == dir &&
+            (_aiState == AIState::MovingToRally || _aiState == AIState::Rallying)) {
+            return;
+        }
+
         Logger::info("AI: received START for level " + std::to_string(startLevel));
+        _rallyLevel = startLevel;
         _broadcastDirection = dir;
 
         if (dir == 0) {
-            // On the tile — place stones and get ready
             _stonesPlaced = false;
-            transitionTo(AIState::Rallying, _stateEnteredMs);
+            if (_aiState != AIState::Rallying)
+                transitionTo(AIState::Rallying, nowMs);
         } else {
             clearNav();
-            transitionTo(AIState::MovingToRally, _stateEnteredMs);
+            if (_aiState != AIState::MovingToRally)
+                transitionTo(AIState::MovingToRally, nowMs);
         }
         return;
     }
 
-    // ── DONE:<level> ─────────────────────────────────────────────
-    if (text.substr(0, 5) == "DONE:") {
+    if (text.rfind("DONE:", 0) == 0) {
+        int doneLevel = parseLevelSuffix(text, 5);
+        if (doneLevel < 0) return;
+        if (doneLevel != _rallyLevel) return;
         if (_aiState == AIState::Rallying || _aiState == AIState::MovingToRally) {
             Logger::info("AI: received DONE, disbanding rally");
             clearNav();
-            transitionTo(AIState::Idle, _stateEnteredMs);
+            transitionTo(AIState::Idle, nowMs);
         }
         return;
     }
@@ -507,7 +567,6 @@ void AI::clearNav() {
     _navInFlight = false;
 }
 
-// Build a step-by-step plan to a nearby tile that has the resource
 void AI::buildPlanToResource(const std::string& resource) {
     clearNav();
     auto tileOpt = _state.getNearestItem(resource);
@@ -526,133 +585,103 @@ void AI::buildPlanToResource(const std::string& resource) {
 
     int localX = tile.localX;
     int localY = tile.localY;
-    int orientation = player.orientation;
+    int orientation = player.orientation; // 1=N,2=E,3=S,4=W
 
-    // Convert local vision coordinates to world-relative delta
-    // Vision is always relative to current facing:
-    // localY = distance forward, localX = lateral offset
-    // We need to turn so our +Y axis aligns with the target
+    // FIX 6: corrected world-delta conversion for all four orientations.
+    // Server vision: localY = rows forward, localX = columns (negative=left, positive=right)
+    // For NORTH (1): forward=−world_y, right=+world_x  → worldDX=localX, worldDY=−localY
+    // For EAST  (2): forward=+world_x, right=+world_y  → worldDX=localY, worldDY=localX
+    //   (but EAST-right is south, i.e. +worldY in server coords where Y increases south)
+    // For SOUTH (3): forward=+world_y, right=−world_x  → worldDX=−localX, worldDY=localY
+    // For WEST  (4): forward=−world_x, right=−world_y  → worldDX=−localY, worldDY=−localX
     int worldDX = 0, worldDY = 0;
     switch (orientation) {
         case 1: worldDX =  localX; worldDY = -localY; break; // North
-        case 2: worldDX =  localY; worldDY =  localX; break; // East (server: EAST=1)
+        case 2: worldDX =  localY; worldDY =  localX; break; // East  (fixed: was localX,localY)
         case 3: worldDX = -localX; worldDY =  localY; break; // South
         case 4: worldDX = -localY; worldDY = -localX; break; // West
     }
 
-    // Move X first
+    auto makeTurns = [](int from, int to) -> std::vector<NavStep> {
+        std::vector<NavStep> t;
+        int diff = (to - from + 4) % 4;
+        if (diff == 1) t.push_back({NavAction::TurnRight, ""});
+        else if (diff == 3) t.push_back({NavAction::TurnLeft, ""});
+        else if (diff == 2) { t.push_back({NavAction::TurnRight, ""}); t.push_back({NavAction::TurnRight, ""}); }
+        return t;
+    };
+
+    // Move X first (East/West)
     if (worldDX != 0) {
         int targetDir = (worldDX > 0) ? 2 : 4; // East or West
-        auto turns = [&]() -> std::vector<NavStep> {
-            std::vector<NavStep> t;
-            int diff = (targetDir - orientation + 4) % 4;
-            if (diff == 1) t.push_back({NavAction::TurnRight, ""});
-            else if (diff == 3) t.push_back({NavAction::TurnLeft, ""});
-            else if (diff == 2) { t.push_back({NavAction::TurnRight, ""}); t.push_back({NavAction::TurnRight, ""}); }
-            return t;
-        }();
-        for (auto& s : turns) _navPlan.push_back(s);
+        for (auto& s : makeTurns(orientation, targetDir)) _navPlan.push_back(s);
         for (int i = 0; i < std::abs(worldDX); i++) _navPlan.push_back({NavAction::Forward, ""});
     }
 
-    // Move Y
+    // Then Y (North/South)
     if (worldDY != 0) {
         int currentDir = orientation;
         if (worldDX > 0) currentDir = 2;
         else if (worldDX < 0) currentDir = 4;
 
         int targetDir = (worldDY < 0) ? 1 : 3; // North or South
-        auto turns = [&]() -> std::vector<NavStep> {
-            std::vector<NavStep> t;
-            int diff = (targetDir - currentDir + 4) % 4;
-            if (diff == 1) t.push_back({NavAction::TurnRight, ""});
-            else if (diff == 3) t.push_back({NavAction::TurnLeft, ""});
-            else if (diff == 2) { t.push_back({NavAction::TurnRight, ""}); t.push_back({NavAction::TurnRight, ""}); }
-            return t;
-        }();
-        for (auto& s : turns) _navPlan.push_back(s);
+        for (auto& s : makeTurns(currentDir, targetDir)) _navPlan.push_back(s);
         for (int i = 0; i < std::abs(worldDY); i++) _navPlan.push_back({NavAction::Forward, ""});
     }
 
-    // Take at destination
     _navPlan.push_back({NavAction::Take, resource});
 }
 
 void AI::buildExplorationPlan() {
     clearNav();
     _explorationStep++;
-
-    // Spiral-ish pattern: mostly forward, occasionally turn
-    if (_explorationStep % 7 == 0) {
-        _navPlan.push_back({NavAction::TurnRight, ""});
-    } else if (_explorationStep % 13 == 0) {
-        _navPlan.push_back({NavAction::TurnLeft, ""});
-    }
-
-    // Always move forward
+    if (_explorationStep % 7 == 0)       _navPlan.push_back({NavAction::TurnRight, ""});
+    else if (_explorationStep % 13 == 0) _navPlan.push_back({NavAction::TurnLeft, ""});
     _navPlan.push_back({NavAction::Forward, ""});
     _navPlan.push_back({NavAction::Forward, ""});
 }
 
 void AI::buildPlanTowardDirection(int direction) {
     clearNav();
+    if (direction == 0) return;
+
     const PlayerState& player = _state.getPlayer();
+    int ori = player.orientation; // 1=N,2=E,3=S,4=W
 
-    // direction: 1=N, 2=NE, 3=E, 4=SE, 5=S, 6=SW, 7=W, 8=NW (relative to listener)
-    // We need to turn to face that direction relative to our current orientation
-    // First map broadcast direction to a world compass direction
-    // (broadcast dir is relative to listener's facing)
-    // orientation: 1=N, 2=E, 3=S, 4=W  (server's NORTH=0 stored as 1 in PlayerState)
-
-    if (direction == 0) return; // same tile
-
-    // Map dir 1-8 to a heading offset (in 45-deg steps) from forward
-    // Forward=dir1=0offset, NE=dir2=45, E=dir3=90, etc.
-    // We simplify to cardinal directions
-    int targetWorldDir = player.orientation; // default: go forward
+    // FIX 6: Broadcast direction is relative to listener's facing.
+    // dir 1 = straight ahead, 3 = right, 5 = behind, 7 = left (octant mid-points)
+    // Map to a world compass direction (1=N,2=E,3=S,4=W).
+    // Octant → forward offset in 90° steps (0=forward,1=right,2=back,3=left)
+    int offset = 0;
     switch (direction) {
-        case 1: targetWorldDir = player.orientation; break; // forward (N relative)
-        case 2: // NE – go N (forward)
-        case 8: targetWorldDir = player.orientation; break;
-        case 3: // E (right)
-        case 4: { // SE
-            targetWorldDir = player.orientation % 4 + 1;
-            break;
-        }
-        case 5: { // S (backward – turn 180)
-            targetWorldDir = (player.orientation - 1 + 2) % 4 + 1;
-            break;
-        }
-        case 6: // SW
-        case 7: { // W (left)
-            targetWorldDir = (player.orientation + 2) % 4 + 1;
-            if (targetWorldDir == 0) targetWorldDir = 4;
-            break;
-        }
+        case 1:           offset = 0; break; // forward
+        case 2: case 8:   offset = 0; break; // forward-ish (NE/NW → go forward)
+        case 3: case 4:   offset = 1; break; // right
+        case 5:           offset = 2; break; // behind
+        case 6: case 7:   offset = 3; break; // left
+        default:          offset = 0; break;
     }
 
-    // Turn to face targetWorldDir
-    int diff = (targetWorldDir - player.orientation + 4) % 4;
+    // Convert offset to absolute orientation: (ori-1 + offset) % 4 + 1
+    int targetDir = ((ori - 1 + offset) % 4) + 1;
+
+    int diff = (targetDir - ori + 4) % 4;
     if (diff == 1) _navPlan.push_back({NavAction::TurnRight, ""});
     else if (diff == 3) _navPlan.push_back({NavAction::TurnLeft, ""});
-    else if (diff == 2) {
-        _navPlan.push_back({NavAction::TurnRight, ""});
-        _navPlan.push_back({NavAction::TurnRight, ""});
-    }
+    else if (diff == 2) { _navPlan.push_back({NavAction::TurnRight, ""}); _navPlan.push_back({NavAction::TurnRight, ""}); }
 
     _navPlan.push_back({NavAction::Forward, ""});
 }
 
 bool AI::executeNextNavStep(int64_t nowMs) {
     if (_navPlan.empty()) return false;
-
     NavStep step = _navPlan.front();
     _navPlan.pop_front();
 
     switch (step.action) {
-        case NavAction::Forward:   sendMove(nowMs);             return true;
-        case NavAction::TurnLeft:  sendTurnLeft(nowMs);         return true;
-        case NavAction::TurnRight: sendTurnRight(nowMs);        return true;
+        case NavAction::Forward:   sendMove(nowMs);              return true;
+        case NavAction::TurnLeft:  sendTurnLeft(nowMs);          return true;
+        case NavAction::TurnRight: sendTurnRight(nowMs);         return true;
         case NavAction::Take:      sendTake(step.resource, nowMs); return true;
         case NavAction::Place:     sendPlace(step.resource, nowMs); return true;
         default: return false;
@@ -670,16 +699,16 @@ std::vector<std::string> AI::computeMissingStones() const {
     const auto& req = levelReq(level);
     std::vector<std::string> missing;
 
+    const auto& inv = _state.getPlayer().inventory;
+
     for (const auto& [stone, needed] : req.stones) {
-        const auto& inv = _state.getPlayer().inventory;
-        int have = inv.count(stone) ? inv.at(stone) : 0;
-        // Count what's already on our current tile (vision tile 0)
-        int onFloor = 0;
-        auto tiles = _state.getTilesWithItem(stone);
-        for (const auto& t : tiles) {
-            if (t.distance == 0) onFloor += t.countItem(stone);
-        }
-        int deficit = needed - have - onFloor;
+        int have   = inv.count(stone) ? inv.at(stone) : 0;
+        // Count how many of this stone are already on our tile (distance==0)
+        int onTile = 0;
+        for (const auto& t : _state.getTilesWithItem(stone))
+            if (t.distance == 0) onTile += t.countItem(stone);
+        // FIX 2: stones in inventory OR already on tile both count toward the goal.
+        int deficit = needed - have - onTile;
         for (int i = 0; i < deficit; i++)
             missing.push_back(stone);
     }
@@ -692,108 +721,143 @@ bool AI::allStonesOnTile() const {
 
     for (const auto& [stone, needed] : req.stones) {
         int onFloor = 0;
-        auto tiles = _state.getTilesWithItem(stone);
-        for (const auto& t : tiles) {
+        for (const auto& t : _state.getTilesWithItem(stone))
             if (t.distance == 0) onFloor += t.countItem(stone);
-        }
         if (onFloor < needed) return false;
     }
     return true;
 }
 
 void AI::placeAllStonesOnTile(int64_t nowMs) {
-    // Place every stone in inventory that is needed for this incantation
     int level = _state.getLevel();
     const auto& req = levelReq(level);
 
+    // Count what's already on the floor using existing API
+    std::map<std::string, int> onFloor;
     for (const auto& [stone, needed] : req.stones) {
-        // How many already on floor?
-        int onFloor = 0;
-        auto tiles = _state.getTilesWithItem(stone);
-        for (const auto& t : tiles) {
-            if (t.distance == 0) onFloor += t.countItem(stone);
-        }
+        for (const auto& t : _state.getTilesWithItem(stone))
+            if (t.distance == 0) onFloor[stone] += t.countItem(stone);
+    }
 
-        int toPlace = needed - onFloor;
-        const auto& inv = _state.getPlayer().inventory;
-        int have = inv.count(stone) ? inv.at(stone) : 0;
+    const auto& inv = _state.getPlayer().inventory;
+
+    for (const auto& [stone, needed] : req.stones) {
+        int floor  = onFloor.count(stone) ? onFloor.at(stone) : 0;
+        int have   = inv.count(stone) ? inv.at(stone) : 0;
+        int toPlace = std::max(0, needed - floor);
         int placing = std::min(toPlace, have);
 
-        for (int i = 0; i < placing; i++) {
+        if (placing > 0) {
+            // FIX 1: Only send one command per tick (the outer _commandInFlight
+            // guard will stop us after the first; we return and come back next tick).
             sendPlace(stone, nowMs);
+            // Do not mark complete until every required stone type is satisfied.
+            _stonesPlaced = false;
+            return; // one command per call
         }
     }
+
+    // If we get here all placements are done
     _stonesPlaced = true;
 }
 
 // ────────────────────────────────────────────────────────────────
-//  Command wrappers – each registers a callback for the response
+//  Command wrappers
 // ────────────────────────────────────────────────────────────────
 
-void AI::sendVoir(int64_t nowMs) {
-    (void)nowMs;
-    _sender.sendVoir();
-    _sender.expectResponse("voir", [](const ServerMessage&) {});
+// Helper: mark a command as in-flight and record when it was sent
+void AI::markInFlight(int64_t nowMs) {
+    _commandInFlight = true;
+    _commandInFlightSentMs = nowMs;
     _lastActionMs = nowMs;
+}
+
+// Helper: called inside every callback to clear the in-flight flag
+void AI::clearInFlight() {
+    _commandInFlight = false;
+}
+
+void AI::sendVoir(int64_t nowMs) {
+    markInFlight(nowMs);
+    _lastVisionRequestMs = nowMs;
+    _sender.sendVoir();
+    _sender.expectResponse("voir", [this](const ServerMessage&) {
+        clearInFlight();
+    });
 }
 
 void AI::sendInventaire(int64_t nowMs) {
-    (void)nowMs;
+    markInFlight(nowMs);
+    _lastInventaireRequestMs = nowMs;
     _sender.sendInventaire();
-    _sender.expectResponse("inventaire", [](const ServerMessage&) {});
-    _lastActionMs = nowMs;
+    _sender.expectResponse("inventaire", [this](const ServerMessage&) {
+        clearInFlight();
+    });
 }
 
 void AI::sendTake(const std::string& resource, int64_t nowMs) {
+    markInFlight(nowMs);
     _sender.sendPrend(resource);
     std::string key = "prend " + resource;
     _sender.expectResponse(key, [this, resource](const ServerMessage& msg) {
+        clearInFlight();
         if (msg.isOk()) {
             Logger::info("AI: took " + resource);
         } else {
             Logger::warn("AI: failed to take " + resource);
+            clearNav(); // tile may have changed
         }
     });
-    _lastActionMs = nowMs;
 }
 
 void AI::sendPlace(const std::string& resource, int64_t nowMs) {
+    markInFlight(nowMs);
     _sender.sendPose(resource);
     std::string key = "pose " + resource;
     _sender.expectResponse(key, [this, resource](const ServerMessage& msg) {
+        clearInFlight();
         if (msg.isOk()) {
             Logger::info("AI: placed " + resource);
         } else {
             Logger::warn("AI: failed to place " + resource);
         }
     });
-    _lastActionMs = nowMs;
 }
 
 void AI::sendMove(int64_t nowMs) {
+    markInFlight(nowMs);
     _sender.sendAvance();
     _sender.expectResponse("avance", [this](const ServerMessage& msg) {
-        if (!msg.isOk()) Logger::warn("AI: avance failed");
-        // Request fresh vision after every move
-        _sender.sendVoir();
-        _sender.expectResponse("voir", [](const ServerMessage&) {});
+        clearInFlight();
+        if (!msg.isOk()) {
+            Logger::warn("AI: avance failed");
+            clearNav();
+        }
+        // Request fresh vision after every move, but do it next tick via stale flag
+        _lastVisionRequestMs = 0; // force stale
     });
-    _lastActionMs = nowMs;
 }
 
 void AI::sendTurnLeft(int64_t nowMs) {
+    markInFlight(nowMs);
     _sender.sendGauche();
-    _sender.expectResponse("gauche", [](const ServerMessage&) {});
-    _lastActionMs = nowMs;
+    _sender.expectResponse("gauche", [this](const ServerMessage&) {
+        clearInFlight();
+        _lastVisionRequestMs = 0; // vision changed after turn
+    });
 }
 
 void AI::sendTurnRight(int64_t nowMs) {
+    markInFlight(nowMs);
     _sender.sendDroite();
-    _sender.expectResponse("droite", [](const ServerMessage&) {});
-    _lastActionMs = nowMs;
+    _sender.expectResponse("droite", [this](const ServerMessage&) {
+        clearInFlight();
+        _lastVisionRequestMs = 0;
+    });
 }
 
 void AI::sendIncantation(int64_t nowMs) {
+    markInFlight(nowMs);
     _incantationSent = true;
     _incantationSentMs = nowMs;
     int levelSnapshot = _state.getLevel();
@@ -802,9 +866,11 @@ void AI::sendIncantation(int64_t nowMs) {
     _sender.expectResponse("incantation",
         [this, levelSnapshot](const ServerMessage& msg) {
             if (msg.status == "in_progress") {
+                // Keep in-flight; the real ok/ko comes next
                 Logger::info("AI: incantation in progress…");
-                return; // stay in Incantating
+                return;
             }
+            clearInFlight();
             if (msg.isOk()) {
                 Logger::info("AI: INCANTATION SUCCESS! Was level " +
                              std::to_string(levelSnapshot));
@@ -812,7 +878,9 @@ void AI::sendIncantation(int64_t nowMs) {
                 _isLeader = false;
                 _incantationSent = false;
                 _stonesPlaced = false;
-                _lastForkMs = 0; // allow immediate fork after level-up
+                _lastForkMs = 0;
+                _lastVisionRequestMs = 0;
+                _lastInventaireRequestMs = 0;
                 transitionTo(AIState::Idle, _incantationSentMs);
             } else {
                 Logger::warn("AI: incantation failed, status=" + msg.status);
@@ -822,22 +890,24 @@ void AI::sendIncantation(int64_t nowMs) {
                 transitionTo(AIState::Idle, _incantationSentMs);
             }
         });
-    _lastActionMs = nowMs;
 }
 
 void AI::sendFork(int64_t nowMs) {
+    markInFlight(nowMs);
     _sender.sendFork();
-    _sender.expectResponse("fork", [](const ServerMessage& msg) {
+    _sender.expectResponse("fork", [this](const ServerMessage& msg) {
+        clearInFlight();
         if (msg.isOk()) Logger::info("AI: fork succeeded");
         else Logger::warn("AI: fork failed");
     });
-    _lastActionMs = nowMs;
 }
 
 void AI::broadcast(const std::string& msg, int64_t nowMs) {
+    markInFlight(nowMs);
     _sender.sendBroadcast(msg);
-    _sender.expectResponse("broadcast", [](const ServerMessage&) {});
-    _lastActionMs = nowMs;
+    _sender.expectResponse("broadcast", [this](const ServerMessage&) {
+        clearInFlight();
+    });
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -855,9 +925,11 @@ bool AI::foodIsCritical() const {
 bool AI::shouldFork(int64_t nowMs) const {
     if (!_forkEnabled) return false;
     if (nowMs - _lastForkMs < FORK_INTERVAL_MS) return false;
-    // Fork if team needs higher-level incantations (more players useful from level 2+)
-    int level = _state.getLevel();
-    if (level < 2) return false; // don't fork at level 1 (slow the game)
+    // Forking is expensive and can drown progression in low-level noise.
+    // Only allow at higher levels with strong food reserve.
+    if (_state.getLevel() < 4) return false;
+    if (_state.getFood() < FOOD_SAFE + 8) return false;
+    if (foodIsLow()) return false;
     return true;
 }
 

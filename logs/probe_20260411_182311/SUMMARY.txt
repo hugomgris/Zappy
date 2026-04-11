@@ -1,0 +1,87 @@
+════════════════════════════════════════════════════════════
+  ZAPPY PROBE SESSION SUMMARY
+  Sat Apr 11 06:25:18 PM CEST 2026
+════════════════════════════════════════════════════════════
+
+OUTCOME       : timeout
+ELAPSED       : 120s / 120s
+
+── Configuration ────────────────────────────────────────────
+  Port        : 8674
+  Team1       : 12 concurrent clients
+  Team2       : 12 concurrent clients
+  Server slots: 72
+  Time unit   : 100
+  Forking     : enabled
+  Easy ascend : YES
+  Respawn     : yes
+
+── Client statistics ────────────────────────────────────────
+  Client log files : 55
+  Total deaths     : 33
+  Incantations OK  : 28
+  Incantations KO  : 0
+0
+  Forks succeeded  : 174
+  RALLY broadcasts : 1416
+
+── Level-up events per level ─────────────────────────────────
+  Level 2  reached  : 28 times
+  Level 3  reached  : 0
+0 times
+  Level 4  reached  : 0
+0 times
+  Level 5  reached  : 0
+0 times
+  Level 6  reached  : 0
+0 times
+  Level 7  reached  : 0
+0 times
+  Level 8  reached  : 0
+0 times
+
+── Highest level reached per team ───────────────────────────
+  team1: level 2
+  team2: level 2
+
+── Server winner line ───────────────────────────────────────
+  (no winner condition reached)
+
+── Last 20 server log lines ─────────────────────────────────
+  [0m[1;31m[7611][ERROR] [WS][SEND] fd=-1 — no SSL context, dropping message
+  [0m[1;33m[7748][WARN ] Client fd=13 not found for command 'voir'
+  [0m[1;31m[7822][ERROR] [WS][SEND] fd=-1 — no SSL context, dropping message
+  [0m[1;31m[7835][ERROR] [WS][SEND] fd=26 — no SSL context, dropping message
+  [0m[1;31m[7835][ERROR] [WS][SEND] fd=27 — no SSL context, dropping message
+  [0m[1;31m[7835][ERROR] [WS][SEND] fd=28 — no SSL context, dropping message
+  [0m[1;31m[9240][ERROR] [WS][SEND] fd=15 — no SSL context, dropping message
+  [0m[1;31m[9440][ERROR] [WS][SEND] fd=1 — no SSL context, dropping message
+  [0m[1;31m[9440][ERROR] [WS][SEND] fd=6 — no SSL context, dropping message
+  [0m[1;31m[9969][ERROR] [WS][SEND] fd=1 — no SSL context, dropping message
+  [0m[1;31m[9985][ERROR] [WS][SEND] fd=1 — no SSL context, dropping message
+  [0m[1;31m[10024][ERROR] [WS][SEND] fd=1 — no SSL context, dropping message
+  [0m[1;31m[10223][ERROR] [WS][SEND] fd=1 — no SSL context, dropping message
+  [0m[1;31m[10278][ERROR] [WS][SEND] fd=1 — no SSL context, dropping message
+  [0m[1;33m[10323][WARN ] Client fd=22 not found for command 'voir'
+  [0m[1;31m[10999][ERROR] [WS][SEND] fd=-1 — no SSL context, dropping message
+  [0m[1;31m[11436][ERROR] [WS][SEND] fd=-1 — no SSL context, dropping message
+  [0m[1;33m[11671][WARN ] Client fd=8 not found for command 'voir'
+  [0m[1;31m[11716][ERROR] [WS][SEND] fd=-1 — no SSL context, dropping message
+  [0m
+── Files ────────────────────────────────────────────────────
+  Log directory  : /home/jareste/hugo/zappy/logs/probe_20260411_182311
+  Server log     : /home/jareste/hugo/zappy/logs/probe_20260411_182311/server.log
+  Runner log     : /home/jareste/hugo/zappy/logs/probe_20260411_182311/runner.log
+  Client logs    : /home/jareste/hugo/zappy/logs/probe_20260411_182311/client_<team>_<N>.log
+
+  Useful one-liners for post-game analysis:
+    # All incantation failures with context:
+    grep -rh 'incantation' /home/jareste/hugo/zappy/logs/probe_20260411_182311/client_*.log | grep -i 'fail\|ko'
+
+    # Timeline of level-ups across all clients:
+    grep -rh 'LEVEL UP' /home/jareste/hugo/zappy/logs/probe_20260411_182311/client_*.log | sort
+
+    # Clients that reached level 4+:
+    grep -rl 'LEVEL UP.*[4-8]' /home/jareste/hugo/zappy/logs/probe_20260411_182311/client_*.log
+
+════════════════════════════════════════════════════════════

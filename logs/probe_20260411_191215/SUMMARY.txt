@@ -1,0 +1,86 @@
+════════════════════════════════════════════════════════════
+  ZAPPY PROBE SESSION SUMMARY
+  Sat Apr 11 07:22:17 PM CEST 2026
+════════════════════════════════════════════════════════════
+
+OUTCOME       : timeout
+ELAPSED       : 600s / 600s
+
+── Configuration ────────────────────────────────────────────
+  Port        : 8674
+  Team1       : 12 concurrent clients
+  Team2       : 12 concurrent clients
+  Server slots: 72
+  Time unit   : 100
+  Forking     : enabled
+  Easy ascend : YES
+  Respawn     : yes
+
+── Client statistics ────────────────────────────────────────
+  Client log files : 312
+  Total deaths     : 293
+  Incantations OK  : 319
+  Incantations KO  : 0
+0
+  Forks succeeded  : 0
+0
+  RALLY broadcasts : 9561
+
+── Level-up events per level ─────────────────────────────────
+  Level 2  reached  : 298 times
+  Level 3  reached  : 21 times
+  Level 4  reached  : 1 times
+  Level 5  reached  : 0
+0 times
+  Level 6  reached  : 0
+0 times
+  Level 7  reached  : 0
+0 times
+  Level 8  reached  : 0
+0 times
+
+── Highest level reached per team ───────────────────────────
+  team1: level 1
+  team2: level 1
+
+── Server winner line ───────────────────────────────────────
+  (no winner condition reached)
+
+── Last 20 server log lines ─────────────────────────────────
+         nb_clients=72  time_unit=100
+         cert='certs/cert.pem'  key='certs/key.pem'
+         ZAPPY_EASY_ASCENSION=1
+  [0m[1;35m[18446744073709551615][BOOT ] [SSL_AL] Loaded cert='certs/cert.pem' key='certs/key.pem'
+  [0m[1;35m[18446744073709551615][BOOT ] [SSL_AL] WSS server listening on port 8674 (fd=4)
+  [0m[1;35m[18446744073709551615][BOOT ] [WORKER] Handshake pool ready (1 thread(s))
+  [0m[1;35m[18446744073709551615][BOOT ] [SSL_AL] Initialised — handshake pool running
+  [0m[1;35m[18446744073709551615][BOOT ] [SERVER] Listening socket ready: fd=4 port=8674
+  [0m[1;35m[0][BOOT ] [TIME] Initialised: t=100 (1 time_unit = 10.0 ms real)
+  [0m[1;35m[0][BOOT ] [INIT] Time API paused — send SIGUSR1 (pid=436168) to start the game
+  [0m[1;35m[0][BOOT ] [INIT] Server ready on port 8674 — waiting for connections
+  [0m[1;35m[0][BOOT ] [MAIN_LOOP] Entering main loop — time API is PAUSED, waiting for SIGUSR1 to start
+  [0m[1;33m[0][WARN ] [SIGNAL] Received signal 10 (SIGINT=2 SIGTERM=15 SIGUSR1=10)
+  [0m[1;33m[8431][WARN ] Client fd=25 not found for command 'droite'
+  [0m[1;33m[14349][WARN ] Client fd=15 not found for command 'droite'
+  [0m[1;33m[19037][WARN ] [MAIN_LOOP] Server exhausted — may lose events. select=0 time_units, play=5 time_units, total=5, now=19037
+  [0m[1;33m[27455][WARN ] Client fd=9 not found for command 'gauche'
+  [0m[1;33m[37728][WARN ] Client fd=22 not found for command 'avance'
+  [0m[1;33m[49314][WARN ] Client fd=7 not found for command 'voir'
+  [0m
+── Files ────────────────────────────────────────────────────
+  Log directory  : /home/jareste/hugo/zappy/logs/probe_20260411_191215
+  Server log     : /home/jareste/hugo/zappy/logs/probe_20260411_191215/server.log
+  Runner log     : /home/jareste/hugo/zappy/logs/probe_20260411_191215/runner.log
+  Client logs    : /home/jareste/hugo/zappy/logs/probe_20260411_191215/client_<team>_<N>.log
+
+  Useful one-liners for post-game analysis:
+    # All incantation failures with context:
+    grep -rh 'incantation' /home/jareste/hugo/zappy/logs/probe_20260411_191215/client_*.log | grep -i 'fail\|ko'
+
+    # Timeline of level-ups across all clients:
+    grep -rh 'LEVEL UP' /home/jareste/hugo/zappy/logs/probe_20260411_191215/client_*.log | sort
+
+    # Clients that reached level 4+:
+    grep -rl 'LEVEL UP.*[4-8]' /home/jareste/hugo/zappy/logs/probe_20260411_191215/client_*.log
+
+════════════════════════════════════════════════════════════
