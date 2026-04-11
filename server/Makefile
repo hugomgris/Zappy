@@ -109,17 +109,19 @@ create_cert:
 	fi
 
 compile_ssl:
-	cd third_party
-	wget https://www.openssl.org/source/openssl-3.2.1.tar.gz
-	tar -xzf openssl-3.2.1.tar.gz
-	mv openssl-3.2.1 openssl
-	rm openssl-3.2.1.tar.gz
+	@mkdir -p $(THIRD_PARTY_PATH)
+	wget -O $(THIRD_PARTY_PATH)/openssl-3.2.1.tar.gz https://www.openssl.org/source/openssl-3.2.1.tar.gz
+	rm -rf $(OPENSSL_SRC_DIR)
+	tar -xzf $(THIRD_PARTY_PATH)/openssl-3.2.1.tar.gz -C $(THIRD_PARTY_PATH)
+	mv $(THIRD_PARTY_PATH)/openssl-3.2.1 $(OPENSSL_SRC_DIR)
+	rm -f $(THIRD_PARTY_PATH)/openssl-3.2.1.tar.gz
 	cd $(OPENSSL_SRC_DIR) && ./config no-shared --prefix=$(abspath $(OPENSSL_INSTALL_DIR)) && make && make install_sw
+	@rm -rf $(OPENSSL_BUILD_DIR)/include $(OPENSSL_BUILD_DIR)/lib
 	@mkdir -p $(OPENSSL_BUILD_DIR)/include
 	@mkdir -p $(OPENSSL_BUILD_DIR)/lib
-	cp $(OPENSSL_INSTALL_DIR)/libssl.a $(OPENSSL_BUILD_DIR)/lib
-	cp $(OPENSSL_INSTALL_DIR)/libcrypto.a $(OPENSSL_BUILD_DIR)/lib
-	cp -r $(OPENSSL_INSTALL_DIR)/include $(OPENSSL_BUILD_DIR)/include
+	cp $(OPENSSL_INSTALL_DIR)/lib*/libssl.a $(OPENSSL_BUILD_DIR)/lib
+	cp $(OPENSSL_INSTALL_DIR)/lib*/libcrypto.a $(OPENSSL_BUILD_DIR)/lib
+	cp -r $(OPENSSL_INSTALL_DIR)/include/. $(OPENSSL_BUILD_DIR)/include
 	@echo "OPENSSL DONE  "
 
 

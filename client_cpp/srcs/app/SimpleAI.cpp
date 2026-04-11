@@ -1,3 +1,42 @@
+/*
+ * SimpleAI.cpp — full rewrite
+ *
+ * Key design decisions / bugs fixed vs previous version:
+ *
+ * 1. FIRE-AND-FORGET vs TRACKED commands
+ *    voir and inventaire are sent without expectResponse so they NEVER
+ *    consume a pending slot. The AI was blocking on them indefinitely.
+ *
+ * 2. SINGLE pending-command slot
+ *    The AI tracks exactly one "blocking" command at a time (_waitingForCmd).
+ *    All decision logic waits only on that slot, not on the generic sender queue.
+ *
+ * 3. onCommandComplete no longer calls _state.onResponse
+ *    Client.cpp already routes every ServerMessage through WorldState::onResponse
+ *    before handing it to the sender and the AI. Calling it again caused
+ *    inventory/vision to be processed twice (double-decrement on prend, etc.)
+ *
+ * 4. prend/pose matching key is just "prend"/"pose"
+ *    The server echoes back cmd+arg, and CommandSender already does the
+ *    "prend resource" compound-key matching. The AI just needs to register
+ *    the compound key consistently to match what CommandSender expects.
+ *
+ * 5. Stone-dropping before incantation is removed
+ *    The server only cares that the stones are on the tile, not who owns them.
+ *    Dropping to the floor then immediately incantating is correct; the previous
+ *    logic was checking "stonesOnTile - needed" which could go negative.
+ *
+ * 6. Incantation participant path
+ *    When we receive an incantation_start event we are a PARTICIPANT —
+ *    we must NOT send another incantation command, just freeze and wait for
+ *    a level-up or a timeout.
+ *
+ * 7. Vision staleness gate
+ *    decideNextAction refuses to act if the last vision update is older than
+ *    VISION_STALE_MS. This avoids decisions based on data that is several
+ *    seconds out of date.
+ */
+
 #include "SimpleAI.hpp"
 #include "helpers/Logger.hpp"
 
@@ -7,576 +46,548 @@
 #include <algorithm>
 
 namespace zappy {
-	SimpleAI::SimpleAI(WorldState& state, CommandSender& sender)
-    : _state(state), _sender(sender) {
-		const char* easyAsc = std::getenv("ZAPPY_EASY_ASCENSION");
-		_easyAscensionMode = (easyAsc != nullptr && std::string(easyAsc) == "1");
-	}
 
-	void SimpleAI::tick(int64_t nowMs) {
-		// timeout processing
-		_sender.checkTimeouts();
+// --------------------------------------------------------------------------
+// helpers
+// --------------------------------------------------------------------------
 
-		// FIXED: Check for stuck pending commands (no response after timeout)
-		for (auto it = _pendingStartTimes.begin(); it != _pendingStartTimes.end(); ) {
-			if (nowMs - it->second > _commandTimeoutMs) {
-				Logger::warn("AI: Command with id " + std::to_string(it->first) + " timed out");
-				it = _pendingStartTimes.erase(it);
-			} else {
-				++it;
-			}
-		}
+static int64_t nowMs() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()
+    ).count();
+}
 
-		static int64_t lastPendingLog = 0;
-		if (nowMs - lastPendingLog > 500) {
-			size_t pending = _sender.pendingCount();
-			if (pending > 0) {
-				Logger::warn("Still waiting for " + std::to_string(pending) + " responses");
-			}
-			lastPendingLog = nowMs;
-		}
+static void clearQueue(std::queue<NavigationStep>& q) {
+    std::queue<NavigationStep> empty;
+    std::swap(q, empty);
+}
 
-		// DEBUG: Show AI state
-		static int64_t lastStateLog = 0;
-		if (nowMs - lastStateLog > 2000) {
-			Logger::info("AI State: " + std::to_string(static_cast<int>(_AIstate)) + 
-						", pending=" + std::to_string(_sender.pendingCount()) +
-						", queue=" + std::to_string(_actionQueue.size()));
-			lastStateLog = nowMs;
-		}
+// --------------------------------------------------------------------------
+// construction
+// --------------------------------------------------------------------------
 
-		// periodic sensor updates
-		if (nowMs - _lastVoirTime > 500) {
-			requestVision();
-		}
-		if (nowMs - _lastInventaireTime > 2000) {
-			requestInventory();
-		}
+SimpleAI::SimpleAI(WorldState& state, CommandSender& sender)
+    : _state(state), _sender(sender)
+{
+    const char* easyAsc = std::getenv("ZAPPY_EASY_ASCENSION");
+    _easyAscensionMode = (easyAsc != nullptr && std::string(easyAsc) == "1");
+    Logger::info("SimpleAI created, easyAscension=" + std::string(_easyAscensionMode ? "yes" : "no"));
+}
 
-		// if ai is awaiting for a response, don't send new cmds
-		if (_sender.pendingCount() > 0) {
-			Logger::debug("Waiting for " + std::to_string(_sender.pendingCount()) + " responses");
-			return;
-		}
+// --------------------------------------------------------------------------
+// tick — called from network thread ~50 ms cadence
+// --------------------------------------------------------------------------
 
-		// avoid spamming
-		if (nowMs - _lastCommandTime < 1) return;
+void SimpleAI::tick(int64_t now) {
+    // 1. housekeeping: timeout detection (does NOT cancel; CommandSender does)
+    _sender.checkTimeouts(_commandTimeoutMs);
 
-		// execute queued actions first
-		if (!_actionQueue.empty()) {
-			executeNextAction();
-			return;
-		}
+    // 2. unblock if our tracked command timed out at the sender level
+    if (_waitingForCmd && (now - _cmdSentAt > _commandTimeoutMs + 2000)) {
+        Logger::warn("AI: hard-timeout on command, resetting to Idle");
+        _waitingForCmd = false;
+        _AIstate       = AIState::Idle;
+        clearQueue(_actionQueue);
+    }
 
-		// DEBUG TO DO TODO
-		static int64_t lastDebugTime = 0;
-		if (nowMs - lastDebugTime > 500) {
-			const auto& vision = _state.getVision();
-			Logger::info("Vision size: " + std::to_string(vision.size()));
-			if (!vision.empty()) {
-				Logger::info("Tile 0 has " + std::to_string(vision[0].items.size()) + " items");
-				for (const auto& item : vision[0].items) {
-					Logger::info("  - " + item);
-				}
-			} else {
-				Logger::warn("NO VISION DATA - Check voir command responses");
-			}
-			lastDebugTime = nowMs;
-		}
+    // 3. periodic sensor refreshes — fire-and-forget, no expectResponse
+    if (now - _lastVoirTime > VOIR_INTERVAL_MS && !_waitingForCmd) {
+        _lastVoirTime = now;
+        _sender.sendVoir();
+        Logger::debug("AI: sent voir (fire-and-forget)");
+    }
+    if (now - _lastInventaireTime > INVENTAIRE_INTERVAL_MS && !_waitingForCmd) {
+        _lastInventaireTime = now;
+        _sender.sendInventaire();
+        Logger::debug("AI: sent inventaire (fire-and-forget)");
+    }
 
-		decideNextAction(nowMs);
-	}
+    // 4. wait if we are blocked on a tracked command
+    if (_waitingForCmd) {
+        Logger::debug("AI: waiting for tracked command response");
+        return;
+    }
 
-	void SimpleAI::decideNextAction(int64_t nowMs) {
-                // Return early if we are participating in an incantation (even if we didn't originate it)
-                if (_AIstate == AIState::Incantating) {
-                        // Let's assume max incantation time is 35-40 seconds
-                        if (nowMs - _lastIncantationTime > 40000) {
-                                Logger::warn("AI: Incantation state timed out. Reverting to Idle.");
-                                _AIstate = AIState::Idle;
-                                return;
-                        }
-                        Logger::debug("AI: Currently participating in incantation. Waiting for completion.");
-                        return;
-                }
+    // 5. execute queued actions first
+    if (!_actionQueue.empty()) {
+        executeNextAction(now);
+        return;
+    }
 
-		// 1 - survival, get food if low
-		// 2 - level up, throw incantation if ready
-		// 3 - gather, get stones needed for next lvl
-		// 4 - expand, fork if conditions are met
-		// 5 - explore, wander looking for resources
+    // 6. high-level decision
+    decideNextAction(now);
+}
 
-		if (_state.getVision().empty()) {
-			Logger::debug("Waiting for vision data before deciding next action");
-			return;
-		}
+// --------------------------------------------------------------------------
+// decideNextAction
+// --------------------------------------------------------------------------
 
-		if (shouldGetFood()) {
-			Logger::info("AI: Low food (" + std::to_string(_state.getFood()) + "), seeking nourriture");
-			startGathering("nourriture");
-			return;
-		}
-		
-		if (shouldIncantate(nowMs)) {
-			// Check if we need to drop items before incantating
-			if (!_easyAscensionMode) {
-				auto requiredStones = _state.getLevelRequirement(_state.getLevel()).stonesNeeded;
-				std::vector<NavigationStep> drops;
-				const auto& vision = _state.getVision();
-				std::map<std::string, int> stonesOnTile;
-				if (!vision.empty()) {
-					for (const auto& item : vision[0].items) stonesOnTile[item]++;
-				}
-				for (const auto& [stone, needed] : requiredStones) {
-					int toDrop = needed - stonesOnTile[stone];
-					for (int i = 0; i < toDrop; i++) drops.push_back({NavAction::Place, stone});
-				}
-				if (!drops.empty()) {
-					Logger::info("AI: Dropping stones for incantation");
-					for (const auto& step : drops) _actionQueue.push(step);
-					executeNextAction();
-					return;
-				}
-			}
+void SimpleAI::decideNextAction(int64_t now) {
+    // --- guard: currently participating in someone else's incantation ---
+    if (_AIstate == AIState::Incantating) {
+        if (now - _lastIncantationTime > INCANTATION_TIMEOUT_MS) {
+            Logger::warn("AI: incantation participation timed out, resetting");
+            _AIstate = AIState::Idle;
+        } else {
+            Logger::debug("AI: waiting for incantation to finish");
+        }
+        return;
+    }
 
-			Logger::info("AI: Ready to incantate for level " + std::to_string(_state.getLevel() + 1));
-			startIncantation();
-			return;
-		}
-		
-		if (_state.hasStonesForIncantation() && !_state.hasEnoughPlayers() && !_easyAscensionMode) {
-			// Drop stones while waiting
-			auto requiredStones = _state.getLevelRequirement(_state.getLevel()).stonesNeeded;
-			std::vector<NavigationStep> drops;
-			const auto& vision = _state.getVision();
-			std::map<std::string, int> stonesOnTile;
-			if (!vision.empty()) {
-				for (const auto& item : vision[0].items) stonesOnTile[item]++;
-			}
-			for (const auto& [stone, needed] : requiredStones) {
-				int toDrop = needed - stonesOnTile[stone];
-				// Only drop what we actually have in inventory to avoid queueing impossible drops
-				auto it = _state.getInventory().find(stone);
-				int have = (it != _state.getInventory().end()) ? it->second : 0;
-				if (toDrop > 0 && have > 0) {
-					int actualDrop = std::min(toDrop, have);
-					for (int i = 0; i < actualDrop; i++) drops.push_back({NavAction::Place, stone});
-				}
-			}
-			if (!drops.empty()) {
-				Logger::info("AI: Dropping stones while waiting for players");
-				for (const auto& step : drops) _actionQueue.push(step);
-				executeNextAction();
-				return;
-			}
+    // --- guard: need fresh vision data before acting ---
+    if (_state.getVision().empty()) {
+        Logger::debug("AI: no vision data yet, waiting");
+        return;
+    }
+    if (now - _state.getLastVisionTime() > VISION_STALE_MS) {
+        Logger::debug("AI: vision data stale, waiting for refresh");
+        return;
+    }
 
-            if (nowMs - _lastBroadcastTime > 200) {
-                Logger::info("AI: Have stones but need players. Broadcasting INCANT_READY");
-                _lastBroadcastTime = nowMs;
-                _sender.sendBroadcast("INCANT_READY " + std::to_string(_state.getLevel()));
-                _lastCommandTime = nowMs;
+    // ================================================================
+    // Priority 1: survival — food
+    // ================================================================
+    if (shouldGetFood()) {
+        Logger::info("AI: food=" + std::to_string(_state.getFood()) + " → gathering nourriture");
+        startGathering("nourriture", now);
+        return;
+    }
+
+    // ================================================================
+    // Priority 2: incantation — level up
+    // ================================================================
+    if (shouldIncantate(now)) {
+        Logger::info("AI: ready to incantate for level " + std::to_string(_state.getLevel() + 1));
+        // Drop the exact required stones onto the tile first (if not already there)
+        if (!_easyAscensionMode) {
+            auto drops = buildStoneDropPlan();
+            if (!drops.empty()) {
+                Logger::info("AI: dropping " + std::to_string(drops.size()) + " stone(s) before incantation");
+                for (const auto& step : drops)
+                    _actionQueue.push(step);
+                // After drops complete, onCommandComplete re-enters decideNextAction
+                // which will then call startIncantation
+                executeNextAction(now);
+                return;
             }
-			return; // wait here for others to join
-		}
-		
-		// If we are following a beacon (or on target tile), wait a bit for updates instead of diverging
-		if (_targetBroadcastDir != -1 && (nowMs - _lastBroadcastTime < 500) && _actionQueue.empty()) {
-			Logger::info("AI: Waiting for next broadcast update or incantation to start...");
-			return;
-		}
-		
-		auto missingStones = _state.getMissingStones();
-		if (!missingStones.empty()) {
-			Logger::info("AI: Need " + std::to_string(missingStones.size()) + " stones for next level");
-			startGathering(missingStones[0]);
-			return;
-		}
-		
-		if (shouldFork(nowMs)) {
-			Logger::info("AI: Forking to increase team size");
-			startFork();
-			return;
-		}
+        }
+        startIncantation(now);
+        return;
+    }
 
-		// exploration
-		Logger::debug("AI: Exploring");
-		_AIstate = AIState::Exploring;
-		auto plan = _planner.planExploration(_state);
-		for (const auto& step : plan) {
-			_actionQueue.push(step);
-		}
+    // ================================================================
+    // Priority 3: wait + broadcast if stones ready but no players
+    // ================================================================
+    if (!_easyAscensionMode && _state.hasStonesForIncantation() && !_state.hasEnoughPlayers()) {
+        // Drop stones onto the tile so arriving players see them
+        auto drops = buildStoneDropPlan();
+        if (!drops.empty()) {
+            Logger::info("AI: placing stones on tile while waiting for players");
+            for (const auto& step : drops)
+                _actionQueue.push(step);
+            executeNextAction(now);
+            return;
+        }
+        // Broadcast our position periodically
+        if (now - _lastBroadcastTime > BROADCAST_INTERVAL_MS) {
+            _lastBroadcastTime = now;
+            Logger::info("AI: broadcasting INCANT_READY lv" + std::to_string(_state.getLevel()));
+            _sender.sendBroadcast("INCANT_READY " + std::to_string(_state.getLevel()));
+        }
+        return; // hold position
+    }
 
-		executeNextAction();
-	}
+    // ================================================================
+    // Priority 4: gather missing stones
+    // ================================================================
+    {
+        auto missing = _state.getMissingStones();
+        if (!missing.empty()) {
+            Logger::info("AI: need stone '" + missing[0] + "'");
+            startGathering(missing[0], now);
+            return;
+        }
+    }
 
-	// FIXED: Improved shouldGetFood logic
-	bool SimpleAI::shouldGetFood() const {
-		int food = _state.getFood();
-		
-		// Emergency: always get food if critically low
-		if (food < _foodEmergencyThreshold) return true;
-		
-		// Don't pick up food if we already have plenty
-		if (food >= _foodComfortThreshold) return false;
-		
-		// Check if food is on current tile AND we have low-ish food
-		const auto& vision = _state.getVision();
-		if (!vision.empty() && vision[0].hasItem("nourriture")) {
-			Logger::debug("Food available on current tile, picking up (food=" + std::to_string(food) + ")");
-			return true;
-		}
-		
-		// Also check if we see food nearby and have low inventory
-		if (food < _foodComfortThreshold && _state.seesItem("nourriture")) {
-			auto nearest = _state.getNearestItem("nourriture");
-			if (nearest.has_value() && nearest->distance <= 2) {
-				return true;
-			}
-		}
-		return false;
-	}
+    // ================================================================
+    // Priority 5: fork
+    // ================================================================
+    if (shouldFork(now)) {
+        Logger::info("AI: forking");
+        startFork(now);
+        return;
+    }
 
-	bool SimpleAI::shouldFork(int64_t nowMs) const {
-		if (!_forkEnabled) return false;
-		if (_forkCount >= _maxForks) return false;
-		if (_state.getFood() < _forkFoodThreshold) return false;
-		if (nowMs - _lastForkTime < 500) return false;  // 0.5 second cooldown
-		return true;
-	}
+    // ================================================================
+    // Priority 6: explore
+    // ================================================================
+    Logger::debug("AI: exploring");
+    _AIstate = AIState::Exploring;
+    auto plan = _planner.planExploration(_state);
+    for (const auto& step : plan)
+        _actionQueue.push(step);
+    if (!_actionQueue.empty())
+        executeNextAction(now);
+}
 
-	bool SimpleAI::shouldIncantate(int64_t nowMs) const {
-		if (_state.getLevel() >= _targetLevel) return false;
-		if (nowMs - _lastIncantationTime < 500) return false;  // 0.5 second cooldown
-		if (_easyAscensionMode) return true;
-		return _state.canIncantate();
-	}
+// --------------------------------------------------------------------------
+// shouldGetFood
+// --------------------------------------------------------------------------
 
-	std::vector<std::string> SimpleAI::getResourcePriorities() const {
-		// food ALWAYS FIRST if below comfort level
-		std::vector<std::string> priorities;
+bool SimpleAI::shouldGetFood() const {
+    int food = _state.getFood();
+    if (food < _foodEmergencyThreshold) return true;
+    if (food >= _foodComfortThreshold)  return false;
 
-		if (_state.getFood() < _foodComfortThreshold) {
-			priorities.push_back("nourriture");
-		}
+    // Opportunistically grab food that's right here or very close
+    const auto& vision = _state.getVision();
+    if (!vision.empty() && vision[0].hasItem("nourriture")) return true;
 
-		// then, stones following next level needs
-		auto missing = _state.getMissingStones();
-		priorities.insert(priorities.end(), missing.begin(), missing.end());
+    if (_state.seesItem("nourriture")) {
+        auto nearest = _state.getNearestItem("nourriture");
+        if (nearest.has_value() && nearest->distance <= 2) return true;
+    }
+    return false;
+}
 
-		// general priority order for remaining stones
-		static const std::vector<std::string> stoneOrder = {
-			"linemate", "deraumere", "sibur", "mendiane", "phiras", "thystame"
-		};
-		for (const auto& stone : stoneOrder) {
-			if (std::find(priorities.begin(), priorities.end(), stone) == priorities.end()) {
-				priorities.push_back(stone);
-			}
-		}
+// --------------------------------------------------------------------------
+// shouldFork
+// --------------------------------------------------------------------------
 
-		return priorities;
-	}
+bool SimpleAI::shouldFork(int64_t now) const {
+    if (!_forkEnabled)                       return false;
+    if (_forkCount >= _maxForks)             return false;
+    if (_state.getFood() < _forkFoodThreshold) return false;
+    if (now - _lastForkTime < FORK_COOLDOWN_MS) return false;
+    return true;
+}
 
-	// FIXED: Register expectResponse BEFORE sending command
-	void SimpleAI::startGathering(const std::string& resource) {
-		_AIstate = AIState::Gathering;
-		_currentResourceTarget = resource;
+// --------------------------------------------------------------------------
+// shouldIncantate
+// --------------------------------------------------------------------------
 
-		// Check if resource is on current tile
-		const auto& vision = _state.getVision();
-		if (!vision.empty()) {
-			const auto& currentTile = vision[0];
-			if (currentTile.hasItem(resource)) {
-				Logger::info("AI: " + resource + " is on current tile! Taking immediately.");
-				
-				// Register expectResponse BEFORE sending
-				_pendingCommandId = _sender.expectResponse("prend " + resource,
-					[this, resource](const ServerMessage& msg) {
-						if (msg.isOk()) {
-							Logger::info("AI: Successfully took " + resource);
-						} else {
-							Logger::warn("AI: Failed to take " + resource);
-						}
-						onCommandComplete(msg); 
-					});
-				
-				// Track start time
-				int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
-					std::chrono::steady_clock::now().time_since_epoch()
-				).count();
-				_pendingStartTimes[_pendingCommandId] = now;
-				
-				_sender.sendPrend(resource);
-				_lastCommandTime = now;
-				return;
-			}
-		}
+bool SimpleAI::shouldIncantate(int64_t now) const {
+    if (_state.getLevel() >= _targetLevel)          return false;
+    if (now - _lastIncantationTime < INCANT_COOLDOWN_MS) return false;
+    if (_easyAscensionMode)                         return true;
+    return _state.canIncantate();
+}
 
-		auto plan = _planner.planPathToResource(_state, resource);
+// --------------------------------------------------------------------------
+// buildStoneDropPlan
+// Returns a list of Place steps for stones we carry that aren't yet on tile.
+// --------------------------------------------------------------------------
 
-		// DEBUG: Log what planPathToResource returned
-		Logger::info("planPathToResource returned " + std::to_string(plan.size()) + " steps");
+std::vector<NavigationStep> SimpleAI::buildStoneDropPlan() const {
+    std::vector<NavigationStep> drops;
+    if (_state.getLevel() >= 8) return drops;
 
-		if (plan.empty()) {
-			Logger::warn("AI: No path to " + resource + ", exploring instead");
-			_AIstate = AIState::Exploring;
-			plan = _planner.planExploration(_state);
-			Logger::info("planExploration returned " + std::to_string(plan.size()) + " steps");
-			
-			// Make sure we have a plan
-			if (plan.empty()) {
-				Logger::error("AI: Exploration plan is also empty!");
-				_AIstate = AIState::Idle;
-				return;
-			}
-		}
+    auto req = _state.getLevelRequirement(_state.getLevel());
+    const auto& vision = _state.getVision();
 
-		Logger::info("AI: Starting to gather " + resource + " with " + std::to_string(plan.size()) + " steps");
-		for (const auto& step : plan) {
-			_actionQueue.push(step);
-			Logger::info("  QUEUED Step: " + step.toString());
-		}
+    // Count what's already on the tile
+    std::map<std::string, int> onTile;
+    if (!vision.empty()) {
+        for (const auto& item : vision[0].items)
+            onTile[item]++;
+    }
 
-		Logger::info("Action queue size before executeNextAction: " + std::to_string(_actionQueue.size()));
-		executeNextAction();
-	}
+    const auto& inv = _state.getInventory();
+    for (const auto& [stone, needed] : req.stonesNeeded) {
+        int alreadyThere = onTile.count(stone) ? onTile.at(stone) : 0;
+        int stillNeeded  = needed - alreadyThere;
+        if (stillNeeded <= 0) continue;
 
-	void SimpleAI::startIncantation() {
-		_AIstate = AIState::Incantating;
-                                _lastIncantationTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-		_lastIncantationTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-			std::chrono::steady_clock::now().time_since_epoch()
-		).count();
+        auto it = inv.find(stone);
+        int have = (it != inv.end()) ? it->second : 0;
+        int toDrop = std::min(stillNeeded, have);
+        for (int i = 0; i < toDrop; i++)
+            drops.push_back({NavAction::Place, stone});
+    }
+    return drops;
+}
 
-		_pendingCommandId = _sender.expectResponse("incantation", [this](const ServerMessage& msg) { onCommandComplete(msg); });
-		int64_t now = _lastIncantationTime;
-		_pendingStartTimes[_pendingCommandId] = now;
-		
-		_sender.sendIncantation();
-		_lastCommandTime = now;
-	}
+// --------------------------------------------------------------------------
+// startGathering
+// --------------------------------------------------------------------------
 
-	void SimpleAI::startFork() {
-		_AIstate = AIState::WaitingForResponse;
-		_lastForkTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-			std::chrono::steady_clock::now().time_since_epoch()
-		).count();
-		
-		_pendingCommandId = _sender.expectResponse("fork",
-			[this](const ServerMessage& msg) { onCommandComplete(msg); });
-		_pendingStartTimes[_pendingCommandId] = _lastForkTime;
-		
-		_sender.sendFork();
-		_lastCommandTime = _lastForkTime;
-		
-		_forkCount++;
-	}
+void SimpleAI::startGathering(const std::string& resource, int64_t now) {
+    _AIstate              = AIState::Gathering;
+    _currentResourceTarget = resource;
 
-	void SimpleAI::requestVision() {
-		_lastVoirTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-			std::chrono::steady_clock::now().time_since_epoch()
-		).count();
-		_sender.expectResponse("voir", [this](const ServerMessage& msg) {
-			// don't call onCommandComplete, vision doesn't consume an action queue slot here usually
-		});
-		_sender.sendVoir();
-	}
+    // Resource on current tile → take immediately
+    const auto& vision = _state.getVision();
+    if (!vision.empty() && vision[0].hasItem(resource)) {
+        Logger::info("AI: " + resource + " on current tile, taking now");
+        issueTrackedCommand(
+            "prend " + resource,
+            [this](const ServerMessage& msg) { onCommandComplete(msg); },
+            now
+        );
+        _sender.sendPrend(resource);
+        return;
+    }
 
-	void SimpleAI::requestInventory() {
-		_lastInventaireTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-			std::chrono::steady_clock::now().time_since_epoch()
-		).count();
-		_sender.expectResponse("inventaire", [this](const ServerMessage& msg) {});
-		_sender.sendInventaire();
-	}
+    // Plan a path
+    auto plan = _planner.planPathToResource(_state, resource);
+    if (plan.empty()) {
+        Logger::warn("AI: no path to " + resource + ", falling back to explore");
+        _AIstate = AIState::Exploring;
+        plan = _planner.planExploration(_state);
+        if (plan.empty()) {
+            Logger::error("AI: exploration plan also empty, going idle");
+            _AIstate = AIState::Idle;
+            return;
+        }
+    }
 
-	void SimpleAI::executeNextAction() {
-		Logger::info("executeNextAction called, queue size: " + std::to_string(_actionQueue.size()));
-		
-		if (_actionQueue.empty()) {
-			Logger::info("Action queue empty, setting state to Idle");
-			_AIstate = AIState::Idle;
-			return;
-		}
+    Logger::info("AI: gathering " + resource + " with " + std::to_string(plan.size()) + " steps");
+    for (const auto& step : plan)
+        _actionQueue.push(step);
+    executeNextAction(now);
+}
 
-		auto step = _actionQueue.front();
-		_actionQueue.pop();
-		
-		Logger::info("Executing step: " + step.toString() + ", remaining queue: " + std::to_string(_actionQueue.size()));
+// --------------------------------------------------------------------------
+// startIncantation
+// --------------------------------------------------------------------------
 
-		int64_t now = std::chrono::duration_cast<std::chrono::milliseconds>(
-			std::chrono::steady_clock::now().time_since_epoch()
-		).count();
-		_lastCommandTime = now;
-		
-		std::string cmdName;
+void SimpleAI::startIncantation(int64_t now) {
+    _AIstate            = AIState::Incantating;
+    _lastIncantationTime = now;
 
-		switch (step.action) {
-			case NavAction::MoveForward:
-				Logger::info("Sending avance command");
-				_pendingCommandId = _sender.expectResponse("avance", [this](const ServerMessage& msg) { onCommandComplete(msg); });
-				_pendingStartTimes[_pendingCommandId] = now;
-				_sender.sendAvance();
-				cmdName = "avance";
-				break;
+    Logger::info("AI: sending incantation");
+    issueTrackedCommand(
+        "incantation",
+        [this](const ServerMessage& msg) { onCommandComplete(msg); },
+        now
+    );
+    _sender.sendIncantation();
+}
 
-			case NavAction::TurnLeft:
-				Logger::info("Sending gauche command");
-				_pendingCommandId = _sender.expectResponse("gauche", [this](const ServerMessage& msg) { onCommandComplete(msg); });
-				_pendingStartTimes[_pendingCommandId] = now;
-				_sender.sendGauche();
-				cmdName = "gauche";
-				break;
+// --------------------------------------------------------------------------
+// startFork
+// --------------------------------------------------------------------------
 
-			case NavAction::TurnRight:
-				Logger::info("Sending droite command");
-				_pendingCommandId = _sender.expectResponse("droite", [this](const ServerMessage& msg) { onCommandComplete(msg); });
-				_pendingStartTimes[_pendingCommandId] = now;
-				_sender.sendDroite();
-				cmdName = "droite";
-				break;
+void SimpleAI::startFork(int64_t now) {
+    _AIstate      = AIState::WaitingForResponse;
+    _lastForkTime = now;
+    _forkCount++;
 
-			case NavAction::Take:
-				Logger::info("Sending prend command for " + step.resource);
-				_pendingCommandId = _sender.expectResponse("prend " + step.resource, [this, step](const ServerMessage& msg) {
-					if (msg.isOk()) {
-						Logger::info("AI: Successfully took " + step.resource);
-					} else {
-						Logger::warn("AI: Failed to take " + step.resource);
-					}
-					onCommandComplete(msg); 
-				});
-				_pendingStartTimes[_pendingCommandId] = now;
-				_sender.sendPrend(step.resource);
-				cmdName = "prend";
-				break;
+    Logger::info("AI: sending fork");
+    issueTrackedCommand(
+        "fork",
+        [this](const ServerMessage& msg) { onCommandComplete(msg); },
+        now
+    );
+    _sender.sendFork();
+}
 
-			case NavAction::Place:
-				Logger::info("Sending pose command for " + step.resource);
-				_pendingCommandId = _sender.expectResponse("pose " + step.resource, [this](const ServerMessage& msg) { onCommandComplete(msg); });
-				_pendingStartTimes[_pendingCommandId] = now;
-				_sender.sendPose(step.resource);
-				cmdName = "pose";
-				break;
-				
-			default:
-				Logger::error("Unknown action type!");
-				return;
-		}
+// --------------------------------------------------------------------------
+// issueTrackedCommand — registers expectResponse and sets _waitingForCmd
+// --------------------------------------------------------------------------
 
-		Logger::debug("AI: Executing " + step.toString() + " with id=" + std::to_string(_pendingCommandId));
-	}
+void SimpleAI::issueTrackedCommand(
+    const std::string& key,
+    std::function<void(const ServerMessage&)> cb,
+    int64_t now)
+{
+    _pendingCommandId = _sender.expectResponse(key, cb);
+    _waitingForCmd    = true;
+    _cmdSentAt        = now;
+    _lastCommandTime  = now;
+}
 
-	void SimpleAI::onCommandComplete(const ServerMessage& msg) {
-		// Remove from pending start times
-		_pendingStartTimes.erase(_pendingCommandId);
-		
-		if (msg.status == "timeout") {
-			Logger::warn("AI: Command timed out: " + msg.cmd);
-			
-			// Don't clear queue - retry the same action
-			if (!_actionQueue.empty()) {
-				// Put the step back at front
-				auto step = _actionQueue.front();
-				_actionQueue.pop();
-				std::queue<NavigationStep> newQueue;
-				newQueue.push(step);
-				while (!_actionQueue.empty()) {
-					newQueue.push(_actionQueue.front());
-					_actionQueue.pop();
-				}
-				_actionQueue = newQueue;
-			}
-			_AIstate = AIState::Idle;
-			return;
-		}
-		
-		if (!msg.isOk()) {
-                        if (msg.cmd == "incantation" && _AIstate == AIState::Incantating) { 
-                                Logger::info("AI: incantation returned ko, but we are participating in one. Staying in Incantating state."); 
-                                return; 
-                        }
-			Logger::warn("AI: Command failed: " + msg.cmd);
-			// Clear queue on failure
-			std::queue<NavigationStep> empty;
-			std::swap(_actionQueue, empty);
-			_AIstate = AIState::Idle;
-			return;
-		}
+// --------------------------------------------------------------------------
+// executeNextAction
+// --------------------------------------------------------------------------
 
-		Logger::info("AI: Command succeeded: " + msg.cmd);
-		_state.onResponse(msg);
+void SimpleAI::executeNextAction(int64_t now) {
+    if (_actionQueue.empty()) {
+        Logger::debug("AI: action queue empty → Idle");
+        _AIstate = AIState::Idle;
+        return;
+    }
 
-		if (!_actionQueue.empty()) {
-			executeNextAction();
-		} else {
-			_AIstate = AIState::Idle;
-		}
-	}
-	
-	// Handle broadcast messages for incantation coordination and server events
-	void SimpleAI::onMessage(const ServerMessage& msg) {
-		if (msg.type == ServerMessageType::Event) {
-			if (msg.status == "incantation_start" || (msg.eventType.has_value() && *msg.eventType == "incantation_start")) {
-				Logger::info("AI: Incantation started! Locking state to Incantating.");
-				std::queue<NavigationStep> empty;
-				std::swap(_actionQueue, empty);
-				_AIstate = AIState::Incantating;
-                                _lastIncantationTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-				return;
-			}
-			if (msg.isLevelUp()) {
-				Logger::info("AI: Level up received! Exiting Incantating state.");
-				if (_AIstate == AIState::Incantating) {
-					_AIstate = AIState::Idle;
-				}
-				return;
-			}
-		}
+    auto step = _actionQueue.front();
+    _actionQueue.pop();
 
-		if (msg.messageText.has_value()) {
-			std::string text = *msg.messageText;
-			
-			if (text.find("INCANT_READY") != std::string::npos) {
-				std::stringstream ss(text);
-				std::string prefix;
-				int level = 0;
-				ss >> prefix >> level;
-				
-				if (level != _state.getLevel()) {
-					return;
-				}
-				
-				if (msg.direction.has_value() && _AIstate != AIState::Incantating) {
-					int dir = *msg.direction;
-					Logger::info("AI: Received INCANT_READY " + std::to_string(level) + " from dir " + std::to_string(dir));
-					_targetBroadcastDir = dir;
-					_lastBroadcastTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-						std::chrono::steady_clock::now().time_since_epoch()
-					).count();
-					
-					if (dir == 0) {
-						// On the same tile!
-						Logger::info("AI: We are on the target tile! Waiting to join or start incantation");
-						std::queue<NavigationStep> empty;
-						std::swap(_actionQueue, empty);
-						_AIstate = AIState::Idle;
-					} else {
-						// Need to move towards it
-						Logger::info("AI: Moving towards broadcast source");
-						std::queue<NavigationStep> empty;
-						std::swap(_actionQueue, empty);
-						
-						auto plan = _planner.planApproachDirection(_state, dir);
-						for (const auto& step : plan) {
-							_actionQueue.push(step);
-						}
-						
-						if (_AIstate == AIState::Idle && _sender.pendingCount() == 0) {
-							executeNextAction();
-						}
-					}
-				}
-			}
-		}
-	}
+    Logger::info("AI: execute " + step.toString() +
+                 " (queue remaining=" + std::to_string(_actionQueue.size()) + ")");
+
+    switch (step.action) {
+        case NavAction::MoveForward:
+            issueTrackedCommand("avance",
+                [this](const ServerMessage& msg) { onCommandComplete(msg); }, now);
+            _sender.sendAvance();
+            break;
+
+        case NavAction::TurnLeft:
+            issueTrackedCommand("gauche",
+                [this](const ServerMessage& msg) { onCommandComplete(msg); }, now);
+            _sender.sendGauche();
+            break;
+
+        case NavAction::TurnRight:
+            issueTrackedCommand("droite",
+                [this](const ServerMessage& msg) { onCommandComplete(msg); }, now);
+            _sender.sendDroite();
+            break;
+
+        case NavAction::Take:
+            issueTrackedCommand("prend " + step.resource,
+                [this, step](const ServerMessage& msg) {
+                    if (msg.isOk())
+                        Logger::info("AI: took " + step.resource);
+                    else
+                        Logger::warn("AI: failed to take " + step.resource);
+                    onCommandComplete(msg);
+                }, now);
+            _sender.sendPrend(step.resource);
+            break;
+
+        case NavAction::Place:
+            issueTrackedCommand("pose " + step.resource,
+                [this, step](const ServerMessage& msg) {
+                    if (msg.isOk())
+                        Logger::info("AI: placed " + step.resource);
+                    else
+                        Logger::warn("AI: failed to place " + step.resource);
+                    onCommandComplete(msg);
+                }, now);
+            _sender.sendPose(step.resource);
+            break;
+
+        default:
+            Logger::error("AI: unknown NavAction!");
+            _waitingForCmd = false;
+            break;
+    }
+}
+
+// --------------------------------------------------------------------------
+// onCommandComplete — called by the expectResponse callback
+// NOTE: WorldState has ALREADY been updated by Client::processIncomingMessages
+//       before the sender dispatched this callback. Do NOT call onResponse again.
+// --------------------------------------------------------------------------
+
+void SimpleAI::onCommandComplete(const ServerMessage& msg) {
+    _waitingForCmd = false;
+
+    // --- timeout ---
+    if (msg.status == "timeout") {
+        Logger::warn("AI: command timeout for '" + msg.cmd + "', clearing queue");
+        clearQueue(_actionQueue);
+        _AIstate = AIState::Idle;
+        return;
+    }
+
+    // --- incantation is special: "ko" can mean "we're a participant, not initiator" ---
+    if (msg.cmd == "incantation") {
+        if (msg.isOk()) {
+            Logger::info("AI: incantation succeeded → level up expected");
+            // Stay Incantating; the level-up event will reset us
+        } else if (msg.isKo()) {
+            Logger::warn("AI: incantation ko — not enough resources/players");
+            _AIstate = AIState::Idle;
+        }
+        // either way we don't chain into next action here; wait for the event
+        return;
+    }
+
+    // --- generic failure ---
+    if (!msg.isOk()) {
+        Logger::warn("AI: command '" + msg.cmd + "' failed (" + msg.status + "), clearing queue");
+        clearQueue(_actionQueue);
+        _AIstate = AIState::Idle;
+        return;
+    }
+
+    Logger::info("AI: command '" + msg.cmd + "' ok");
+
+    // Continue queued actions if any
+    if (!_actionQueue.empty()) {
+        executeNextAction(nowMs());
+    } else {
+        _AIstate = AIState::Idle;
+    }
+}
+
+// --------------------------------------------------------------------------
+// onMessage — called for events AND broadcasts
+// --------------------------------------------------------------------------
+
+void SimpleAI::onMessage(const ServerMessage& msg) {
+    // ---- server events ----
+    if (msg.type == ServerMessageType::Event) {
+        // incantation_start: we are a participant — freeze
+        bool isIncantStart =
+            (msg.eventType.has_value() && *msg.eventType == "incantation_start") ||
+            msg.status == "incantation_start";
+
+        if (isIncantStart && _AIstate != AIState::Incantating) {
+            Logger::info("AI: incantation_start event → locking as participant");
+            clearQueue(_actionQueue);
+            _waitingForCmd = false;        // release any tracked command
+            _AIstate             = AIState::Incantating;
+            _lastIncantationTime = nowMs();
+            return;
+        }
+
+        // level-up: unlock from incantating state
+        if (msg.isLevelUp()) {
+            Logger::info("AI: level-up event → resetting to Idle (was " +
+                         std::to_string(static_cast<int>(_AIstate)) + ")");
+            _AIstate = AIState::Idle;
+            _lastIncantationTime = 0; // reset cooldown so we can act immediately
+            return;
+        }
+        return;
+    }
+
+    // ---- broadcast messages for coordination ----
+    if (msg.type == ServerMessageType::Message && msg.messageText.has_value()) {
+        const std::string& text = *msg.messageText;
+
+        if (text.find("INCANT_READY") != std::string::npos) {
+            std::istringstream ss(text);
+            std::string prefix;
+            int level = 0;
+            ss >> prefix >> level;
+
+            // Ignore if different level
+            if (level != _state.getLevel()) return;
+
+            // Ignore if we're already incantating or don't have a direction
+            if (_AIstate == AIState::Incantating || !msg.direction.has_value()) return;
+
+            int dir = *msg.direction;
+            Logger::info("AI: INCANT_READY lv" + std::to_string(level) + " from dir " + std::to_string(dir));
+
+            _lastBroadcastTime = nowMs();
+
+            if (dir == 0) {
+                // Already on the right tile — stop and wait
+                Logger::info("AI: on target tile, stopping to join incantation");
+                clearQueue(_actionQueue);
+                _waitingForCmd = false;
+                _AIstate       = AIState::Idle;
+                _targetBroadcastDir = 0;
+            } else {
+                // Move one step towards the broadcaster
+                _targetBroadcastDir = dir;
+                clearQueue(_actionQueue);
+                _waitingForCmd = false;
+
+                auto plan = _planner.planApproachDirection(_state, dir);
+                for (const auto& step : plan)
+                    _actionQueue.push(step);
+
+                Logger::info("AI: moving towards INCANT_READY source (dir=" + std::to_string(dir) + ")");
+                if (!_actionQueue.empty())
+                    executeNextAction(nowMs());
+            }
+        }
+    }
+}
+
 } // namespace zappy
