@@ -32,7 +32,7 @@ namespace zappy {
 			int	_forkCount = 0;
 			int	_levelUpCount = 0;
 
-			mutable std::mutex	_mutex;
+		mutable std::recursive_mutex	_mutex;
 
 			void updateInventory(const std::map<std::string, int>& inv);
 			void updateVision(const std::vector<VisionTile>& vision);
@@ -66,6 +66,7 @@ namespace zappy {
 
 			// incantation
 			bool canIncantate() const;
+			bool hasStonesForIncantation() const;
 			LevelRequirement getLevelRequirement(int level) const;
 			std::vector<std::string> getMissingStones() const;
 			bool hasEnoughPlayers() const;

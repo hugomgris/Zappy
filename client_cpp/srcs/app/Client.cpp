@@ -193,7 +193,7 @@ namespace zappy {
 			_ai.tick(nowMs);
 
 			// status logging
-			if (nowMs - lastStatusTime > 10000) {
+			if (nowMs - lastStatusTime > 1000) {
 				Logger::info("Status: Level=" + std::to_string(_state.getLevel()) +
 							" Food=" + std::to_string(_state.getFood()) +
 							" Forks=" + std::to_string(_state.getForkCount()));
@@ -229,6 +229,13 @@ namespace zappy {
 				ServerMessage msg = parseServerMessage(text);
 				
 				// Update world state
+				if (msg.isDeath()) {
+					_state.onEvent(msg);
+					Logger::error("Player died! Exiting client loop.");
+					_running = false;
+					break;
+				}
+
 				switch (msg.type) {
 					case ServerMessageType::Response:
 						Logger::info("Processing response, cmd=" + msg.cmd + ", status=" + msg.status);
@@ -237,6 +244,7 @@ namespace zappy {
 						break;
 					case ServerMessageType::Event:
 						_state.onEvent(msg);
+						_ai.onMessage(msg);  // Let AI handle incantation_start and Level up
 						break;
 					case ServerMessageType::Message:
 						_state.onMessage(msg);

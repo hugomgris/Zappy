@@ -166,6 +166,9 @@ test-integration: check_gtest $(TEST_BINARY)
 	@echo "$(CYAN)Running integration tests...$(DEF_COLOR)"
 	@./tests/scripts/run_integration_tests.sh
 
+test_prend: srcs/test_prend.cpp $(CLIENT_OBJS)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
+
 test-all: test-unit test-integration
 	@echo "$(GREEN)All tests completed!$(DEF_COLOR)"
 

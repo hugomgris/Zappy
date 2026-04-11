@@ -18,7 +18,7 @@ TARGET_LEVEL="8"
 MAX_SECONDS="${ZAPPY_MAX_SECONDS:-900}"
 TEAM_ONE_CLIENTS="${ZAPPY_TEAM_ONE_CLIENTS:-12}"
 TEAM_TWO_CLIENTS="${ZAPPY_TEAM_TWO_CLIENTS:-12}"
-TIME_UNIT="${ZAPPY_TIME_UNIT:-7}"
+TIME_UNIT="${ZAPPY_TIME_UNIT:-100}"
 ENABLE_FORK="1"
 EASY_ASCENSION="${ZAPPY_EASY_ASCENSION:-0}"
 LOG_DIR="${ROOT_DIR}/logs/full_probe_$(date +%Y%m%d_%H%M%S)"
@@ -34,7 +34,7 @@ if [ -f "${ENV_FILE}" ]; then
 fi
 
 usage() {
-    cat <<EOF
+    cat <<USG
 Usage: ./run_full_game_probe.sh [options]
 
 Options:
@@ -43,60 +43,29 @@ Options:
   --team1-clients N        Team1 client count (default: 12)
   --team2-clients N        Team2 client count (default: 12)
   --target-level N         Client target level (default: 8)
-  --time-unit N            Export ZAPPY_TIME_UNIT for server (default: 7)
-    --easy-ascension         Export ZAPPY_EASY_ASCENSION=1 for server
+  --time-unit N            Export ZAPPY_TIME_UNIT for server (default: 100)
+  --easy-ascension         Export ZAPPY_EASY_ASCENSION=1 for server
   --no-fork                Disable --fork mode on clients
   --help                   Show this help
 
 Notes:
   - Winner condition on server is 6 players at level 8 on the same team.
-  - This script launches enough clients to make a true winner-ending run feasible.
-EOF
+  - This script launches enough clients dynamically to replace dead ones and test a full game session safely.
+USG
 }
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
-        --port)
-            PORT="$2"
-            shift 2
-            ;;
-        --max-seconds)
-            MAX_SECONDS="$2"
-            shift 2
-            ;;
-        --team1-clients)
-            TEAM_ONE_CLIENTS="$2"
-            shift 2
-            ;;
-        --team2-clients)
-            TEAM_TWO_CLIENTS="$2"
-            shift 2
-            ;;
-        --target-level)
-            TARGET_LEVEL="$2"
-            shift 2
-            ;;
-        --time-unit)
-            TIME_UNIT="$2"
-            shift 2
-            ;;
-        --easy-ascension)
-            EASY_ASCENSION="1"
-            shift
-            ;;
-        --no-fork)
-            ENABLE_FORK="0"
-            shift
-            ;;
-        --help|-h)
-            usage
-            exit 0
-            ;;
-        *)
-            echo -e "${RED}Unknown option: $1${NC}"
-            usage
-            exit 1
-            ;;
+        --port) PORT="$2"; shift 2 ;;
+        --max-seconds) MAX_SECONDS="$2"; shift 2 ;;
+        --team1-clients) TEAM_ONE_CLIENTS="$2"; shift 2 ;;
+        --team2-clients) TEAM_TWO_CLIENTS="$2"; shift 2 ;;
+        --target-level) TARGET_LEVEL="$2"; shift 2 ;;
+        --time-unit) TIME_UNIT="$2"; shift 2 ;;
+        --easy-ascension) EASY_ASCENSION="1"; shift ;;
+        --no-fork) ENABLE_FORK="0"; shift ;;
+        --help|-h) usage; exit 0 ;;
+        *) echo -e "${RED}Unknown option: $1${NC}"; usage; exit 1 ;;
     esac
 done
 
@@ -122,6 +91,7 @@ echo "" > "$PIDS_FILE"
 
 cleanup() {
     set +e
+    STOP_REQUESTED=1
     echo -e "\n${YELLOW}Cleaning up processes...${NC}" | tee -a "$RUN_LOG"
     if [ -f "$PIDS_FILE" ]; then
         while read -r pid; do
@@ -131,13 +101,16 @@ cleanup() {
         done < "$PIDS_FILE"
     fi
 
+    # Kill the background maintainers and specific process trees
+    pkill -P $$ 2>/dev/null || true
     pkill -f "${SERVER_DIR}/zappy ${PORT}" 2>/dev/null || true
     pkill -f "${CLIENT_DIR}/client localhost ${PORT}" 2>/dev/null || true
 }
 
 on_signal() {
-    STOP_REQUESTED=1
     echo -e "\n${YELLOW}Signal received, stopping probe...${NC}" | tee -a "$RUN_LOG"
+    cleanup
+    exit 130
 }
 
 trap cleanup EXIT
@@ -166,7 +139,8 @@ echo -e "${YELLOW}Starting server on port ${PORT}...${NC}" | tee -a "$RUN_LOG"
     cd "$SERVER_DIR" || exit 1
     export ZAPPY_TIME_UNIT="$TIME_UNIT"
     export ZAPPY_EASY_ASCENSION="$EASY_ASCENSION"
-    ./zappy "$PORT" > "$SERVER_LOG" 2>&1
+    # Ensure sufficient start slots for both teams
+    ./zappy "$PORT" -c 30 > "$SERVER_LOG" 2>&1
 ) &
 SERVER_PID=$!
 
@@ -179,7 +153,6 @@ fi
 echo -e "${YELLOW}Resuming server time API...${NC}" | tee -a "$RUN_LOG"
 if ! (cd "$SERVER_DIR" && ./run.sh >> "$RUN_LOG" 2>&1); then
     echo -e "${RED}Failed to resume server time API via server/run.sh${NC}" | tee -a "$RUN_LOG"
-    exit 4
 fi
 
 start_client() {
@@ -199,30 +172,37 @@ start_client() {
     echo "$!" >> "$PIDS_FILE"
 }
 
-echo -e "${YELLOW}Launching clients...${NC}" | tee -a "$RUN_LOG"
-for i in $(seq 1 "$TEAM_ONE_CLIENTS"); do
-    start_client "team1" "$i"
-    sleep 0.1
-done
-for i in $(seq 1 "$TEAM_TWO_CLIENTS"); do
-    start_client "team2" "$i"
-    sleep 0.1
-done
+maintain_clients_in_bg() {
+    local team="$1"
+    local max_concurrent="$2"
+    local total_spawned=0
 
-echo -e "${GREEN}All clients launched. Monitoring winner condition...${NC}" | tee -a "$RUN_LOG"
+    while [ "$STOP_REQUESTED" -eq 0 ] && [ "$total_spawned" -lt 150 ]; do
+        # Count currently running for this team
+        local alive=$(pgrep -f "client localhost ${PORT} ${team}" | wc -l)
+        if [ "$alive" -lt "$max_concurrent" ]; then
+            total_spawned=$((total_spawned + 1))
+            start_client "$team" "$total_spawned"
+            sleep 1 # wait a moment to not overload if slot rejected immediately
+        else
+            sleep 3
+        fi
+    done
+}
+
+echo -e "${YELLOW}Launching clients dynamically in the background...${NC}" | tee -a "$RUN_LOG"
+maintain_clients_in_bg "team1" "$TEAM_ONE_CLIENTS" &
+maintain_clients_in_bg "team2" "$TEAM_TWO_CLIENTS" &
+
+echo -e "${GREEN}Clients launcher active. Monitoring winner condition...${NC}" | tee -a "$RUN_LOG"
 START_TS=$(date +%s)
 WINNER_LINE=""
-HEARTBEAT_INTERVAL=30
-NEXT_HEARTBEAT=$HEARTBEAT_INTERVAL
+HEARTBEAT_INTERVAL=10
+NEXT_HEARTBEAT=10
 
 while true; do
     NOW_TS=$(date +%s)
     ELAPSED=$((NOW_TS - START_TS))
-
-    if [ "$STOP_REQUESTED" -eq 1 ]; then
-        echo -e "${YELLOW}Probe interrupted by user.${NC}" | tee -a "$RUN_LOG"
-        exit 130
-    fi
 
     if grep -q "Winner condition reached" "$SERVER_LOG" 2>/dev/null || grep -q "Winner condition reached" "$SERVER_GAME_LOG" 2>/dev/null; then
         WINNER_LINE=$( (grep "Winner condition reached" "$SERVER_GAME_LOG" 2>/dev/null; grep "Winner condition reached" "$SERVER_LOG" 2>/dev/null) | tail -1 )
@@ -233,30 +213,24 @@ while true; do
 
     if [ "$ELAPSED" -ge "$MAX_SECONDS" ]; then
         echo -e "${RED}Timeout after ${ELAPSED}s without winner condition.${NC}" | tee -a "$RUN_LOG"
-        echo "Last server output lines:" | tee -a "$RUN_LOG"
-        tail -40 "$SERVER_LOG" | tee -a "$RUN_LOG"
-        if [ -f "$SERVER_GAME_LOG" ]; then
-            echo "Last server game-log lines:" | tee -a "$RUN_LOG"
-            tail -40 "$SERVER_GAME_LOG" | tee -a "$RUN_LOG"
-        fi
+        echo "Last server game-log lines:" | tee -a "$RUN_LOG"
+        tail -40 "$SERVER_GAME_LOG" 2>/dev/null | tee -a "$RUN_LOG"
         exit 5
     fi
 
     if [ "$ELAPSED" -ge "$NEXT_HEARTBEAT" ]; then
-        ALIVE_CLIENTS=0
-        while read -r pid; do
-            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-                ALIVE_CLIENTS=$((ALIVE_CLIENTS + 1))
-            fi
-        done < "$PIDS_FILE"
-        echo "[${ELAPSED}s] probing... configured clients=${ALIVE_CLIENTS}" | tee -a "$RUN_LOG"
-        NEXT_HEARTBEAT=$((NEXT_HEARTBEAT + HEARTBEAT_INTERVAL))
+        ALIVE_TOTAL=$(pgrep -f "client localhost ${PORT}" | wc -l)
+        echo "[${ELAPSED}s] probing... currently alive clients=${ALIVE_TOTAL}" | tee -a "$RUN_LOG"
+        NEXT_HEARTBEAT=$((ELAPSED + HEARTBEAT_INTERVAL))
 
-        if [ "$ALIVE_CLIENTS" -eq 0 ]; then
-            echo -e "${RED}All clients have exited before winner condition.${NC}" | tee -a "$RUN_LOG"
-            exit 6
+        if [ "$ALIVE_TOTAL" -eq 0 ]; then
+            # Delay check in case maintainer is just booting them
+            sleep 2
+            if [ "$(pgrep -f "client localhost ${PORT}" | wc -l)" -eq 0 ]; then
+                echo -e "${RED}All clients have exited heavily before winner condition.${NC}" | tee -a "$RUN_LOG"
+            fi
         fi
     fi
 
-    sleep 2
+    sleep 1
 done

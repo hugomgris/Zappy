@@ -1,0 +1,14 @@
+--- ../client_cpp/srcs/app/SimpleAI.cpp
++++ ../client_cpp/srcs/app/SimpleAI.cpp
+@@ -488,6 +488,11 @@
+ 
+ if (!msg.isOk()) {
+ Logger::warn("AI: Command failed: " + msg.cmd);
++if (msg.cmd == "incantation" && _AIstate == AIState::Incantating) {
++Logger::info("AI: incantation returned ko, but we are participating in one. Staying in Incantating state.");
++return;
++}
++
+ // Clear queue on failure
+ std::queue<NavigationStep> empty;
+ std::swap(_actionQueue, empty);

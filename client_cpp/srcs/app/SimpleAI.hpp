@@ -8,6 +8,7 @@
 #include <vector>
 #include <queue>
 #include <cstdint>
+#include <map>
 
 namespace zappy {
 	enum class AIState {
@@ -29,9 +30,9 @@ namespace zappy {
 			bool	_forkEnabled = true;
 			int		_targetLevel = 8;
 			int		_maxForks = 5;
-			int		_forkFoodThreshold = 15;
-			int		_foodEmergencyThreshold = 3;
-			int		_foodComfortThreshold = 8;
+			int		_forkFoodThreshold = 25;
+			int		_foodEmergencyThreshold = 6;     // Critical - will die soon
+			int		_foodComfortThreshold = 12;       // Don't pick up food if above this
 			bool	_easyAscensionMode = false;
 
 			int		_commandTimeoutMs = 30000;
@@ -44,11 +45,16 @@ namespace zappy {
 			int64_t	_lastForkTime = 0;
 			int64_t	_lastIncantationTime = 0;
 			int		_forkCount = 0;
+			int		_targetBroadcastDir = -1;
+			int64_t	_lastBroadcastTime = 0;
 
 			// action queue
 			std::queue<NavigationStep>	_actionQueue;
 			std::string					_currentResourceTarget;
-			int64_t						_pendingCommandId = 0;
+			uint64_t					_pendingCommandId = 0;
+
+			// FIXED: Track pending command start times for timeout recovery
+			std::map<uint64_t, int64_t>	_pendingStartTimes;
 
 			// decision making
 			void decideNextAction(int64_t nowMs);
@@ -78,10 +84,10 @@ namespace zappy {
 			// main tick func
 			void tick(int64_t nowMs);
 			
-			// FIXED: Handle incoming messages for coordination
+			// Handle incoming messages for coordination
 			void onMessage(const ServerMessage& msg);
 
-			// conf
+			// config
 			void setForkEnabled(bool enabled) { _forkEnabled = enabled; }
 			void setTargetLevel(int level) { _targetLevel = level; }
 			void setMaxForks(int max) { _maxForks = max; }

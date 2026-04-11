@@ -64,7 +64,7 @@ static void m_init_config_content()
 {
     if (!m_config_content)
         return;
-    m_config_content->INITIAL_LIFE_UNITS = 10;
+    m_config_content->INITIAL_LIFE_UNITS = 100;
     m_config_content->LIFE_UNIT_TO_TIME = 126;
     m_config_content->NUMBER_OF_CLIENTS = 100;
     m_config_content->TIME_UNIT = 100;

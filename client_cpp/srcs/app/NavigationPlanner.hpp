@@ -35,7 +35,7 @@ namespace zappy {
 			NavigationPlanner();
 			
 			std::vector<NavigationStep> planPathToResource(const WorldState& state, const std::string& resource);
-			std::vector<NavigationStep> planPathToTile(const WorldState& state, const VisionTile& target);
+			std::vector<NavigationStep> planPathToTile(const WorldState& state, const VisionTile& target, const std::string& resource);
 			std::vector<NavigationStep> planExploration(const WorldState& state);
 			std::vector<NavigationStep> planApproachDirection(const WorldState& state, int direction);
 	};

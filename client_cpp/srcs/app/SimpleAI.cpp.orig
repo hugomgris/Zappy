@@ -46,10 +46,10 @@ namespace zappy {
 		}
 
 		// periodic sensor updates
-		if (nowMs - _lastVoirTime > 500) {
+		if (nowMs - _lastVoirTime > 50) {
 			requestVision();
 		}
-		if (nowMs - _lastInventaireTime > 2000) {
+		if (nowMs - _lastInventaireTime > 500) {
 			requestInventory();
 		}
 
@@ -487,10 +487,6 @@ namespace zappy {
 		}
 		
 		if (!msg.isOk()) {
-                        if (msg.cmd == "incantation" && _AIstate == AIState::Incantating) { 
-                                Logger::info("AI: incantation returned ko, but we are participating in one. Staying in Incantating state."); 
-                                return; 
-                        }
 			Logger::warn("AI: Command failed: " + msg.cmd);
 			// Clear queue on failure
 			std::queue<NavigationStep> empty;

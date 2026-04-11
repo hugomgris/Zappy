@@ -67,6 +67,7 @@ namespace zappy {
 	}
 
 	Result CommandSender::sendPrend(const std::string& resource) {
+		Logger::debug("Sending PREND for resource: " + resource);
 		cJSON* cmd = cJSON_CreateObject();
 		cJSON_AddStringToObject(cmd, "type", "cmd");
 		cJSON_AddStringToObject(cmd, "cmd", "prend");
@@ -126,28 +127,35 @@ namespace zappy {
 		return id;
 	}
 
-	// Match response to pending command.
-	// Some server responses only carry a generic status and omit the original cmd.
+	// FIXED: Improved response matching with FIFO fallback
 	void CommandSender::processResponse(const ServerMessage& msg) {
 		if (msg.type != ServerMessageType::Response) return;
-
+			// Ignore in_progress responses for incantation
+			if (msg.status == "in_progress") {
+				Logger::debug("Ignoring in_progress response for cmd: " + msg.cmd);
+				return;
+			}
 		std::function<void(const ServerMessage&)> callback;
 		uint64_t matchedId = 0;
 		std::string matchedCmd;
 		{
 			std::lock_guard<std::mutex> lock(_mutex);
 			
-			// DEBUG: Log pending commands
-			Logger::debug("Processing response for cmd: " + msg.cmd + ", pending count=" + std::to_string(_pending.size()));
+			Logger::debug("Processing response for cmd: " + msg.cmd + 
+						  ", pending count=" + std::to_string(_pending.size()));
+			
 			for (const auto& p : _pending) {
 				Logger::debug("  Pending: id=" + std::to_string(p.id) + ", cmd=" + p.cmd);
 			}
 			
 			auto it = _pending.end();
 
+			// Always match by cmd field if present
 			if (!msg.cmd.empty()) {
 				it = std::find_if(_pending.begin(), _pending.end(),
 					[&msg](const PendingCommand& p) { return p.cmd == msg.cmd; });
+				
+				// Removed the FIFO fallback for explicit commands to prevent grabbing wrong responses.
 			} else if (!_pending.empty()) {
 				// Fallback: cmd-less responses are assumed to answer the oldest pending command.
 				it = _pending.begin();
@@ -173,7 +181,6 @@ namespace zappy {
 		}
 	}
 
-	// FIXED: Invoke callback on timeout with error message
 	void CommandSender::checkTimeouts(int timeoutMs) {
 		auto now = std::chrono::steady_clock::now();
 		std::vector<std::pair<std::string, std::function<void(const ServerMessage&)>>> expired;

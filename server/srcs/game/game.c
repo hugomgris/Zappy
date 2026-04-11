@@ -1128,6 +1128,7 @@ static int m_command_incantation(void* _p, void* _arg)
 {
     player* p;
     tile* t;
+    player* p2;
     level_requisites* reqs;
     client* c;
     char level[12];
@@ -1173,6 +1174,20 @@ static int m_command_incantation(void* _p, void* _arg)
     }
 
     snprintf(level, sizeof(level), "%d", p->level);
+
+    /* Broadcast to all players on the tile that the incantation has started */
+    p2 = t->players;
+    while (p2)
+    {
+        if (p2->level == p->level)
+        {
+            if (p2->id != p->id)
+            {
+                server_create_response_msg(p2->id, "event", NULL, "incantation_start");
+            }
+        }
+        p2 = p2->next_on_tile;
+    }
 
     time_api_schedule_client_event_front(NULL, &c->event_buffer, m_incantation_time, m_command_real_incantation, p, strdup(level));
 
@@ -1577,7 +1592,6 @@ int game_execute_command(int fd, char *cmd, char *_arg)
     command_type command;
     char* arg;
 
-    // ADD THIS DEBUG
     log_msg(LOG_LEVEL_INFO, "Received command from fd=%d: cmd='%s', arg='%s'\n", fd, cmd, _arg ? _arg : "NULL");
 
     ret = m_game_get_client_from_fd(fd, &c);
@@ -1608,12 +1622,24 @@ int game_execute_command(int fd, char *cmd, char *_arg)
     else
         arg = NULL;
 
-    log_msg(LOG_LEVEL_DEBUG, "Scheduling command '%s' with delay %d for fd=%d\n", 
-            cmd, command_prototypes[command].delay, fd);
+    time_api *t_api = time_api_get_local();
+    log_msg(LOG_LEVEL_DEBUG, "Scheduling command '%s' with delay %d, current_time=%lu, exec_time will be %lu\n", 
+            cmd, command_prototypes[command].delay, 
+            t_api->current_time_units,
+            t_api->current_time_units + command_prototypes[command].delay);
 
     ret = time_api_schedule_client_event(NULL, &c->event_buffer,\
     command_prototypes[command].delay,\
     command_prototypes[command].prototype, c->player, arg);
+    
+    // Debug: Print event buffer state after scheduling
+    log_msg(LOG_LEVEL_DEBUG, "Event buffer now: count=%d, head=%d, tail=%d\n",
+            c->event_buffer.count, c->event_buffer.head, c->event_buffer.tail);
+    
+    if (c->event_buffer.count > 0) {
+        log_msg(LOG_LEVEL_DEBUG, "Next event exec_time: %lu\n", 
+                c->event_buffer.events[c->event_buffer.head].exec_time);
+    }
 
     return SUCCESS;
 }
@@ -1686,7 +1712,7 @@ int game_player_die(client *c)
 
 int game_play()
 {
-    int i;
+        int i;
     time_api* t_api;
     client* c;
     bool has_played;
@@ -1694,6 +1720,13 @@ int game_play()
     int ret;
 
     t_api = time_api_get_local();
+    
+    // Debug: Log current time each loop
+    static int loop_count = 0;
+    if (++loop_count % 100 == 0) {
+        log_msg(LOG_LEVEL_INFO, "game_play: current_time=%lu\n", t_api->current_time_units);
+    }
+    
     i = 0;
     has_played = false;
     while (i < m_server.client_count)
@@ -1701,9 +1734,8 @@ int game_play()
         c = m_server.clients[i];
         i++;
 
-        /**/
         if (c == NULL)
-            continue; /* No client */
+            continue;
 
         if (!PLAYER_IS_ALIVE(c, t_api->current_time_units))
         {
@@ -1711,8 +1743,18 @@ int game_play()
             continue;
         }
 
+        // Debug: Check if client has actions
+        if (c->event_buffer.count > 0) {
+            event *next_ev = &c->event_buffer.events[c->event_buffer.head];
+            log_msg(LOG_LEVEL_DEBUG, "Client %d has %d events, next exec_time=%lu, current=%lu, due=%d\n",
+                    c->socket_fd, c->event_buffer.count, next_ev->exec_time, 
+                    t_api->current_time_units, 
+                    next_ev->exec_time <= t_api->current_time_units);
+        }
+
         if (CLIENT_HAS_ACTIONS(c, t_api->current_time_units))
         {
+            log_msg(LOG_LEVEL_DEBUG, "Processing events for client %d\n", c->socket_fd);
             time_api_process_client_events(NULL, &c->event_buffer);
             has_played = true;
         }       

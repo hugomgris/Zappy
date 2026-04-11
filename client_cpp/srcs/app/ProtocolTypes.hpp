@@ -74,11 +74,11 @@ namespace zappy {
 		bool isKo() const { return status == "ko" || arg == "ko"; }
 		bool isLevelUp() const {
 			return type == ServerMessageType::Event
-				&& (arg == "Level up!" || (eventType.has_value() && *eventType == "Level up!"));
+				&& (status == "Level up!" || arg == "Level up!" || (eventType.has_value() && *eventType == "Level up!"));
 		}
 		bool isDeath() const {
-			return type == ServerMessageType::Event
-				&& (arg == "die" || (eventType.has_value() && *eventType == "die"));
+			return (type == ServerMessageType::Event && (status == "die" || arg == "die" || (eventType.has_value() && *eventType == "die"))) ||
+			       (type == ServerMessageType::Response && cmd == "-" && arg == "die");
 		}
 	};
 

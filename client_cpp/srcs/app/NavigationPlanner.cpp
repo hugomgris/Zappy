@@ -23,11 +23,11 @@ namespace zappy {
 			return planExploration(state);
 		}
 
-		return planPathToTile(state, *target);
+		return planPathToTile(state, *target, resource);
 	}
 
 	std::vector<NavigationStep> NavigationPlanner::planPathToTile(
-			const WorldState& state, const VisionTile& target) {
+			const WorldState& state, const VisionTile& target, const std::string& resource) {
 		std::vector<NavigationStep> plan;
 		const PlayerState& player = state.getPlayer();
 
@@ -36,7 +36,7 @@ namespace zappy {
 			Logger::info("Resource on current tile! Adding take actions");
 			for (const auto& item : target.items) {
 				// Only take items we actually need
-				plan.push_back({NavAction::Take, item});
+				if (item == resource || item == "nourriture") plan.push_back({NavAction::Take, item});
 			}
 			return plan;
 		}
@@ -79,7 +79,7 @@ namespace zappy {
 
 		// Once we reach the target tile, pick up visible resources there.
 		for (const auto& item : target.items) {
-			plan.push_back({NavAction::Take, item});
+			if (item == resource || item == "nourriture") plan.push_back({NavAction::Take, item});
 		}
 		
 		return plan;

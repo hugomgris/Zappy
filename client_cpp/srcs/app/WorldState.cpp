@@ -1,5 +1,6 @@
 #include "WorldState.hpp"
 #include "helpers/Logger.hpp"
+#include <algorithm>
 
 namespace zappy {
 	WorldState::WorldState() {
@@ -7,7 +8,7 @@ namespace zappy {
 	}
 
 	void WorldState::onWelcome(const ServerMessage& msg) {
-		std::lock_guard<std::mutex> lock(_mutex);
+		std::lock_guard<std::recursive_mutex> lock(_mutex);
 
 		_connected = true;
 		if (msg.mapSize.has_value()) {
@@ -21,7 +22,7 @@ namespace zappy {
 	}
 
 	void WorldState::onResponse(const ServerMessage& msg) {
-		std::lock_guard<std::mutex> lock(_mutex);
+		std::lock_guard<std::recursive_mutex> lock(_mutex);
 		
 		// TEMPORARY DEBUG: Log all responses to see what's coming in
 		Logger::info("=== onResponse received ===");
@@ -76,6 +77,7 @@ namespace zappy {
 				int oldX = _player.x;
 				int oldY = _player.y;
 				applyMove(_player.x, _player.y, _player.orientation, _mapSize->x, _mapSize->y);
+_vision.clear(); 		_vision.clear();
 				Logger::info("=== AVANCE ===");
 				Logger::info("  Moved from (" + std::to_string(oldX) + "," + std::to_string(oldY) + 
 							") to (" + std::to_string(_player.x) + "," + std::to_string(_player.y) + ")");
@@ -84,6 +86,7 @@ namespace zappy {
 		else if (msg.cmd == "droite" && msg.isOk()) {
 			int oldOrientation = _player.orientation;
 			applyTurn(_player.orientation, true);
+_vision.clear(); 		_vision.clear();
 			Logger::info("=== DROITE ===");
 			Logger::info("  Turned from " + orientationToString(oldOrientation) + 
 						" to " + orientationToString(_player.orientation));
@@ -91,6 +94,7 @@ namespace zappy {
 		else if (msg.cmd == "gauche" && msg.isOk()) {
 			int oldOrientation = _player.orientation;
 			applyTurn(_player.orientation, false);
+_vision.clear(); 		_vision.clear();
 			Logger::info("=== GAUCHE ===");
 			Logger::info("  Turned from " + orientationToString(oldOrientation) + 
 						" to " + orientationToString(_player.orientation));
@@ -115,7 +119,13 @@ namespace zappy {
 				Logger::info("  Incantation in progress...");
 			} else if (msg.isOk()) {
 				Logger::info("  Incantation completed!");
-			} else if (msg.isKo()) {
+			} else if (msg.isKo()) { 
+							Logger::error("  PREND FAILED! Erasing from vision.");
+							if (!_vision.empty()) {
+								auto it = std::find(_vision[0].items.begin(), _vision[0].items.end(), msg.arg);
+								if (it != _vision[0].items.end()) _vision[0].items.erase(it);
+							}
+
 				Logger::info("  Incantation failed");
 			} else {
 				Logger::info("  Incantation response: arg=" + msg.arg + ", status=" + msg.status);
@@ -128,13 +138,50 @@ namespace zappy {
 		else if (msg.cmd == "prend") {
 			Logger::info("=== PREND ===");
 			Logger::info("  Arg: " + msg.arg + ", Status: " + msg.status);
-			if (msg.isKo()) {
+			if (msg.isOk()) {
+				// Update inventory when take succeeds
+				std::lock_guard<std::recursive_mutex> lock(_mutex);
+				_player.inventory[msg.arg]++;
+				if (msg.arg == "nourriture") {
+					Logger::info("  Food increased to " + std::to_string(_player.inventory["nourriture"]));
+				}
+				if (!_vision.empty()) {
+					auto it = std::find(_vision[0].items.begin(), _vision[0].items.end(), msg.arg);
+					if (it != _vision[0].items.end()) {
+						_vision[0].items.erase(it);
+					}
+				}
+			} else if (msg.isKo()) { 
+				Logger::error("  PREND FAILED! Erasing from vision.");
+				if (!_vision.empty()) {
+					_vision[0].items.erase(
+						std::remove(_vision[0].items.begin(), _vision[0].items.end(), msg.arg),
+						_vision[0].items.end()
+					);
+				}
 				Logger::error("  PREND FAILED! Resource not available?");
 			}
 		}
 		else if (msg.cmd == "pose") {
 			Logger::info("=== POSE ===");
 			Logger::info("  Arg: " + msg.arg + ", Status: " + msg.status);
+			if (msg.isOk()) {
+				std::lock_guard<std::recursive_mutex> lock(_mutex);
+				if (_player.inventory[msg.arg] > 0) {
+					_player.inventory[msg.arg]--;
+				}
+				if (!_vision.empty()) {
+					_vision[0].items.push_back(msg.arg);
+				}
+			} else if (msg.isKo()) { 
+							Logger::error("  PREND FAILED! Erasing from vision.");
+							if (!_vision.empty()) {
+								auto it = std::find(_vision[0].items.begin(), _vision[0].items.end(), msg.arg);
+								if (it != _vision[0].items.end()) _vision[0].items.erase(it);
+							}
+
+				Logger::error("  POSE FAILED! Resource not in inventory?");
+			}
 		}
 		else if (msg.cmd == "broadcast") {
 			Logger::info("=== BROADCAST ===");
@@ -148,7 +195,7 @@ namespace zappy {
 	}
 
 	void WorldState::onEvent(const ServerMessage& msg) {
-		std::lock_guard<std::mutex> lock(_mutex);
+		std::lock_guard<std::recursive_mutex> lock(_mutex);
 		
 		if (msg.isLevelUp()) {
 			_player.level++;
@@ -162,7 +209,7 @@ namespace zappy {
 	}
 
 	void WorldState::onMessage(const ServerMessage& msg) {
-		std::lock_guard<std::mutex> lock(_mutex);
+		std::lock_guard<std::recursive_mutex> lock(_mutex);
 		
 		if (msg.messageText.has_value() && msg.direction.has_value()) {
 			Logger::info("Broadcast from dir " + std::to_string(*msg.direction) + ": " + *msg.messageText);
@@ -170,7 +217,11 @@ namespace zappy {
 	}
 
 	void WorldState::updateInventory(const std::map<std::string, int>& inv) {
-		std::lock_guard<std::mutex> lock(_mutex);
+		// _mutex is already locked in onResponse if called from there, 
+        // but can be called from outside too. To prevent deadlock we only lock if needed,
+        // or just use a std::unique_lock or std::recursive_mutex.
+        // Actually, let's just make the lock a recursive_mutex in the header.
+        std::lock_guard<std::recursive_mutex> lock(_mutex);
 		// REPLACE completely - don't merge
 		_player.inventory.clear();
 		_player.inventory = inv;
@@ -202,13 +253,13 @@ namespace zappy {
 	}
 	
 	int WorldState::getPlayersOnTile() const {
-		std::lock_guard<std::mutex> lock(_mutex);
+		std::lock_guard<std::recursive_mutex> lock(_mutex);
 		if (_vision.empty()) return 0;
 		return _vision[0].playerCount;
 	}
 
 	bool WorldState::seesItem(const std::string& item) const {
-		std::lock_guard<std::mutex> lock(_mutex);
+		std::lock_guard<std::recursive_mutex> lock(_mutex);
 		for (const auto& tile : _vision) {
 			if (tile.hasItem(item)) return true;
 		}
@@ -216,7 +267,7 @@ namespace zappy {
 	}
 
 	std::optional<VisionTile> WorldState::getNearestItem(const std::string& item) const {
-		std::lock_guard<std::mutex> lock(_mutex);
+		std::lock_guard<std::recursive_mutex> lock(_mutex);
 		for (const auto& tile : _vision) {
 			if (tile.hasItem(item)) return tile;
 		}
@@ -224,7 +275,7 @@ namespace zappy {
 	}
 
 	std::vector<VisionTile> WorldState::getTilesWithItem(const std::string& item) const {
-		std::lock_guard<std::mutex> lock(_mutex);
+		std::lock_guard<std::recursive_mutex> lock(_mutex);
 		std::vector<VisionTile> result;
 		for (const auto& tile : _vision) {
 			if (tile.hasItem(item)) result.push_back(tile);
@@ -248,8 +299,32 @@ namespace zappy {
 		return {1, {}};
 	}
 
+	bool WorldState::hasStonesForIncantation() const {
+		std::lock_guard<std::recursive_mutex> lock(_mutex);
+		if (_player.level >= 8) return false;
+
+		auto req = getLevelRequirement(_player.level);
+		std::map<std::string, int> availableOnTile;
+		if (!_vision.empty()) {
+			for (const auto& item : _vision[0].items) {
+				availableOnTile[item]++;
+			}
+		}
+
+		for (const auto& [stone, needed] : req.stonesNeeded) {
+			auto it = _player.inventory.find(stone);
+			int have = (it != _player.inventory.end()) ? it->second : 0;
+			int onTile = availableOnTile[stone];
+			
+			if (have + onTile < needed) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	bool WorldState::canIncantate() const {
-		std::lock_guard<std::mutex> lock(_mutex);
+		std::lock_guard<std::recursive_mutex> lock(_mutex);
 
 		if (_player.level >= 8) return false;
 
@@ -259,19 +334,11 @@ namespace zappy {
 		int playersOnTile = _vision.empty() ? 0 : _vision[0].playerCount;
 		if (playersOnTile < req.playersNeeded) return false;
 
-		// check stones in inv (assuming placed on tile)
-		for (const auto& [stone, needed] : req.stonesNeeded) {
-			auto it = _player.inventory.find(stone);
-			if (it == _player.inventory.end() || it->second < needed) {
-				return false;
-			}
-		}
-
-		return true;
+		return hasStonesForIncantation();
 	}
 
 	std::vector<std::string> WorldState::getMissingStones() const {
-		std::lock_guard<std::mutex> lock(_mutex);
+		std::lock_guard<std::recursive_mutex> lock(_mutex);
 		std::vector<std::string> missing;
 		
 		if (_player.level >= 8) return missing;
@@ -313,7 +380,7 @@ namespace zappy {
 	}
 
 	bool WorldState::hasEnoughPlayers() const {
-		std::lock_guard<std::mutex> lock(_mutex);
+		std::lock_guard<std::recursive_mutex> lock(_mutex);
 		if (_player.level >= 8) return false;
 		auto req = getLevelRequirement(_player.level);
 		int playersOnTile = _vision.empty() ? 0 : _vision[0].playerCount;
@@ -321,7 +388,7 @@ namespace zappy {
 	}
 
 	void WorldState::clear() {
-		std::lock_guard<std::mutex> lock(_mutex);
+		std::lock_guard<std::recursive_mutex> lock(_mutex);
 		_connected = false;
 		_mapSize.reset();
 		_player = PlayerState{};

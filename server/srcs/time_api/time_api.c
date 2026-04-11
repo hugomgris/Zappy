@@ -70,19 +70,20 @@ uint64_t time_get_current_time_units(time_api *_api)
     time_api *api;
     long now;
 
-    api= _api ? _api : m_time;
+    api = _api ? _api : m_time;
     if (!api)
     {
         log_msg(LOG_LEVEL_ERROR, "Time API not initialized.\n");
         return -1;
     }
 
+    // But we shouldn't update it while paused
     if (api->paused_ms > 0)
         return api->current_time_units;
 
     now = get_current_time_ms();
-    /* Each time unit lasts 1000/t milliseconds */
-    return (uint64_t)((now - api->start_time_ms) * api->t / 1000);
+    uint64_t elapsed_ms = (now > api->start_time_ms) ? (now - api->start_time_ms) : 0;
+    return (uint64_t)(elapsed_ms * api->t / 1000);
 }
 
 void time_api_pause(time_api *_api)
@@ -129,8 +130,10 @@ void time_api_run(time_api *_api)
 int time_api_update(time_api *_api)
 {
     time_api *api;
+    uint64_t old_units;
+    uint64_t new_units;
 
-    api= _api ? _api : m_time;
+    api = _api ? _api : m_time;
     if (!api)
     {
         log_msg(LOG_LEVEL_ERROR, "Time API not initialized.\n");
@@ -142,7 +145,15 @@ int time_api_update(time_api *_api)
         return SUCCESS;
     }
 
-    api->current_time_units = time_get_current_time_units(api);
+    old_units = api->current_time_units;
+    new_units = time_get_current_time_units(api);
+    
+    if (new_units != old_units) {
+        log_msg(LOG_LEVEL_DEBUG, "Time advanced: %lu -> %lu (diff=%lu)\n", 
+                old_units, new_units, new_units - old_units);
+    }
+    
+    api->current_time_units = new_units;
     return SUCCESS;
 }
 
@@ -166,6 +177,8 @@ int time_api_schedule_single_event(time_api* _api, event* event, int delay, int 
     event->callback = callback;
     event->data = data;
     event->arg = arg;
+    
+    log_msg(LOG_LEVEL_DEBUG, "Scheduled single event: delay=%d, exec_time=%lu\n", delay, event->exec_time);
 
     return 0;
 }
@@ -178,7 +191,7 @@ int time_api_schedule_client_event(time_api *_api, event_buffer *buffer, int del
     event new_event;
     time_api *api;
 
-    api= _api ? _api : m_time;
+    api = _api ? _api : m_time;
     if (!api)
     {
         log_msg(LOG_LEVEL_ERROR, "Time API not initialized.\n");
@@ -187,13 +200,14 @@ int time_api_schedule_client_event(time_api *_api, event_buffer *buffer, int del
 
     if (buffer->count >= MAX_EVENTS)
     {
+        log_msg(LOG_LEVEL_WARN, "Event buffer full! count=%d, max=%d\n", buffer->count, MAX_EVENTS);
         return -1;
     }
 
-    if (buffer->count > 0)
-        new_event.exec_time = buffer->events[buffer->tail].exec_time + delay;
-    else
-        new_event.exec_time = api->current_time_units + delay;
+    new_event.exec_time = api->current_time_units + delay;
+    
+    log_msg(LOG_LEVEL_DEBUG, "Scheduling event: delay=%d, current_time=%lu, exec_time=%lu\n",
+            delay, api->current_time_units, new_event.exec_time);
 
     new_event.callback = callback;
     new_event.data = data;
@@ -231,6 +245,9 @@ int time_api_schedule_client_event_front(time_api *_api, event_buffer *buffer, i
     buffer->head = (buffer->head - 1 + MAX_EVENTS) % MAX_EVENTS;
     buffer->events[buffer->head] = new_event;
     buffer->count++;
+    
+    log_msg(LOG_LEVEL_DEBUG, "Scheduled front event: delay=%d, exec_time=%lu\n", delay, new_event.exec_time);
+    
     return 0;
 }
 
