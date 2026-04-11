@@ -21,6 +21,8 @@ TEAM_TWO_CLIENTS="${ZAPPY_TEAM_TWO_CLIENTS:-12}"
 TIME_UNIT="${ZAPPY_TIME_UNIT:-100}"
 ENABLE_FORK="1"
 EASY_ASCENSION="${ZAPPY_EASY_ASCENSION:-0}"
+SERVER_CLIENT_SLOTS=""
+RESPAWN_DEAD="${ZAPPY_RESPAWN_DEAD:-1}"
 LOG_DIR="${ROOT_DIR}/logs/full_probe_$(date +%Y%m%d_%H%M%S)"
 STOP_REQUESTED=0
 
@@ -31,6 +33,9 @@ if [ -f "${ENV_FILE}" ]; then
     TEAM_ONE_CLIENTS="${ZAPPY_TEAM_ONE_CLIENTS:-$TEAM_ONE_CLIENTS}"
     TEAM_TWO_CLIENTS="${ZAPPY_TEAM_TWO_CLIENTS:-$TEAM_TWO_CLIENTS}"
     EASY_ASCENSION="${ZAPPY_EASY_ASCENSION:-$EASY_ASCENSION}"
+    ENABLE_FORK="${ZAPPY_ENABLE_FORK:-$ENABLE_FORK}"
+    SERVER_CLIENT_SLOTS="${ZAPPY_SERVER_CLIENT_SLOTS:-$SERVER_CLIENT_SLOTS}"
+    RESPAWN_DEAD="${ZAPPY_RESPAWN_DEAD:-$RESPAWN_DEAD}"
 fi
 
 usage() {
@@ -44,8 +49,12 @@ Options:
   --team2-clients N        Team2 client count (default: 12)
   --target-level N         Client target level (default: 8)
   --time-unit N            Export ZAPPY_TIME_UNIT for server (default: 100)
+    --server-slots N         Server total player slots (-c N). Auto-calculated by default
   --easy-ascension         Export ZAPPY_EASY_ASCENSION=1 for server
+    --fork                   Enable --fork mode on clients
   --no-fork                Disable --fork mode on clients
+    --respawn                Keep replacing dead clients (default)
+    --no-respawn             Do not replace dead clients after initial wave
   --help                   Show this help
 
 Notes:
@@ -62,8 +71,12 @@ while [ "$#" -gt 0 ]; do
         --team2-clients) TEAM_TWO_CLIENTS="$2"; shift 2 ;;
         --target-level) TARGET_LEVEL="$2"; shift 2 ;;
         --time-unit) TIME_UNIT="$2"; shift 2 ;;
+        --server-slots) SERVER_CLIENT_SLOTS="$2"; shift 2 ;;
         --easy-ascension) EASY_ASCENSION="1"; shift ;;
+        --fork) ENABLE_FORK="1"; shift ;;
         --no-fork) ENABLE_FORK="0"; shift ;;
+        --respawn) RESPAWN_DEAD="1"; shift ;;
+        --no-respawn) RESPAWN_DEAD="0"; shift ;;
         --help|-h) usage; exit 0 ;;
         *) echo -e "${RED}Unknown option: $1${NC}"; usage; exit 1 ;;
     esac
@@ -74,12 +87,25 @@ if ! [[ "$PORT" =~ ^[0-9]+$ ]] || [ "$PORT" -lt 1 ] || [ "$PORT" -gt 65535 ]; th
     exit 1
 fi
 
-for n in "$MAX_SECONDS" "$TEAM_ONE_CLIENTS" "$TEAM_TWO_CLIENTS" "$TARGET_LEVEL" "$TIME_UNIT" "$EASY_ASCENSION"; do
+for n in "$MAX_SECONDS" "$TEAM_ONE_CLIENTS" "$TEAM_TWO_CLIENTS" "$TARGET_LEVEL" "$TIME_UNIT" "$EASY_ASCENSION" "$RESPAWN_DEAD"; do
     if ! [[ "$n" =~ ^[0-9]+$ ]]; then
         echo -e "${RED}Expected numeric value, got: ${n}${NC}"
         exit 1
     fi
 done
+
+if [ -z "$SERVER_CLIENT_SLOTS" ]; then
+    if [ "$ENABLE_FORK" = "1" ]; then
+        SERVER_CLIENT_SLOTS=$(((TEAM_ONE_CLIENTS + TEAM_TWO_CLIENTS) * 2))
+    else
+        SERVER_CLIENT_SLOTS=$((TEAM_ONE_CLIENTS + TEAM_TWO_CLIENTS))
+    fi
+fi
+
+if ! [[ "$SERVER_CLIENT_SLOTS" =~ ^[0-9]+$ ]] || [ "$SERVER_CLIENT_SLOTS" -lt 2 ]; then
+    echo -e "${RED}Invalid --server-slots value: ${SERVER_CLIENT_SLOTS}${NC}"
+    exit 1
+fi
 
 mkdir -p "$LOG_DIR"
 SERVER_LOG="${LOG_DIR}/server.log"
@@ -119,7 +145,7 @@ trap on_signal INT TERM
 echo -e "${BLUE}=== Zappy Full Winner Probe ===${NC}" | tee -a "$RUN_LOG"
 echo "Log directory: ${LOG_DIR}" | tee -a "$RUN_LOG"
 echo "Port=${PORT} Team1=${TEAM_ONE_CLIENTS} Team2=${TEAM_TWO_CLIENTS} TargetLevel=${TARGET_LEVEL} MaxSeconds=${MAX_SECONDS}" | tee -a "$RUN_LOG"
-echo "TimeUnit=${TIME_UNIT} EasyAscension=${EASY_ASCENSION} Fork=${ENABLE_FORK}" | tee -a "$RUN_LOG"
+echo "TimeUnit=${TIME_UNIT} EasyAscension=${EASY_ASCENSION} Fork=${ENABLE_FORK} ServerSlots=${SERVER_CLIENT_SLOTS} RespawnDead=${RESPAWN_DEAD}" | tee -a "$RUN_LOG"
 
 echo -e "${YELLOW}Building server and client...${NC}" | tee -a "$RUN_LOG"
 if ! (cd "$SERVER_DIR" && make >/dev/null); then
@@ -139,8 +165,7 @@ echo -e "${YELLOW}Starting server on port ${PORT}...${NC}" | tee -a "$RUN_LOG"
     cd "$SERVER_DIR" || exit 1
     export ZAPPY_TIME_UNIT="$TIME_UNIT"
     export ZAPPY_EASY_ASCENSION="$EASY_ASCENSION"
-    # Ensure sufficient start slots for both teams
-    ./zappy "$PORT" -c 30 > "$SERVER_LOG" 2>&1
+    exec ./zappy "$PORT" -n team1 team2 -c "$SERVER_CLIENT_SLOTS" > "$SERVER_LOG" 2>&1
 ) &
 SERVER_PID=$!
 
@@ -151,8 +176,16 @@ if ! kill -0 "$SERVER_PID" 2>/dev/null; then
 fi
 
 echo -e "${YELLOW}Resuming server time API...${NC}" | tee -a "$RUN_LOG"
-if ! (cd "$SERVER_DIR" && ./run.sh >> "$RUN_LOG" 2>&1); then
-    echo -e "${RED}Failed to resume server time API via server/run.sh${NC}" | tee -a "$RUN_LOG"
+for _ in $(seq 1 40); do
+    if grep -q "MAIN_LOOP" "$SERVER_LOG" 2>/dev/null; then
+        break
+    fi
+    sleep 0.1
+done
+if kill -USR1 "$SERVER_PID" 2>/dev/null; then
+    echo "Sent SIGUSR1 to server pid ${SERVER_PID}" | tee -a "$RUN_LOG"
+else
+    echo -e "${RED}Failed to send SIGUSR1 to server pid ${SERVER_PID}${NC}" | tee -a "$RUN_LOG"
 fi
 
 start_client() {
@@ -176,8 +209,13 @@ maintain_clients_in_bg() {
     local team="$1"
     local max_concurrent="$2"
     local total_spawned=0
+    local max_spawn_total=150
 
-    while [ "$STOP_REQUESTED" -eq 0 ] && [ "$total_spawned" -lt 150 ]; do
+    if [ "$RESPAWN_DEAD" = "0" ]; then
+        max_spawn_total="$max_concurrent"
+    fi
+
+    while [ "$STOP_REQUESTED" -eq 0 ] && [ "$total_spawned" -lt "$max_spawn_total" ]; do
         # Count currently running for this team
         local alive=$(pgrep -f "client localhost ${PORT} ${team}" | wc -l)
         if [ "$alive" -lt "$max_concurrent" ]; then
@@ -213,6 +251,12 @@ while true; do
 
     if [ "$ELAPSED" -ge "$MAX_SECONDS" ]; then
         echo -e "${RED}Timeout after ${ELAPSED}s without winner condition.${NC}" | tee -a "$RUN_LOG"
+        LEVEL_UP_EVENTS=$(grep -h "LEVEL UP" "$LOG_DIR"/client_*.log 2>/dev/null | wc -l)
+        LEVEL2_PLAYERS=$(grep -l "LEVEL UP .*2" "$LOG_DIR"/client_*.log 2>/dev/null | wc -l)
+        LEVEL3_PLAYERS=$(grep -l "LEVEL UP .*3" "$LOG_DIR"/client_*.log 2>/dev/null | wc -l)
+        DEATH_EVENTS=$(grep -h "Player died" "$LOG_DIR"/client_*.log 2>/dev/null | wc -l)
+        INCANT_KO_EVENTS=$(grep -h "incantation failed" "$LOG_DIR"/client_*.log 2>/dev/null | wc -l)
+        echo "Probe summary: level_up_events=${LEVEL_UP_EVENTS} level2_players=${LEVEL2_PLAYERS} level3_players=${LEVEL3_PLAYERS} death_events=${DEATH_EVENTS} incantation_ko=${INCANT_KO_EVENTS}" | tee -a "$RUN_LOG"
         echo "Last server game-log lines:" | tee -a "$RUN_LOG"
         tail -40 "$SERVER_GAME_LOG" 2>/dev/null | tee -a "$RUN_LOG"
         exit 5
@@ -220,7 +264,10 @@ while true; do
 
     if [ "$ELAPSED" -ge "$NEXT_HEARTBEAT" ]; then
         ALIVE_TOTAL=$(pgrep -f "client localhost ${PORT}" | wc -l)
-        echo "[${ELAPSED}s] probing... currently alive clients=${ALIVE_TOTAL}" | tee -a "$RUN_LOG"
+        LEVEL2_PLAYERS=$(grep -l "LEVEL UP .*2" "$LOG_DIR"/client_*.log 2>/dev/null | wc -l)
+        LEVEL3_PLAYERS=$(grep -l "LEVEL UP .*3" "$LOG_DIR"/client_*.log 2>/dev/null | wc -l)
+        DEATH_EVENTS=$(grep -h "Player died" "$LOG_DIR"/client_*.log 2>/dev/null | wc -l)
+        echo "[${ELAPSED}s] probing... alive=${ALIVE_TOTAL} lvl2_players=${LEVEL2_PLAYERS} lvl3_players=${LEVEL3_PLAYERS} deaths=${DEATH_EVENTS}" | tee -a "$RUN_LOG"
         NEXT_HEARTBEAT=$((ELAPSED + HEARTBEAT_INTERVAL))
 
         if [ "$ALIVE_TOTAL" -eq 0 ]; then

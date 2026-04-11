@@ -132,6 +132,7 @@ int parse_args(int argc, char *argv[], t_args* args)
             case 'c':
                 if (m_parse_positive_int(optarg, &parsed_port) == ERROR)
                     ZAPPY_USAGE(EXIT_FAILURE);
+                args->nb_clients = parsed_port;
                 break;
             case 'f':
                 // Config file - but you already loaded it

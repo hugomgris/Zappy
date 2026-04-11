@@ -128,6 +128,13 @@ void parse_set_nb_clients(int* nb_clients)
     *nb_clients = m_config_content->NUMBER_OF_CLIENTS;
 }
 
+void parse_override_nb_clients(int nb_clients)
+{
+    if (!m_config_content || nb_clients <= 0)
+        return;
+    m_config_content->NUMBER_OF_CLIENTS = nb_clients;
+}
+
 void parse_set_commands_delay(command cmd[MAX_COMMANDS])
 {
     if (!m_config_content)

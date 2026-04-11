@@ -155,6 +155,7 @@ int main(int argc, char **argv)
         .port     = PORT,
         .width    = 10,
         .height   = 10,
+        .nb_clients = 20,
         .teams    = teams,
         .nb_teams = 2,
         .time_unit = 100,
@@ -180,6 +181,9 @@ int main(int argc, char **argv)
         if (errno == 0 && endptr != time_unit_env && *endptr == '\0' && parsed_time_unit > 0)
             args.time_unit = (time_t)parsed_time_unit;
     }
+
+    if (args.nb_clients > 0)
+        parse_override_nb_clients(args.nb_clients);
 
     /* Init logging first so everything that follows is captured */
     log_init();

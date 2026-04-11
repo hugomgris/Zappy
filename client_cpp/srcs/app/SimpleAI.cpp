@@ -44,6 +44,7 @@
 #include <cstdlib>
 #include <sstream>
 #include <algorithm>
+#include <unistd.h>
 
 namespace zappy {
 
@@ -71,6 +72,9 @@ SimpleAI::SimpleAI(WorldState& state, CommandSender& sender)
 {
     const char* easyAsc = std::getenv("ZAPPY_EASY_ASCENSION");
     _easyAscensionMode = (easyAsc != nullptr && std::string(easyAsc) == "1");
+    _clientTag = static_cast<int>((nowMs() ^ static_cast<int64_t>(getpid())) % 1000000);
+    if (_clientTag < 0)
+        _clientTag = -_clientTag;
     Logger::info("SimpleAI created, easyAscension=" + std::string(_easyAscensionMode ? "yes" : "no"));
 }
 
@@ -110,6 +114,12 @@ void SimpleAI::tick(int64_t now) {
 
     // 5. execute queued actions first
     if (!_actionQueue.empty()) {
+        if (_state.getFood() < _foodEmergencyThreshold && _currentResourceTarget != "nourriture") {
+            Logger::warn("AI: emergency food preemption, dropping current plan");
+            clearQueue(_actionQueue);
+            startGathering("nourriture", now);
+            return;
+        }
         executeNextAction(now);
         return;
     }
@@ -189,10 +199,12 @@ void SimpleAI::decideNextAction(int64_t now) {
             return;
         }
         // Broadcast our position periodically
-        if (now - _lastBroadcastTime > BROADCAST_INTERVAL_MS) {
+        if (now - _lastBroadcastTime > BROADCAST_INTERVAL_MS && shouldLeadIncantation(now)) {
             _lastBroadcastTime = now;
-            Logger::info("AI: broadcasting INCANT_READY lv" + std::to_string(_state.getLevel()));
-            _sender.sendBroadcast("INCANT_READY " + std::to_string(_state.getLevel()));
+            Logger::info("AI: broadcasting INCANT_READY lv" + std::to_string(_state.getLevel()) +
+                " anchor=" + std::to_string(_clientTag));
+            _sender.sendBroadcast("INCANT_READY " + std::to_string(_state.getLevel()) +
+                " " + std::to_string(_clientTag));
         }
         return; // hold position
     }
@@ -237,16 +249,8 @@ void SimpleAI::decideNextAction(int64_t now) {
 bool SimpleAI::shouldGetFood() const {
     int food = _state.getFood();
     if (food < _foodEmergencyThreshold) return true;
-    if (food >= _foodComfortThreshold)  return false;
+    if (food < _foodComfortThreshold)   return true;
 
-    // Opportunistically grab food that's right here or very close
-    const auto& vision = _state.getVision();
-    if (!vision.empty() && vision[0].hasItem("nourriture")) return true;
-
-    if (_state.seesItem("nourriture")) {
-        auto nearest = _state.getNearestItem("nourriture");
-        if (nearest.has_value() && nearest->distance <= 2) return true;
-    }
     return false;
 }
 
@@ -380,6 +384,16 @@ void SimpleAI::startFork(int64_t now) {
         now
     );
     _sender.sendFork();
+}
+
+bool SimpleAI::shouldLeadIncantation(int64_t now) const {
+    if (_state.getFood() < _foodComfortThreshold)
+        return false;
+
+    if (_selectedAnchorTag != -1 && _selectedAnchorTag != _clientTag && now < _anchorStickyUntil)
+        return false;
+
+    return true;
 }
 
 // --------------------------------------------------------------------------
@@ -530,6 +544,8 @@ void SimpleAI::onMessage(const ServerMessage& msg) {
             _waitingForCmd = false;        // release any tracked command
             _AIstate             = AIState::Incantating;
             _lastIncantationTime = nowMs();
+            _selectedAnchorTag = -1;
+            _anchorStickyUntil = 0;
             return;
         }
 
@@ -539,6 +555,8 @@ void SimpleAI::onMessage(const ServerMessage& msg) {
                          std::to_string(static_cast<int>(_AIstate)) + ")");
             _AIstate = AIState::Idle;
             _lastIncantationTime = 0; // reset cooldown so we can act immediately
+            _selectedAnchorTag = -1;
+            _anchorStickyUntil = 0;
             return;
         }
         return;
@@ -552,7 +570,10 @@ void SimpleAI::onMessage(const ServerMessage& msg) {
             std::istringstream ss(text);
             std::string prefix;
             int level = 0;
+            int anchorTag = -1;
             ss >> prefix >> level;
+            if (!(ss >> anchorTag))
+                anchorTag = -1;
 
             // Ignore if different level
             if (level != _state.getLevel()) return;
@@ -560,10 +581,33 @@ void SimpleAI::onMessage(const ServerMessage& msg) {
             // Ignore if we're already incantating or don't have a direction
             if (_AIstate == AIState::Incantating || !msg.direction.has_value()) return;
 
+            int64_t now = nowMs();
+            if (_anchorStickyUntil > 0 && now >= _anchorStickyUntil) {
+                _selectedAnchorTag = -1;
+                _anchorStickyUntil = 0;
+            }
+
+            if (anchorTag != -1) {
+                if (_selectedAnchorTag == -1 || anchorTag == _selectedAnchorTag || anchorTag < _selectedAnchorTag) {
+                    _selectedAnchorTag = anchorTag;
+                    _anchorStickyUntil = now + 15000;
+                }
+                if (_selectedAnchorTag != anchorTag)
+                    return;
+            }
+
+            if (now - _lastAnchorFollowTime < 600)
+                return;
+
+            if (_state.getFood() < _foodComfortThreshold)
+                return;
+
+            _lastAnchorFollowTime = now;
+
             int dir = *msg.direction;
             Logger::info("AI: INCANT_READY lv" + std::to_string(level) + " from dir " + std::to_string(dir));
 
-            _lastBroadcastTime = nowMs();
+            _lastBroadcastTime = now;
 
             if (dir == 0) {
                 // Already on the right tile — stop and wait

@@ -46,13 +46,13 @@ private:
     static constexpr int64_t INVENTAIRE_INTERVAL_MS  = 1500;  // how often to refresh inventory
     static constexpr int64_t VISION_STALE_MS         = 2000;  // refuse to decide if vision is older
     static constexpr int64_t INCANTATION_TIMEOUT_MS  = 45000; // max wait as participant
-    static constexpr int64_t INCANT_COOLDOWN_MS      = 300;   // min ms between incantation attempts
+    static constexpr int64_t INCANT_COOLDOWN_MS      = 3500;  // min ms between incantation attempts
     static constexpr int64_t FORK_COOLDOWN_MS        = 2000;  // min ms between forks
-    static constexpr int64_t BROADCAST_INTERVAL_MS   = 500;   // how often to re-broadcast
+    static constexpr int64_t BROADCAST_INTERVAL_MS   = 1500;  // how often to re-broadcast
 
     // food thresholds
-    int _foodEmergencyThreshold = 6;
-    int _foodComfortThreshold   = 14;
+    int _foodEmergencyThreshold = 8;
+    int _foodComfortThreshold   = 18;
     int _forkFoodThreshold      = 25;
 
     int  _commandTimeoutMs = 30000;
@@ -97,6 +97,10 @@ private:
     std::queue<NavigationStep> _actionQueue;
     std::string                _currentResourceTarget;
     int                        _targetBroadcastDir = -1;
+    int                        _clientTag = 0;
+    int                        _selectedAnchorTag = -1;
+    int64_t                    _anchorStickyUntil = 0;
+    int64_t                    _lastAnchorFollowTime = 0;
 
     // ------------------------------------------------------------------
     // private methods
@@ -112,6 +116,7 @@ private:
     void startGathering(const std::string& resource, int64_t now);
     void startIncantation(int64_t now);
     void startFork(int64_t now);
+    bool shouldLeadIncantation(int64_t now) const;
 
     void issueTrackedCommand(const std::string& key,
                              std::function<void(const ServerMessage&)> cb,
