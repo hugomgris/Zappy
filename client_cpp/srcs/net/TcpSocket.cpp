@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <netinet/tcp.h>  // FIXED: Added for TCP_NODELAY
 #include <unistd.h>
+#include <iostream>
 
 namespace {
 	bool isWouldBlockErrno(int err) {
@@ -56,7 +57,7 @@ Result TcpSocket::pollConnect(int timeoutMs) {
 	pfd.fd = _fd;
 	pfd.events = POLLOUT | POLLERR | POLLHUP;
 
-	const int rc = ::poll(&pfd, 1, timeoutMs);
+	const int rc = ::poll(&pfd, 1, timeoutMs); std::cout << "poll rc=" << rc << " revents=" << pfd.revents << std::endl;
 	if (rc == 0) {
 		if (timeoutMs == 0) {
 			return Result::success();

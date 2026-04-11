@@ -77,7 +77,7 @@ TEST_F(ProtocolTest, ParseVisionResponse) {
 	EXPECT_EQ(vision[1].items[1], "nourriture");
 	
 	// Tile 2 (distance 1, row 1, position 0)
-	EXPECT_EQ(vision[2].distance, 2);
+	EXPECT_EQ(vision[2].distance, 1);
 	EXPECT_EQ(vision[2].localX, 0);
 	EXPECT_EQ(vision[2].localY, 1);
 	EXPECT_EQ(vision[2].playerCount, 2);
@@ -111,17 +111,17 @@ TEST_F(ProtocolTest, ParseVisionCoordinateCalculation) {
 	EXPECT_EQ(vision[1].localY, 1);
 	
 	// Tile 2: distance=1, localX=0, localY=1
-	EXPECT_EQ(vision[2].distance, 2);
+	EXPECT_EQ(vision[2].distance, 1);
 	EXPECT_EQ(vision[2].localX, 0);
 	EXPECT_EQ(vision[2].localY, 1);
 	
 	// Tile 3: distance=1, localX=1, localY=1
-	EXPECT_EQ(vision[3].distance, 3);
+	EXPECT_EQ(vision[3].distance, 1);
 	EXPECT_EQ(vision[3].localX, 1);
 	EXPECT_EQ(vision[3].localY, 1);
 	
 	// Tile 4: distance=2, localX=-2, localY=2
-	EXPECT_EQ(vision[4].distance, 4);
+	EXPECT_EQ(vision[4].distance, 2);
 	EXPECT_EQ(vision[4].localX, -2);
 	EXPECT_EQ(vision[4].localY, 2);
 }

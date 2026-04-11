@@ -152,9 +152,13 @@ namespace zappy {
 
 			// Always match by cmd field if present
 			if (!msg.cmd.empty()) {
+				std::string expectedCmd = msg.cmd;
+				if (!msg.arg.empty() && (msg.cmd == "prend" || msg.cmd == "pose")) {
+					expectedCmd += " " + msg.arg;
+				}
 				it = std::find_if(_pending.begin(), _pending.end(),
-					[&msg](const PendingCommand& p) { return p.cmd == msg.cmd; });
-				
+					[&expectedCmd](const PendingCommand& p) { return p.cmd == expectedCmd; });
+
 				// Removed the FIFO fallback for explicit commands to prevent grabbing wrong responses.
 			} else if (!_pending.empty()) {
 				// Fallback: cmd-less responses are assumed to answer the oldest pending command.

@@ -91,6 +91,16 @@ namespace zappy {
 		// parse vision response - FIXED coordinate calculation
 		// Replace the vision parsing section (around line 180)
 		if (msg.type == ServerMessageType::Response && msg.cmd == "voir") {
+			cJSON* statusField = cJSON_GetObjectItem(root, "status");
+			if (statusField && cJSON_IsString(statusField)) {
+				msg.status = statusField->valuestring;
+			}
+			
+			if (msg.status == "ko") {
+				Logger::warn("Failed to execute voir command");
+				return msg; // Skip parsing vision if status is ko
+			}
+
 			cJSON* visionField = cJSON_GetObjectItem(root, "vision");
 			if (visionField && cJSON_IsArray(visionField)) {
 				std::vector<VisionTile> tiles;

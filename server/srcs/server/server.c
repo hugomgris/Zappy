@@ -271,6 +271,8 @@ int cb_on_accept_success(int fd)
 {
     int ret;
 
+    log_msg(LOG_LEVEL_INFO, "New client connected: fd=%d\n", fd);
+
     FD_SET(fd, &m_read_fds);
     if (fd > m_max_fd)
         m_max_fd = fd;
@@ -345,6 +347,7 @@ static int m_handle_login_observer(int fd, cJSON *root)
         return ERROR;
     }
 
+    log_msg(LOG_LEVEL_INFO, "Observer logged in: fd=%d\n", fd);
     m_create_json_response(fd, "ok", "Observer registered", NULL);
     return ret;
 }
@@ -588,7 +591,8 @@ int server_select()
     memcpy(&read_fds, &m_read_fds, sizeof(m_read_fds));
 
     timeout.tv_sec = 0;
-    timeout.tv_usec = 0;
+    timeout.tv_usec = 1000;
+    
 
     ret = select(m_max_fd + 1, &read_fds, NULL, NULL, &timeout);
     if (ret < 0) /* Error... */

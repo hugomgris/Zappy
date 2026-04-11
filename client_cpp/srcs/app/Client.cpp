@@ -73,6 +73,9 @@ namespace zappy {
 
 				if (msg.type == ServerMessageType::Bienvenue) {
 					Logger::info("Received bienvenue: " + msg.raw);
+					if (_messageCallback) {
+						_messageCallback(msg);
+					}
 					return Result::success();
 				}
 			}
@@ -110,6 +113,9 @@ namespace zappy {
 				if (msg.type == ServerMessageType::Welcome) {
 					_state.onWelcome(msg);
 					Logger::info("Login successful! " + msg.raw);
+					if (_messageCallback) {
+						_messageCallback(msg);
+					}
 					return Result::success();
 				}
 				

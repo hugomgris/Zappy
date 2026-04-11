@@ -3,6 +3,7 @@
 
 #include "../helpers/Logger.hpp"
 #include <openssl/err.h>
+#include <iostream>
 #include <cstring>
 
 namespace zappy {
@@ -280,7 +281,7 @@ Result SecureSocket::performHandshake() {
     }
 
     // ret < 0: error or need to retry
-    const int ssl_err = SSL_get_error(_ssl, ret);
+    const int ssl_err = SSL_get_error(_ssl, ret); std::cout << "SSL ret=" << ret << " err=" << ssl_err << std::endl;
 
     if (ssl_err == SSL_ERROR_WANT_READ || ssl_err == SSL_ERROR_WANT_WRITE) {
         // Handshake in progress, need more data

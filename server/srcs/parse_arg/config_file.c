@@ -162,6 +162,12 @@ void parse_set_respawn_context(spawn_ctx* ctx)
 
 void parse_set_log_config(log_config* log)
 {
+    if (!m_config_content) {
+        log->LOG_ERASE = true;
+        log->LOG_FILE_PATH = "log.txt";
+        log->LOG_LEVEL = 2;
+        return;
+    }
     log->LOG_ERASE = m_config_content->LOG_ERASE;
     log->LOG_FILE_PATH = m_config_content->LOG_FILE_PATH;
     log->LOG_LEVEL = m_config_content->LOG_LEVEL;

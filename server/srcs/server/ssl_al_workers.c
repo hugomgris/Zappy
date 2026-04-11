@@ -66,6 +66,8 @@ static void *handshake_worker(void *arg)
             close(client_fd);
             continue;
         }
+        
+        log_msg(LOG_LEVEL_INFO, "SSL handshake completed for client fd=%d\n", client_fd);
 
         /* Queue it for dequeing from main */
         pthread_mutex_lock(&task_mtx_dq);

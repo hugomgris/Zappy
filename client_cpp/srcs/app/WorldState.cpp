@@ -77,7 +77,7 @@ namespace zappy {
 				int oldX = _player.x;
 				int oldY = _player.y;
 				applyMove(_player.x, _player.y, _player.orientation, _mapSize->x, _mapSize->y);
-_vision.clear(); 		_vision.clear();
+                                _vision.clear();
 				Logger::info("=== AVANCE ===");
 				Logger::info("  Moved from (" + std::to_string(oldX) + "," + std::to_string(oldY) + 
 							") to (" + std::to_string(_player.x) + "," + std::to_string(_player.y) + ")");
@@ -86,7 +86,7 @@ _vision.clear(); 		_vision.clear();
 		else if (msg.cmd == "droite" && msg.isOk()) {
 			int oldOrientation = _player.orientation;
 			applyTurn(_player.orientation, true);
-_vision.clear(); 		_vision.clear();
+                                _vision.clear();
 			Logger::info("=== DROITE ===");
 			Logger::info("  Turned from " + orientationToString(oldOrientation) + 
 						" to " + orientationToString(_player.orientation));
@@ -94,7 +94,7 @@ _vision.clear(); 		_vision.clear();
 		else if (msg.cmd == "gauche" && msg.isOk()) {
 			int oldOrientation = _player.orientation;
 			applyTurn(_player.orientation, false);
-_vision.clear(); 		_vision.clear();
+                                _vision.clear();
 			Logger::info("=== GAUCHE ===");
 			Logger::info("  Turned from " + orientationToString(oldOrientation) + 
 						" to " + orientationToString(_player.orientation));
@@ -119,15 +119,9 @@ _vision.clear(); 		_vision.clear();
 				Logger::info("  Incantation in progress...");
 			} else if (msg.isOk()) {
 				Logger::info("  Incantation completed!");
-			} else if (msg.isKo()) { 
-							Logger::error("  PREND FAILED! Erasing from vision.");
-							if (!_vision.empty()) {
-								auto it = std::find(_vision[0].items.begin(), _vision[0].items.end(), msg.arg);
-								if (it != _vision[0].items.end()) _vision[0].items.erase(it);
-							}
-
-				Logger::info("  Incantation failed");
-			} else {
+			} else if (msg.isKo()) {
+						Logger::info("  Incantation failed");
+					} else {
 				Logger::info("  Incantation response: arg=" + msg.arg + ", status=" + msg.status);
 			}
 		}

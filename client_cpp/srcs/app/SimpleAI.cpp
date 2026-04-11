@@ -289,8 +289,8 @@ namespace zappy {
 				Logger::info("AI: " + resource + " is on current tile! Taking immediately.");
 				
 				// Register expectResponse BEFORE sending
-				_pendingCommandId = _sender.expectResponse("prend", 
-					[this, resource](const ServerMessage& msg) { 
+				_pendingCommandId = _sender.expectResponse("prend " + resource,
+					[this, resource](const ServerMessage& msg) {
 						if (msg.isOk()) {
 							Logger::info("AI: Successfully took " + resource);
 						} else {
@@ -375,6 +375,9 @@ namespace zappy {
 		_lastVoirTime = std::chrono::duration_cast<std::chrono::milliseconds>(
 			std::chrono::steady_clock::now().time_since_epoch()
 		).count();
+		_sender.expectResponse("voir", [this](const ServerMessage& msg) {
+			// don't call onCommandComplete, vision doesn't consume an action queue slot here usually
+		});
 		_sender.sendVoir();
 	}
 
@@ -382,6 +385,7 @@ namespace zappy {
 		_lastInventaireTime = std::chrono::duration_cast<std::chrono::milliseconds>(
 			std::chrono::steady_clock::now().time_since_epoch()
 		).count();
+		_sender.expectResponse("inventaire", [this](const ServerMessage& msg) {});
 		_sender.sendInventaire();
 	}
 
@@ -433,7 +437,7 @@ namespace zappy {
 
 			case NavAction::Take:
 				Logger::info("Sending prend command for " + step.resource);
-				_pendingCommandId = _sender.expectResponse("prend", [this, step](const ServerMessage& msg) { 
+				_pendingCommandId = _sender.expectResponse("prend " + step.resource, [this, step](const ServerMessage& msg) {
 					if (msg.isOk()) {
 						Logger::info("AI: Successfully took " + step.resource);
 					} else {
@@ -448,7 +452,7 @@ namespace zappy {
 
 			case NavAction::Place:
 				Logger::info("Sending pose command for " + step.resource);
-				_pendingCommandId = _sender.expectResponse("pose", [this](const ServerMessage& msg) { onCommandComplete(msg); });
+				_pendingCommandId = _sender.expectResponse("pose " + step.resource, [this](const ServerMessage& msg) { onCommandComplete(msg); });
 				_pendingStartTimes[_pendingCommandId] = now;
 				_sender.sendPose(step.resource);
 				cmdName = "pose";

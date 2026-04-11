@@ -201,6 +201,7 @@ int main(int argc, char **argv)
     parse_free_config();
     printf("Server started on port %d\n", args.port);
 
+    signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, signal_handler);
     signal(SIGUSR1, signal_handler);
     main_loop();
