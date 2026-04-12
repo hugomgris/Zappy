@@ -16,7 +16,6 @@ Result Parser::parseArguments(char** argv, Arguments& parsedArguments) {
 	for (size_t i = 0; i < args.size(); ++i) {
 		const std::string& arg = args[i];
 		
-		// FIXED: Handle --insecure as a flag, not consuming next argument
 		if (arg == "--insecure") {
 			parsedArguments.insecure = true;
 			continue;
@@ -44,6 +43,8 @@ Result Parser::parseArguments(char** argv, Arguments& parsedArguments) {
 			++i;
 			continue;
 		}
+
+		std::cout << "failing with: " << arg << std::endl;
 
 		return Result::failure(ErrorCode::InvalidArgs, "Error: Unrecognized argument: " + arg);
 	}

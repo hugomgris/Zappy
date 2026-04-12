@@ -42,9 +42,8 @@ GMOCK_LIB       := $(GTEST_DIR)/build/lib/libgmock.a
 
 MAIN_SRC        := main.cpp
 HELPER_SRC		:= helpers/Parser.cpp helpers/Logger.cpp
-APP_SRC			:= app/ProtocolTypes.cpp app/CommandSender.cpp app/WorldState.cpp app/NavigationPlanner.cpp app/AI.cpp app/Client.cpp
 NET_SRC			:= net/FrameCodec.cpp net/SecureSocket.cpp net/TcpSocket.cpp net/TlsContext.cpp net/WebsocketClient.cpp
-ALL_SRC         := $(MAIN_SRC) $(CORE_SRC) $(HELPER_SRC) $(NET_SRC) $(APP_SRC)
+ALL_SRC         := $(MAIN_SRC) $(HELPER_SRC) $(NET_SRC)
 
 SRCS            := $(addprefix $(SRCDIR)/, $(ALL_SRC))
 OBJS            := $(addprefix $(OBJDIR)/, $(ALL_SRC:.cpp=.o))
@@ -120,7 +119,7 @@ check: re
 # -=-=-=-=-    TEST TARGETS -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 
 check_gtest:
-	@if [ ! -f "$(GTEST_LIB)" ] || [ ! -f "$(GTEST_MAIN_LIB)" ] || [ ! -f "$(GMOCK_LIB)" ]; then \
+	@if [ ! -f "$(GTEST_LIB)" ]; then \
 		echo "$(YELLOW)Google Test not ready. Bootstrapping local dependency...$(DEF_COLOR)"; \
 		mkdir -p $(LIB_DIR); \
 		if [ -d "$(GTEST_DIR)" ] && [ ! -d "$(GTEST_DIR)/googletest" ]; then \
@@ -133,9 +132,9 @@ check_gtest:
 		cd $(GTEST_DIR) && mkdir -p build && cd build && \
 		cmake -DCMAKE_CXX_STANDARD=20 .. && \
 		make -j4; \
-		echo "$(GREEN)Google Test/Mock built successfully$(DEF_COLOR)"; \
+		echo "$(GREEN)Google Test built successfully$(DEF_COLOR)"; \
 	else \
-		echo "$(GREEN)Google Test/Mock already built$(DEF_COLOR)"; \
+		echo "$(GREEN)Google Test already built$(DEF_COLOR)"; \
 	fi
 
 test: check_gtest $(TEST_BINARY)
@@ -146,32 +145,6 @@ test-valgrind: check_gtest $(TEST_BINARY)
 	@echo "$(CYAN)Running tests under valgrind...$(DEF_COLOR)"
 	valgrind --track-origins=yes --leak-check=full ./$(TEST_BINARY)
 
-test-unit: $(TEST_BINARY)
-	@echo "$(CYAN)Running unit tests only...$(DEF_COLOR)"
-	./$(TEST_BINARY) --gtest_filter="*Unit*"
-
-test-protocol: $(TEST_BINARY)
-	@echo "$(CYAN)Running protocol tests...$(DEF_COLOR)"
-	./$(TEST_BINARY) --gtest_filter="ProtocolTest.*"
-
-test-commands: $(TEST_BINARY)
-	@echo "$(CYAN)Running command sender tests...$(DEF_COLOR)"
-	./$(TEST_BINARY) --gtest_filter="CommandSenderTest.*"
-
-test-world: $(TEST_BINARY)
-	@echo "$(CYAN)Running world state tests...$(DEF_COLOR)"
-	./$(TEST_BINARY) --gtest_filter="WorldStateTest.*"
-
-test-integration: check_gtest $(TEST_BINARY)
-	@echo "$(CYAN)Running integration tests...$(DEF_COLOR)"
-	@./tests/scripts/run_integration_tests.sh
-
-test_prend: srcs/test_prend.cpp $(CLIENT_OBJS)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
-
-test-all: test-unit test-integration
-	@echo "$(GREEN)All tests completed!$(DEF_COLOR)"
-
 ci-test:
 	@echo "$(CYAN)Running CI test pipeline [$(PROFILE)]...$(DEF_COLOR)"
 	@$(MAKE) PROFILE=$(PROFILE) fclean
@@ -180,17 +153,9 @@ ci-test:
 
 retest: fclean test
 
-coverage:
-	@echo "$(CYAN)Generating coverage report...$(DEF_COLOR)"
-	@$(MAKE) PROFILE=debug CXXFLAGS="$(COMMON_CXXFLAGS) $(DEBUG_CXXFLAGS) --coverage" test
-	@lcov --capture --directory . --output-file coverage.info
-	@lcov --remove coverage.info '/usr/*' '*/tests/*' '*/third_party/*' --output-file coverage_filtered.info
-	@genhtml coverage_filtered.info --output-directory coverage_report
-	@echo "$(GREEN)Coverage report generated in coverage_report/index.html$(DEF_COLOR)"
-
-$(TEST_BINARY): $(TESTABLE_OBJS) $(TEST_OBJS) $(CJSON_LIB) $(GTEST_LIB) $(GTEST_MAIN_LIB) $(GMOCK_LIB)
+$(TEST_BINARY): $(TESTABLE_OBJS) $(TEST_OBJS) $(GTEST_LIB) $(GTEST_MAIN_LIB)
 	@echo "$(YELLOW)Linking test binary...$(DEF_COLOR)"
-	@$(CXX) -o $@ $(TESTABLE_OBJS) $(TEST_OBJS) $(CJSON_LIB) $(GTEST_MAIN_LIB) $(GTEST_LIB) $(GMOCK_LIB) $(TEST_LDFLAGS)
+	@$(CXX) -o $@ $(TESTABLE_OBJS) $(TEST_OBJS) $(GTEST_MAIN_LIB) $(GTEST_LIB) $(TEST_LDFLAGS)
 	@chmod +x $@
 	@echo "$(GREEN)Test binary created: $(TEST_BINARY)$(DEF_COLOR)"
 
