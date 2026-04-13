@@ -52,7 +52,7 @@ all: .gitignore create_cert
 	$(MAKE) $(NAME)
 
 $(NAME): $(OBJ) $(CJSON_LIB) Makefile
-	$(CC) $(CFLAGS) $(OBJ) $(CJSON_LIB) -lssl -lcrypto -ldl -lpthread -o $(NAME) $(LDFLAGS)
+	$(CC) $(CFLAGS) $(OBJ) $(CJSON_LIB) -o $(NAME) $(LDFLAGS) -ldl -lpthread
 	@echo "EVERYTHING DONE  "
 #	@./.add_path.sh
 

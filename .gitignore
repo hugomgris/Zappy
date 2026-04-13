@@ -13,3 +13,6 @@ log.txt
 server/log.txt
 server_stdout.txt
 client_cpp/test.log
+.vscode/
+.gitignore
+log.txt
