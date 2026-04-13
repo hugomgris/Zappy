@@ -47,7 +47,7 @@ static std::string sha1Hash(const std::string& input) {
     return base64Encode(hash_vec);
 }
 
-namespace zappy {
+using namespace zappy;
 
 WebsocketClient::WebsocketClient()
     : _secure_socket(std::make_unique<SecureSocket>()) {
@@ -410,5 +410,3 @@ Result WebsocketClient::flushSendQueue() {
 bool WebsocketClient::shouldSendPing(int64_t now_ms) {
     return (now_ms - _last_ping_time_ms) > (PING_INTERVAL_SECONDS * 1000);
 }
-
-} // namespace zappy

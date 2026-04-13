@@ -1116,7 +1116,7 @@ static int m_command_real_incantation(void* _p, void* _arg)
         {
             p2->level++;
             // server_create_response_to_command(p2->id, "incantation", NULL, "Level up!");
-            server_create_response_msg(p2->id, "event", NULL, "Level up!");
+            server_create_response_msg(p2->id, "event", NULL, "level_up");
         }
         p2 = p2->next_on_tile;
     }
@@ -1143,7 +1143,7 @@ static int m_command_incantation(void* _p, void* _arg)
             return server_create_response_to_command(p->id, "incantation", NULL, "ko");
 
         p->level++;
-        server_create_response_msg(p->id, "event", NULL, "Level up!");
+        server_create_response_msg(p->id, "event", NULL, "level_up");
         return server_create_response_to_command(p->id, "incantation", NULL, "ok");
     }
 
@@ -1685,7 +1685,7 @@ int game_player_die(client *c)
 
     m_game_remove_player_from_tile(c->player);
 
-    server_create_response_to_command(c->socket_fd, "-", "die", NULL);
+    server_create_response_to_command(c->socket_fd, "-", "die", "died");
     log_msg(LOG_LEVEL_DEBUG, "Player %d has died\n", c->socket_fd);
     if (!c->player->to_be_claimed)
     {

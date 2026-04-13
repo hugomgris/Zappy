@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace zappy {
+using namespace zappy;
     class SecureSocketTest : public ::testing::Test {
     protected:
         SecureSocket socket_;
@@ -52,4 +52,3 @@ namespace zappy {
         EXPECT_EQ(res.status, NetStatus::InvalidState);
         EXPECT_EQ(res.message, "tlsWrite called while not fully connected");
     }
-}

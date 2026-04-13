@@ -3,7 +3,7 @@
 #include "../../incs/DataStructs.hpp"
 #include "../srcs/helpers/Logger.hpp"
 
-namespace zappy {
+using namespace zappy;
 	TEST(Parser, ArgumentsAreCorrectlyParsedAndValidated_WhenGoodArgumentsFull) {
 		const char *inputArguments[11] = {"Client", "-n", "alpha", "-p", "8674", "-h", "localhost", "-c", "1", "--insecure"};
 		inputArguments[sizeof(inputArguments)] = 0;
@@ -72,4 +72,3 @@ namespace zappy {
 
 		EXPECT_EQ(static_cast<int>(parseResult.code), static_cast<int>(ErrorCode::MissingArgs));
 	}
-}

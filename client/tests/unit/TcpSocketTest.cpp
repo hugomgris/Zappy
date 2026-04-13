@@ -1,7 +1,7 @@
 #include "../../srcs/net/TcpSocket.hpp"
 #include <gtest/gtest.h>
 
-namespace zappy {
+using namespace zappy;
     // TestFixture
     class TcpSocketTest : public ::testing::Test {
     protected:
@@ -117,4 +117,3 @@ namespace zappy {
         EXPECT_NE(NetStatus::ConnectionClosed, NetStatus::InvalidState);
         EXPECT_NE(NetStatus::InvalidState, NetStatus::NetworkError);
     }
-}

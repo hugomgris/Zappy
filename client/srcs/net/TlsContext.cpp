@@ -12,7 +12,7 @@ static int insecure_mode_verify_callback(int ok, X509_STORE_CTX* ctx) {
 	return 1;
 }
 
-namespace zappy {
+using namespace zappy;
 
 TlsContext::~TlsContext() {
 	if (_ctx) {
@@ -75,5 +75,3 @@ SSL_CTX* TlsContext::getCtx() const {
 bool TlsContext::isInitialized() const {
 	return _initialized;
 }
-
-} // namespace zappy

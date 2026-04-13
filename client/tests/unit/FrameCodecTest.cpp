@@ -12,7 +12,7 @@ std::string toString(const std::vector<std::uint8_t>& bytes) {
 
 }
 
-namespace zappy {
+using namespace zappy;
     TEST(FrameCodecTest, CreateTextFrameStoresTextPayload) {
         const std::string text = "hello zappy";
         WebSocketFrame frame = FrameCodec::createTextFrame(text);
@@ -115,4 +115,3 @@ namespace zappy {
         EXPECT_EQ(decode_res.code, ErrorCode::ProtocolError);
         EXPECT_EQ(decode_res.message, "Not enough data to decode frame header");
     }
-}

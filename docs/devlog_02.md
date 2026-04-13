@@ -1,9 +1,5 @@
-rewrite this to explain how to code an AI in the zappy context
-Protocol types
-World state
-Command sender/handler
-Navigation protocol
-Ai class
-Client class/wrapper
+Explain I'm in hell, third attempt
 
-how everything is done via Result to constantly check how the communication is going between client and server (because we're in hell)
+how to build the mental logic model of the AI, then how to step by step code it
+
+how to parse your jsons

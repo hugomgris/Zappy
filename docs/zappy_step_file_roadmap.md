@@ -17,20 +17,20 @@ No network, no AI, no state. Test with hardcoded strings.
 
 #### `protocol/Message.hpp` — create from scratch
 
-- [ ] Define `enum class Orientation : int { N=0, E=1, S=2, W=3 }`
-- [ ] Add comment at top: *"Orientation is always 0-indexed matching the server enum. N=0,E=1,S=2,W=3. Never convert this."*
-- [ ] Define `struct VisionTile { int distance; int localX; int localY; int playerCount; std::vector<std::string> items; }`
-- [ ] Add `VisionTile::hasItem(name)` helper
-- [ ] Add `VisionTile::countItem(name)` helper
-- [ ] Define `struct Inventory` with all 7 resource fields
-- [ ] Define `enum class MsgType` with: Unknown, Bienvenue, Welcome, Response, Event, Broadcast, Error
-- [ ] Define `struct ServerMessage` with all fields (cmd, arg, status, optional vision, optional inventory, optional broadcastDirection, etc.)
-- [ ] Add `ServerMessage::isOk()`, `isKo()`, `isInProgress()`, `isDeath()`, `isLevelUp()` helpers
+- [x] Define `enum class Orientation : int { N=0, E=1, S=2, W=3 }`
+- [x] Add comment at top: *"Orientation is always 0-indexed matching the server enum. N=0,E=1,S=2,W=3. Never convert this."*
+- [x] Define `struct VisionTile { int distance; int localX; int localY; int playerCount; std::vector<std::string> items; }`
+- [x] Add `VisionTile::hasItem(name)` helper
+- [x] Add `VisionTile::countItem(name)` helper
+- [x] Define `struct Inventory` with all 7 resource fields
+- [x] Define `enum class MsgType` with: Unknown, Bienvenue, Welcome, Response, Event, Broadcast, Error
+- [x] Define `struct ServerMessage` with all fields (cmd, arg, status, optional vision, optional inventory, optional broadcastDirection, etc.)
+- [x] Add `ServerMessage::isOk()`, `isKo()`, `isInProgress()`, `isDeath()`, `isLevelUp()` helpers
 
 #### `protocol/Parser.hpp` — create from scratch
 
-- [ ] Declare `ServerMessage parse(const std::string& json)`
-- [ ] No state, no constructor needed — pure function
+- [x] Declare `ServerMessage parse(const std::string& json)`
+- [x] No state, no constructor needed — pure function
 
 #### `protocol/Parser.cpp` — create from scratch
 

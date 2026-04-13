@@ -18,7 +18,7 @@
 #include <thread>
 #include <vector>
 
-namespace zappy {
+using namespace zappy;
 
     constexpr const char* kCertPath = "../server/certs/cert.pem";
     constexpr const char* kKeyPath = "../server/certs/key.pem";
@@ -510,4 +510,3 @@ namespace zappy {
 
         client.close();
     }
-}

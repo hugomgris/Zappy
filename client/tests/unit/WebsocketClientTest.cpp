@@ -1,7 +1,7 @@
 #include "../../srcs/net/WebsocketClient.hpp"
 #include <gtest/gtest.h>
 
-namespace zappy {
+using namespace zappy;
     class WebsocketClientTest : public ::testing::Test {
     protected:
         WebsocketClient client_;
@@ -51,4 +51,3 @@ namespace zappy {
         EXPECT_EQ(res.status, NetStatus::InvalidState);
         EXPECT_EQ(res.message, "WebSocket not connected");
     }
-}

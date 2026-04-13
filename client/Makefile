@@ -21,10 +21,6 @@ DEPDIR          := .dep/$(PROFILE)
 INCDIR          := incs
 
 OPENSSL_DIR     := ../server/third_party/openssl_build
-CJSON_DIR       := ../server/third_party/cJSON
-CJSON_SRC       := $(CJSON_DIR)/cJSON.c
-CJSON_OBJ       := $(OBJDIR)/third_party/cJSON.o
-CJSON_LIB       := $(OBJDIR)/third_party/libcjson.a
 
 TEST_DIR        := tests
 TEST_OBJDIR     := .test_obj/$(PROFILE)
@@ -41,9 +37,10 @@ GMOCK_LIB       := $(GTEST_DIR)/build/lib/libgmock.a
 # -=-=-=-=-    SOURCES -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 
 MAIN_SRC        := main.cpp
+PROT_SRC		:= protocol/MessageParser.cpp
 HELPER_SRC		:= helpers/Parser.cpp helpers/Logger.cpp
 NET_SRC			:= net/FrameCodec.cpp net/SecureSocket.cpp net/TcpSocket.cpp net/TlsContext.cpp net/WebsocketClient.cpp
-ALL_SRC         := $(MAIN_SRC) $(HELPER_SRC) $(NET_SRC)
+ALL_SRC         := $(MAIN_SRC) $(PROT_SRC) $(HELPER_SRC) $(NET_SRC)
 
 SRCS            := $(addprefix $(SRCDIR)/, $(ALL_SRC))
 OBJS            := $(addprefix $(OBJDIR)/, $(ALL_SRC:.cpp=.o))
@@ -58,14 +55,13 @@ TESTABLE_OBJS   := $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR)/%.o,$(TESTABLE_SRCS))
 
 # -=-=-=-=-    FLAGS -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 
-INCLUDES        := -I$(INCDIR) -I$(SRCDIR) -I$(OPENSSL_DIR)/include -I$(CJSON_DIR)
+INCLUDES        := -I$(INCDIR) -I$(SRCDIR) -I$(OPENSSL_DIR)/include
 DEPFLAGS        := -MMD -MP
 GTEST_INCLUDES  := -I$(GTEST_DIR)/googletest/include
 GMOCK_INCLUDES  := -I$(GTEST_DIR)/googlemock/include
 TEST_INCLUDES   := -I$(TEST_DIR)
 
 COMMON_CXXFLAGS := -std=c++20 -Wall -Wextra -Werror -pedantic $(INCLUDES) -DOPENSSL_API_COMPAT=30000
-CJSON_CFLAGS    := -Wall -Wextra -Werror -pedantic $(INCLUDES)
 DEBUG_CXXFLAGS  := -g3 -O0
 RELEASE_CXXFLAGS:= -g -O2 -DNDEBUG
 
@@ -86,9 +82,9 @@ TEST_LDFLAGS    := -L$(OPENSSL_DIR)/lib -lpthread -lssl -lcrypto -ldl -lm
 
 all: $(NAME)
 
-$(NAME): $(OBJS) $(CJSON_LIB) Makefile
+$(NAME): $(OBJS) Makefile
 	@echo "$(CYAN)Linking $(NAME) [$(PROFILE)]...$(DEF_COLOR)"
-	@$(CXX) $(CXXFLAGS) $(OBJS) $(CJSON_LIB) -o $(NAME) $(LDFLAGS) $(ALL_LIBS)
+	@$(CXX) $(CXXFLAGS) $(OBJS) -o $(NAME) $(LDFLAGS) $(ALL_LIBS)
 	@echo "$(GREEN)Build complete: $(NAME)$(DEF_COLOR)"
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
@@ -96,16 +92,6 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	@mkdir -p $(dir $(DEPDIR)/$*.d)
 	@echo "$(YELLOW)Compiling $<...$(DEF_COLOR)"
 	@$(CXX) $(CXXFLAGS) $(DEPFLAGS) -c $< -o $@ -MF $(DEPDIR)/$*.d
-
-$(CJSON_OBJ): $(CJSON_SRC)
-	@mkdir -p $(dir $@)
-	@mkdir -p $(dir $(DEPDIR)/third_party/cJSON.d)
-	@echo "$(YELLOW)Compiling cJSON...$(DEF_COLOR)"
-	@$(CC) $(CJSON_CFLAGS) $(DEPFLAGS) -c $< -o $@ -MF $(DEPDIR)/third_party/cJSON.d
-
-$(CJSON_LIB): $(CJSON_OBJ)
-	@mkdir -p $(dir $@)
-	@ar rcs $@ $<
 
 run: all
 	./$(NAME)
