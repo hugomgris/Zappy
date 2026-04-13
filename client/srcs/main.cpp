@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
 	const char *inputArguments[12] = {"Client", "-n", "alpha", "-p", "8674", "-h", "localhost", "-c", "1", "--insecure", "true"};
 
 	Arguments args;
-	zappy::Result res = Parser::parseArguments(const_cast<char**>(inputArguments), args);
+	Result res = Parser::parseArguments(const_cast<char**>(inputArguments), args);
 
 	Logger::info(std::to_string(static_cast<int>(res.code)));
 

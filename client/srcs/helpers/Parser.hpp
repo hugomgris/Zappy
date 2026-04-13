@@ -10,7 +10,7 @@
 #include <sstream>
 
 class Parser {
-	using Result = zappy::Result;
+	
 	
 	public:
 		static Result parseArguments(char** argv, Arguments& parsedArguments);
