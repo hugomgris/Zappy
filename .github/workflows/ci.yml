@@ -1,0 +1,57 @@
+name: CI/CD Pipeline
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          valgrind \
+          build-essential \
+          cmake \
+          git
+    
+    - name: Cache libraries
+      uses: actions/cache@v4
+      with:
+        path: |
+          client/libs/googletest
+        key: ${{ runner.os }}-gtest-${{ hashFiles('client/Makefile') }}
+        restore-keys: |
+          ${{ runner.os }}-gtest-
+    
+    
+    - name: Build Google Test
+      run: make check_gtest
+    
+    - name: Build project
+      run: make all
+    
+    - name: Run tests
+      run: make test
+    
+    - name: Upload artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: |
+          client/client
+          client/run_tests_debug
+          client/test_results.json
+          client/*.log
+        if-no-files-found: ignore
