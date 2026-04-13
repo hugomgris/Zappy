@@ -34,7 +34,8 @@ jobs:
             build-essential \
             cmake \
             git \
-            valgrind
+            valgrind \
+            libssl-dev
 
       - name: Cache googletest
         uses: actions/cache@v4
@@ -44,7 +45,7 @@ jobs:
           restore-keys: ${{ runner.os }}-gtest-
 
       - name: Build and run tests
-        run: make ci-test
+        run: make ci-test OPENSSL_DIR=/usr
 
       - name: Upload test binary
         if: always()
