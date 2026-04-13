@@ -18,6 +18,7 @@ ServerMessage MessageParser::parse(const std::string& raw) {
 		root = json::parse(raw);
 	} catch(const json::exception &e) {
 		Logger::error("Failed to parse JSON: " + std::string(e.what()));
+		return msg;
 	}
 
 	// get the msg type

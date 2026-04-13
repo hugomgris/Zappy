@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include "../../srcs/helpers/Parser.hpp"
 #include "../../incs/DataStructs.hpp"
-#include "../srcs/helpers/Logger.hpp"
+#include "../../srcs/helpers/Logger.hpp"
 
 using namespace zappy;
 	TEST(Parser, ArgumentsAreCorrectlyParsedAndValidated_WhenGoodArgumentsFull) {

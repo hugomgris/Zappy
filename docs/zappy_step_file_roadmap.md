@@ -34,16 +34,16 @@ No network, no AI, no state. Test with hardcoded strings.
 
 #### `protocol/Parser.cpp` — create from scratch
 
-- [ ] Implement `parse()` using cJSON
-- [ ] Parse `type` field → set `MsgType`
-- [ ] Parse `cmd`, `arg`, `status` fields
-- [ ] For Welcome: parse `remaining_clients`, `map_size.x`, `map_size.y`, `orientation`
-- [ ] **Vision tile parsing:** iterate the `vision` JSON array, track `currentLevel` and `tilesProcessed`, compute `localX = tilesProcessed - currentLevel`, `localY = currentLevel`, increment both correctly
-- [ ] For each vision tile: count `"player"` entries → `playerCount`, push everything else to `items`
-- [ ] For inventaire: parse `inventaire` JSON object → `Inventory` struct
-- [ ] For message (broadcast): parse `arg` → `messageText`, parse `status` as int → `broadcastDirection`
-- [ ] For event: check `status` for `"Level up!"` → set flag; check for `"-"` type (death)
-- [ ] **Unit test:** write `test_parser.cpp` with at least these hardcoded inputs and verify output:
+- [x] Implement `parse()` using cJSON
+- [x] Parse `type` field → set `MsgType`
+- [x] Parse `cmd`, `arg`, `status` fields
+- [x] For Welcome: parse `remaining_clients`, `map_size.x`, `map_size.y`, `orientation`
+- [x] **Vision tile parsing:** iterate the `vision` JSON array, track `currentLevel` and `tilesProcessed`, compute `localX = tilesProcessed - currentLevel`, `localY = currentLevel`, increment both correctly
+- [x] For each vision tile: count `"player"` entries → `playerCount`, push everything else to `items`
+- [x] For inventaire: parse `inventaire` JSON object → `Inventory` struct
+- [x] For message (broadcast): parse `arg` → `messageText`, parse `status` as int → `broadcastDirection`
+- [x] For event: check `status` for `"Level up!"` → set flag; check for `"-"` type (death)
+- [x] **Unit test:** write `test_parser.cpp` with at least these hardcoded inputs and verify output:
   - A `voir` response with 1 tile (level 1 player)
   - A `voir` response with 4 tiles (level 1, distance 0 + distance 1)
   - An `inventaire` response
