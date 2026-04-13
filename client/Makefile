@@ -37,7 +37,7 @@ GMOCK_LIB       := $(GTEST_DIR)/build/lib/libgmock.a
 # -=-=-=-=-    SOURCES -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 
 MAIN_SRC        := main.cpp
-PROT_SRC		:= protocol/MessageParser.cpp
+PROT_SRC		:= protocol/MessageParser.cpp protocol/Sender.cpp
 HELPER_SRC		:= helpers/Parser.cpp helpers/Logger.cpp
 NET_SRC			:= net/FrameCodec.cpp net/SecureSocket.cpp net/TcpSocket.cpp net/TlsContext.cpp net/WebsocketClient.cpp
 ALL_SRC         := $(MAIN_SRC) $(PROT_SRC) $(HELPER_SRC) $(NET_SRC)
@@ -105,7 +105,7 @@ check: re
 # -=-=-=-=-    TEST TARGETS -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 
 check_gtest:
-	@if [ ! -f "$(GTEST_LIB)" ]; then \
+	@if [ ! -f "$(GTEST_LIB)" ] || [ ! -f "$(GTEST_MAIN_LIB)" ] || [ ! -f "$(GMOCK_LIB)" ]; then \
 		echo "$(YELLOW)Google Test not ready. Bootstrapping local dependency...$(DEF_COLOR)"; \
 		mkdir -p $(LIB_DIR); \
 		if [ -d "$(GTEST_DIR)" ] && [ ! -d "$(GTEST_DIR)/googletest" ]; then \
@@ -118,9 +118,9 @@ check_gtest:
 		cd $(GTEST_DIR) && mkdir -p build && cd build && \
 		cmake -DCMAKE_CXX_STANDARD=20 .. && \
 		make -j4; \
-		echo "$(GREEN)Google Test built successfully$(DEF_COLOR)"; \
+		echo "$(GREEN)Google Test/Mock built successfully$(DEF_COLOR)"; \
 	else \
-		echo "$(GREEN)Google Test already built$(DEF_COLOR)"; \
+		echo "$(GREEN)Google Test/Mock already built$(DEF_COLOR)"; \
 	fi
 
 test: check_gtest $(TEST_BINARY)
@@ -139,9 +139,9 @@ ci-test:
 
 retest: fclean test
 
-$(TEST_BINARY): $(TESTABLE_OBJS) $(TEST_OBJS) $(GTEST_LIB) $(GTEST_MAIN_LIB)
+$(TEST_BINARY): $(TESTABLE_OBJS) $(TEST_OBJS) $(CJSON_LIB) $(GTEST_LIB) $(GTEST_MAIN_LIB) $(GMOCK_LIB)
 	@echo "$(YELLOW)Linking test binary...$(DEF_COLOR)"
-	@$(CXX) -o $@ $(TESTABLE_OBJS) $(TEST_OBJS) $(GTEST_MAIN_LIB) $(GTEST_LIB) $(TEST_LDFLAGS)
+	@$(CXX) -o $@ $(TESTABLE_OBJS) $(TEST_OBJS) $(CJSON_LIB) $(GTEST_MAIN_LIB) $(GTEST_LIB) $(GMOCK_LIB) $(TEST_LDFLAGS)
 	@chmod +x $@
 	@echo "$(GREEN)Test binary created: $(TEST_BINARY)$(DEF_COLOR)"
 

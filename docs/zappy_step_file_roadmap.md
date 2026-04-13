@@ -60,22 +60,22 @@ No network, no AI, no state. Test with hardcoded strings.
 
 #### `protocol/Sender.hpp` — create from scratch
 
-- [ ] Declare `Sender(WebsocketClient& ws)`
-- [ ] Declare all send methods: `sendVoir()`, `sendAvance()`, `sendDroite()`, `sendGauche()`, `sendPrend(resource)`, `sendPose(resource)`, `sendBroadcast(text)`, `sendIncantation()`, `sendFork()`, `sendConnectNbr()`, `sendInventaire()`, `sendLogin(teamName)`
-- [ ] Declare `expect(cmd, callback)` — registers callback for next response matching `cmd`
-- [ ] Declare `processResponse(msg)` — match and fire pending callback
-- [ ] Declare `checkTimeouts(int timeoutMs)` — fire error callbacks for stale entries
-- [ ] Declare `cancelAll()`
+- [x] Declare `Sender(WebsocketClient& ws)`
+- [x] Declare all send methods: `sendVoir()`, `sendAvance()`, `sendDroite()`, `sendGauche()`, `sendPrend(resource)`, `sendPose(resource)`, `sendBroadcast(text)`, `sendIncantation()`, `sendFork()`, `sendConnectNbr()`, `sendInventaire()`, `sendLogin(teamName)`
+- [x] Declare `expect(cmd, callback)` — registers callback for next response matching `cmd`
+- [x] Declare `processResponse(msg)` — match and fire pending callback
+- [x] Declare `checkTimeouts(int timeoutMs)` — fire error callbacks for stale entries
+- [x] Declare `cancelAll()`
 
 #### `protocol/Sender.cpp` — create from scratch
 
-- [ ] Implement all send methods as cJSON object builders → JSON string → `_ws.sendText()`
-- [ ] `expect()`: push `{cmd, sentAt, callback}` to `_pending` deque
-- [ ] `processResponse()`:
+- [x] Implement all send methods as cJSON object builders → JSON string → `_ws.sendText()`
+- [x] `expect()`: push `{cmd, sentAt, callback}` to `_pending` deque
+- [x] `processResponse()`:
   - For `incantation` + `in_progress`: fire callback but **do not remove** from pending
   - For all other statuses: find by `cmd`, fire callback, remove from pending
   - For `prend`/`pose`: match key as `"prend " + arg` / `"pose " + arg` so different resources don't collide
-- [ ] `checkTimeouts()`: iterate pending, fire error callback (status="timeout") for entries older than `timeoutMs`, remove them
+- [x] `checkTimeouts()`: iterate pending, fire error callback (status="timeout") for entries older than `timeoutMs`, remove them
 - [ ] **Test:** in isolation, verify that:
   - Sending `sendVoir()` then calling `processResponse()` with a matching voir response fires the callback
   - Incantation `in_progress` does not remove the pending entry
