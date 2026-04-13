@@ -76,7 +76,7 @@ endif
 LDFLAGS         := -L$(OPENSSL_DIR)/lib -lssl -lcrypto -ldl -lm -lpthread
 ALL_LIBS        :=
 TEST_CXXFLAGS   := $(CXXFLAGS) $(GTEST_INCLUDES) $(GMOCK_INCLUDES) $(TEST_INCLUDES)
-TEST_LDFLAGS    := -L$(OPENSSL_DIR)/lib -lpthread -lssl -lcrypto -ldl -lm
+TEST_LDFLAGS	:= -lpthread -lssl -lcrypto -ldl -lm
 
 # -=-=-=-=-    RULES -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 
