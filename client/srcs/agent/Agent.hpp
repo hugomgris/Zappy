@@ -17,6 +17,8 @@ class Agent {
 		std::string _host;
 		int         _port;
 		std::string _teamName;
+		std::string	_key;
+		bool _forkEnabled = true;
 
 		WebsocketClient	_ws;
 		Sender			_sender;
@@ -26,7 +28,7 @@ class Agent {
 		std::atomic<bool>				_running{false};
 		std::unique_ptr<std::thread>	_networkThread;
 
-		static constexpr int MAX_RECONNECT				= 0;
+		static constexpr int MAX_RECONNECT				= 5;
 		static constexpr int FOOD_SAFE					= 12;
 		static constexpr int FOOD_CRITICAL				= 4;
 		static constexpr int COMMAND_FLIGHT_TIMEOUT_MS	= 3000;
@@ -40,11 +42,12 @@ class Agent {
 	public:
 		static constexpr int CONNECT_TIMEOUT_MS			= 10000;
 
-		Agent(const std::string& host, const int port, const std::string& teamName);
+		Agent(const std::string& host, const int port, const std::string& teamName, const std::string& key);
 		~Agent();
 
 		bool isRunning() const { return _running; }
-		WorldState getState() const { return _state; }
+		const WorldState& getState() const { return _state; }
+		void setForkEnabled(bool enabled) { _forkEnabled = enabled; } // TODO Step 6: wire to Behavior
 
 		Result connect(int timeoutMs);
 		Result run();

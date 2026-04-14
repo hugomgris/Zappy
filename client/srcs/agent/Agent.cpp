@@ -2,8 +2,9 @@
 #include "../helpers/Logger.hpp"
 
 
-Agent::Agent(const std::string& host, const int port, const std::string& teamName)
-	: _host(host), _port(port), _teamName(teamName), _sender(_ws), _behavior(_sender, _state) {}
+Agent::Agent(const std::string& host, const int port, const std::string& teamName, const std::string& key)
+	: _host(host), _port(port), _teamName(teamName), _key(key),
+	 _sender(_ws), _behavior(_sender, _state) {}
 
 Agent::~Agent() {
 	stop();
@@ -62,19 +63,19 @@ Result Agent::waitForBienvenue(int64_t& nowMs, int timeoutMs) {
 				return Result::success();
 			}
 		}
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(50));
+		nowMs += 50;
+
+		auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+			std::chrono::steady_clock::now() - startTime).count();
+		if (elapsed > timeoutMs)
+			return Result::failure(ErrorCode::ProtocolError, "No bienvenue received");
 	}
-
-	std::this_thread::sleep_for(std::chrono::milliseconds(50));
-	nowMs += 50;
-
-	auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-		std::chrono::steady_clock::now() - startTime).count();
-	if (elapsed > timeoutMs)
-		return Result::failure(ErrorCode::ProtocolError, "No bienvenue received");
 }
 
 Result Agent::performLogin(int64_t& nowMs, int timeoutMs) {
-	Result res = _sender.sendLogin(_teamName);
+	Result res = _sender.sendLogin(_teamName, _key);
 	if (!res.ok()) return res;
 
 	auto startTime = std::chrono::steady_clock::now();
@@ -92,7 +93,8 @@ Result Agent::performLogin(int64_t& nowMs, int timeoutMs) {
             ServerMessage msg = MessageParser::parse(text);
 
             if (msg.type == MsgType::Welcome) {
-                Logger::info("Login successful");
+                _state.onWelcome(msg);
+				Logger::info("Login successful");
                 return Result::success();
             }
             if (msg.type == MsgType::Error)
@@ -109,6 +111,7 @@ Result Agent::performLogin(int64_t& nowMs, int timeoutMs) {
 	}
 }
 
+// TODO: One thing worth adding is a _lastError field to Agent so Step 8 can surface it, but that's genuinely a later concern
 Result Agent::run() {
 	_running = true;
 	_networkThread = std::make_unique<std::thread>(&Agent::networkLoop, this);

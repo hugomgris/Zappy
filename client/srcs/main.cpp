@@ -20,12 +20,13 @@ void printUsage(const char* progName) {
 	std::cout << "Usage: " << progName << " [options] <host> <port> <team_name>\n"
 			<< "Options:\n"
 			<< "  --no-fork         Disable automatic forking (default: enabled)\n"
+			<< "  --key				Specify server key value\n"
 			<< "  --debug           Enable debug logging\n"
 			<< "  --help            Show this help\n";
 }
 
 int main(int argc, char **argv) {
-	signal(SIGPIPE, SIG_IGN); // Needed??
+	signal(SIGPIPE, SIG_IGN);
 
 	bool forkEnabled = true;  // forking is on by default
 	bool debugMode = false;
@@ -33,15 +34,20 @@ int main(int argc, char **argv) {
 	static struct option long_options[] = {
 		{"no-fork", no_argument, 0, 'F'},
 		{"debug",   no_argument, 0, 'd'},
+		{"key",     required_argument, 0, 'k'},
 		{"help",    no_argument, 0, 'h'},
 		{0, 0, 0, 0}
 	};
 
+
+	std::string serverKey = "SOME_KEY"; 
+
 	int opt;
-	while ((opt = getopt_long(argc, argv, "Fdh", long_options, nullptr)) != -1) {
+	while ((opt = getopt_long(argc, argv, "Fdk:h", long_options, nullptr)) != -1) {
 		switch (opt) {
 			case 'F': forkEnabled = false; break;
 			case 'd': debugMode = true; break;
+			case 'k': serverKey = optarg; break;
 			case 'h': printUsage(argv[0]); return 0;
 			default:  printUsage(argv[0]); return 1;
 		}
@@ -66,10 +72,10 @@ int main(int argc, char **argv) {
 	Logger::info("Team: " + teamName);
 	Logger::info("Fork enabled: " + std::string(forkEnabled ? "yes" : "no"));
 
-	Agent agent(host, port, teamName);
+	Agent agent(host, port, teamName, serverKey);
 	g_agent = &agent;
 
-	//agent.setForkEnabled(forkEnabled); // TODO: Not yet implemented. Needed?
+	agent.setForkEnabled(forkEnabled);
 
 	Result res = agent.connect(Agent::CONNECT_TIMEOUT_MS);
 	if (!res.ok()) {

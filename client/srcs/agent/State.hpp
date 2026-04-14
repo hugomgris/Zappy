@@ -19,6 +19,22 @@ struct WorldState {
 	int						mapWidth = 0;
 	int						mapHeight = 0;
 
+	// NOTE: server does not send orientation in welcome; player starts at N by default.
+	// If the server ever adds this field, the optional handles it correctly.
+	void onWelcome(const ServerMessage& msg) {
+		if (msg.playerOrientation.has_value())
+			player.orientation = msg.playerOrientation.value();
+		
+		if (msg.remainingSlots.has_value())
+			player.remainingSlots = msg.remainingSlots.value();
+
+		if (msg.mapWidth.has_value())
+			mapWidth = msg.mapWidth.value();
+		
+		if (msg.mapHeight.has_value())
+			mapHeight = msg.mapHeight.value();
+	}
+
 	// helper queries
 	bool visionHasItem(const std::string& item) const {
 		for (auto& tile : vision) {
