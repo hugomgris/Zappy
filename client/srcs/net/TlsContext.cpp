@@ -12,8 +12,6 @@ static int insecure_mode_verify_callback(int ok, X509_STORE_CTX* ctx) {
 	return 1;
 }
 
-using namespace zappy;
-
 TlsContext::~TlsContext() {
 	if (_ctx) {
 		SSL_CTX_free(_ctx);

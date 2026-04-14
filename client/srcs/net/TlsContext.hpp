@@ -4,24 +4,22 @@
 #include <openssl/ssl.h>
 #include <memory>
 
-namespace zappy {
-    class TlsContext {
-        public:
-            ~TlsContext();
+class TlsContext {
+    public:
+        ~TlsContext();
 
-            TlsContext(const TlsContext&) = delete;
-            TlsContext& operator=(const TlsContext&) = delete;
+        TlsContext(const TlsContext&) = delete;
+        TlsContext& operator=(const TlsContext&) = delete;
 
-            static TlsContext& instance();
+        static TlsContext& instance();
 
-            Result initialize(bool insecureMode = false);
-            SSL_CTX* getCtx() const;
-            bool isInitialized() const;
+        Result initialize(bool insecureMode = false);
+        SSL_CTX* getCtx() const;
+        bool isInitialized() const;
 
-        private:
-            TlsContext() = default;
+    private:
+        TlsContext() = default;
 
-            SSL_CTX* _ctx = nullptr;
-            bool _initialized = false;
-    };
-} // namespae zappy
+        SSL_CTX* _ctx = nullptr;
+        bool _initialized = false;
+};

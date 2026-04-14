@@ -54,6 +54,8 @@ jobs:
 
       - name: Build and run tests
         run: make ci-test OPENSSL_DIR=/usr
+        env:
+          LD_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
 
       - name: Upload test binary
         if: always()

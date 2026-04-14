@@ -60,23 +60,23 @@ No network, no AI, no state. Test with hardcoded strings.
 
 #### `protocol/Sender.hpp` — create from scratch
 
-- [ ] Declare `Sender(WebsocketClient& ws)`
-- [ ] Declare all send methods: `sendVoir()`, `sendAvance()`, `sendDroite()`, `sendGauche()`, `sendPrend(resource)`, `sendPose(resource)`, `sendBroadcast(text)`, `sendIncantation()`, `sendFork()`, `sendConnectNbr()`, `sendInventaire()`, `sendLogin(teamName)`
-- [ ] Declare `expect(cmd, callback)` — registers callback for next response matching `cmd`
-- [ ] Declare `processResponse(msg)` — match and fire pending callback
-- [ ] Declare `checkTimeouts(int timeoutMs)` — fire error callbacks for stale entries
-- [ ] Declare `cancelAll()`
+- [x] Declare `Sender(WebsocketClient& ws)`
+- [x] Declare all send methods: `sendVoir()`, `sendAvance()`, `sendDroite()`, `sendGauche()`, `sendPrend(resource)`, `sendPose(resource)`, `sendBroadcast(text)`, `sendIncantation()`, `sendFork()`, `sendConnectNbr()`, `sendInventaire()`, `sendLogin(teamName)`
+- [x] Declare `expect(cmd, callback)` — registers callback for next response matching `cmd`
+- [x] Declare `processResponse(msg)` — match and fire pending callback
+- [x] Declare `checkTimeouts(int timeoutMs)` — fire error callbacks for stale entries
+- [x] Declare `cancelAll()`
 
 #### `protocol/Sender.cpp` — create from scratch
 
-- [ ] Implement all send methods as cJSON object builders → JSON string → `_ws.sendText()`
-- [ ] `expect()`: push `{cmd, sentAt, callback}` to `_pending` deque
-- [ ] `processResponse()`:
+- [x] Implement all send methods as cJSON object builders → JSON string → `_ws.sendText()`
+- [x] `expect()`: push `{cmd, sentAt, callback}` to `_pending` deque
+- [x] `processResponse()`:
   - For `incantation` + `in_progress`: fire callback but **do not remove** from pending
   - For all other statuses: find by `cmd`, fire callback, remove from pending
   - For `prend`/`pose`: match key as `"prend " + arg` / `"pose " + arg` so different resources don't collide
-- [ ] `checkTimeouts()`: iterate pending, fire error callback (status="timeout") for entries older than `timeoutMs`, remove them
-- [ ] **Test:** in isolation, verify that:
+- [x] `checkTimeouts()`: iterate pending, fire error callback (status="timeout") for entries older than `timeoutMs`, remove them
+- [x] **Test:** in isolation, verify that:
   - Sending `sendVoir()` then calling `processResponse()` with a matching voir response fires the callback
   - Incantation `in_progress` does not remove the pending entry
   - A timed-out entry fires an error callback
@@ -91,52 +91,52 @@ No network, no AI, no state. Test with hardcoded strings.
 
 #### `agent/State.hpp` — create from scratch
 
-- [ ] Define `struct PlayerState { int x; int y; Orientation orientation; int level; Inventory inventory; int remainingSlots; }`
-- [ ] Define `struct WorldState { PlayerState player; std::vector<VisionTile> vision; int mapWidth; int mapHeight; }`
-- [ ] Add `WorldState::nearestTileWithItem(name)` — returns first tile in `vision` that has the item (distance 0 first)
-- [ ] Add `WorldState::playersOnCurrentTile()` — returns `vision[0].playerCount` if vision is non-empty
-- [ ] Add `WorldState::countItemOnCurrentTile(name)` — counts item in `vision[0]`
-- [ ] Add read-only food helper: `int PlayerState::food() const { return inventory.nourriture; }`
+- [x] Define `struct PlayerState { int x; int y; Orientation orientation; int level; Inventory inventory; int remainingSlots; }`
+- [x] Define `struct WorldState { PlayerState player; std::vector<VisionTile> vision; int mapWidth; int mapHeight; }`
+- [x] Add `WorldState::nearestTileWithItem(name)` — returns first tile in `vision` that has the item (distance 0 first)
+- [x] Add `WorldState::playersOnCurrentTile()` — returns `vision[0].playerCount` if vision is non-empty
+- [x] Add `WorldState::countItemOnCurrentTile(name)` — counts item in `vision[0]`
+- [x] Add read-only food helper: `int PlayerState::food() const { return inventory.nourriture; }`
 
 #### `agent/Behavior.hpp` — create from scratch (survival only)
 
-- [ ] Define `enum class AIState { Idle, CollectFood }`
-- [ ] Declare `void tick(int64_t nowMs)` — the main entry point called every loop
-- [ ] Declare `bool commandInFlight` flag
-- [ ] Declare `void onResponse(const ServerMessage& msg)` — for any response the behavior needs to react to
+- [x] Define `enum class AIState { Idle, CollectFood }`
+- [x] Declare `void tick(int64_t nowMs)` — the main entry point called every loop
+- [x] Declare `bool commandInFlight` flag
+- [x] Declare `void onResponse(const ServerMessage& msg)` — for any response the behavior needs to react to
 
 #### `agent/Behavior.cpp` — create from scratch (survival only)
 
-- [ ] Implement `tick()`:
+- [x] Implement `tick()`:
   - If command in flight → return immediately
   - If vision is stale (never requested, or flagged stale after move) → `sendVoir()`, set in-flight, on callback clear in-flight and mark vision fresh
   - If inventory is stale → `sendInventaire()`, same pattern
   - If food on current tile (`vision[0]` has `"nourriture"`) → `sendPrend("nourriture")`
   - Else if nearest food tile found → build one nav step toward it (just one turn or one forward)
   - Else → turn right (exploration)
-- [ ] Each send call goes through `Sender`, each registers a callback that clears `commandInFlight`
-- [ ] After `avance`/`droite`/`gauche` response → mark vision stale
-- [ ] After `prend nourriture` response → update `State.player.inventory.nourriture++`
+- [x] Each send call goes through `Sender`, each registers a callback that clears `commandInFlight`
+- [x] After `avance`/`droite`/`gauche` response → mark vision stale
+- [x] After `prend nourriture` response → update `State.player.inventory.nourriture++`
 
 #### `agent/Agent.hpp` + `agent/Agent.cpp` — create from scratch (minimal)
 
-- [ ] Constructor takes host, port, teamName
-- [ ] `connect()`: connect websocket, send login, wait for welcome, update `State` from welcome message
-- [ ] `run()`: start network loop thread
-- [ ] Network loop:
+- [x] Constructor takes host, port, teamName
+- [x] `connect()`: connect websocket, send login, wait for welcome, update `State` from welcome message
+- [x] `run()`: start network loop thread
+- [x] Network loop:
   - `_ws.tick(nowMs)`
   - drain incoming frames → `Parser::parse()` → route to `State` update + `Sender::processResponse()` or `Behavior::onBroadcast()`
   - `_sender.checkTimeouts(3000)`
   - `_behavior.tick(nowMs)`
   - sleep 50ms
-- [ ] `stop()`: set running flag to false, join thread
+- [x] `stop()`: set running flag to false, join thread
 
 #### `main.cpp` — create from scratch
 
-- [ ] Parse `<host> <port> <team_name>` from args
-- [ ] Optional `--debug` flag
-- [ ] Install signal handlers for SIGINT/SIGTERM → `agent.stop()`
-- [ ] Create Agent, call `connect()`, call `run()`, loop until stopped
+- [x] Parse `<host> <port> <team_name>` from args
+- [x] Optional `--debug` flag
+- [x] Install signal handlers for SIGINT/SIGTERM → `agent.stop()`
+- [x] Create Agent, call `connect()`, call `run()`, loop until stopped
 
 **Test:** Run one client against the server. It should stay alive for at least 5 minutes without dying. Watch logs for `[TIME][EVT] Buffer full!` — if you see it, the command-in-flight guard is broken.
 
