@@ -47,8 +47,6 @@ static std::string sha1Hash(const std::string& input) {
     return base64Encode(hash_vec);
 }
 
-using namespace zappy;
-
 WebsocketClient::WebsocketClient()
     : _secure_socket(std::make_unique<SecureSocket>()) {
 }

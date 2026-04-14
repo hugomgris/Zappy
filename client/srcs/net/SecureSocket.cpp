@@ -6,8 +6,6 @@
 #include <iostream>
 #include <cstring>
 
-using namespace zappy;
-
 SecureSocket::SecureSocket()
     : _tcp(std::make_unique<TcpSocket>()) {
 }

@@ -22,7 +22,6 @@ struct WebSocketFrame {
 };
 
 class FrameCodec {
-    using Result = zappy::Result;
     public:
         // Encode a frame to bytes (client frames are masked)
         static Result encodeFrame(const WebSocketFrame& frame, std::vector<std::uint8_t>& out);

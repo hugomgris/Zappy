@@ -87,7 +87,12 @@ ServerMessage MessageParser::parse(const std::string& raw) {
 
 					for (const auto& item : tileArr) {
 						if (item.is_string())
-							tile.items.push_back(item.get<std::string>());
+							if (item.is_string()) {
+							std::string s = item.get<std::string>();
+							if (s == "player")
+								tile.playerCount++;
+							tile.items.push_back(s);
+						}
 					}
 					tiles.push_back(tile);
 				}

@@ -16,9 +16,6 @@ namespace {
 	}
 }
 
-using Result = zappy::Result;
-using ErrorCode = zappy::ErrorCode;
-
 TcpSocket::~TcpSocket() {
 	close();
 }

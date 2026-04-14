@@ -1,7 +1,7 @@
 #include "Parser.hpp"
 
-using Result = zappy::Result;
-using ErrorCode = zappy::ErrorCode;
+
+using ErrorCode = ErrorCode;
 
 Result Parser::parseArguments(char** argv, Arguments& parsedArguments) {
 	std::vector<std::string> args;
