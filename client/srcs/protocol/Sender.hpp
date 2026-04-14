@@ -9,11 +9,11 @@
 
 class Sender {
 	public:
-			struct PendingCommand {
-				std::string									cmd;
-				std::chrono::steady_clock::time_point		sentAt;
-				std::function<void(const ServerMessage&)>	callback;
-			};
+		struct PendingCommand {
+			std::string									cmd;
+			std::chrono::steady_clock::time_point		sentAt;
+			std::function<void(const ServerMessage&)>	callback;
+		};
 
 	private:
 		WebsocketClient&			_ws;
