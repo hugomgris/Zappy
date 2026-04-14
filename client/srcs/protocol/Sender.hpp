@@ -27,7 +27,7 @@ class Sender {
 		~Sender() = default;
 
 		// cmd handlers
-		Result sendLogin(const std::string& teamName, const std::string& key);
+		Result sendLogin(const std::string& teamName, const std::string& key="SOME_KEY");
 
 		virtual Result sendVoir();
 		virtual Result sendInventaire();
@@ -49,7 +49,7 @@ class Sender {
 		// response tracking
 		virtual void expect(const std::string& cmd, std::function<void(const ServerMessage&)> callback);
 		void processResponse(const ServerMessage& msg);
-		void checkTimeouts(int timeoutMs);
+		void checkTimeouts(int timeoutMs = 10000);
 
 		void cancelAll();
 };

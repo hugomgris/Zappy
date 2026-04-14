@@ -120,23 +120,23 @@ No network, no AI, no state. Test with hardcoded strings.
 
 #### `agent/Agent.hpp` + `agent/Agent.cpp` — create from scratch (minimal)
 
-- [ ] Constructor takes host, port, teamName
-- [ ] `connect()`: connect websocket, send login, wait for welcome, update `State` from welcome message
-- [ ] `run()`: start network loop thread
-- [ ] Network loop:
+- [x] Constructor takes host, port, teamName
+- [x] `connect()`: connect websocket, send login, wait for welcome, update `State` from welcome message
+- [x] `run()`: start network loop thread
+- [x] Network loop:
   - `_ws.tick(nowMs)`
   - drain incoming frames → `Parser::parse()` → route to `State` update + `Sender::processResponse()` or `Behavior::onBroadcast()`
   - `_sender.checkTimeouts(3000)`
   - `_behavior.tick(nowMs)`
   - sleep 50ms
-- [ ] `stop()`: set running flag to false, join thread
+- [x] `stop()`: set running flag to false, join thread
 
 #### `main.cpp` — create from scratch
 
-- [ ] Parse `<host> <port> <team_name>` from args
-- [ ] Optional `--debug` flag
-- [ ] Install signal handlers for SIGINT/SIGTERM → `agent.stop()`
-- [ ] Create Agent, call `connect()`, call `run()`, loop until stopped
+- [x] Parse `<host> <port> <team_name>` from args
+- [x] Optional `--debug` flag
+- [x] Install signal handlers for SIGINT/SIGTERM → `agent.stop()`
+- [x] Create Agent, call `connect()`, call `run()`, loop until stopped
 
 **Test:** Run one client against the server. It should stay alive for at least 5 minutes without dying. Watch logs for `[TIME][EVT] Buffer full!` — if you see it, the command-in-flight guard is broken.
 
