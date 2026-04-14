@@ -14,9 +14,11 @@ void Behavior::tick(int64_t nowMs) {
 		_sender.sendVoir();
 		_sender.expect("voir", [this](const ServerMessage& msg) {
 			_commandInFlight = false;
-			if (msg.isOk() && msg.vision.has_value()) {
+			if (msg.vision.has_value()) {
 				_state.vision = msg.vision.value();
 				_staleVision = false;
+			} else if (msg.isKo()) {
+				Logger::warn("Voir failed");
 			}
 		});
 		return;
@@ -27,9 +29,12 @@ void Behavior::tick(int64_t nowMs) {
 		_sender.sendInventaire();
 		_sender.expect("inventaire", [this](const ServerMessage& msg) {
 			_commandInFlight = false;
-			if (msg.isOk() && msg.inventory.has_value()) {
+			if (msg.inventory.has_value()) {
+				Logger::info("Refreshed inventory from msg raw: " + msg.raw);
 				_state.player.inventory = msg.inventory.value();
 				_staleInventory = false;
+			} else if (msg.isKo()) {
+				Logger::warn("Inventaire failed");
 			}
 		});
 		return;
@@ -44,6 +49,7 @@ void Behavior::tick(int64_t nowMs) {
 				_state.player.inventory.nourriture++;
 				setInventoryStale();
 			}
+			setVisionStale();
 		});
 	} else if (_state.visionHasItem("nourriture")) {
 		_commandInFlight = true;

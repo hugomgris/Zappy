@@ -2,6 +2,9 @@
 
 #include "../protocol/Message.hpp"
 
+#include <iostream>
+#include <cmath>
+
 struct PlayerState {
 	int			x = 0;
 	int			y = 0;
@@ -22,6 +25,7 @@ struct WorldState {
 	// NOTE: server does not send orientation in welcome; player starts at N by default.
 	// If the server ever adds this field, the optional handles it correctly.
 	void onWelcome(const ServerMessage& msg) {
+		std::cout << msg.raw << std::endl;
 		if (msg.playerOrientation.has_value())
 			player.orientation = msg.playerOrientation.value();
 		
@@ -47,13 +51,21 @@ struct WorldState {
 	}
 
 	std::optional<VisionTile> nearestTileWithItem(const std::string& item) const {
-		for (auto& tile : vision) {
-			for (auto& tileItem : tile.items) {
-				if (tileItem == item)
-					return tile;
+		std::optional<VisionTile> bestTile = std::nullopt;
+		for (const auto& tile : vision) {
+			if (bestTile.has_value() && tile.distance > bestTile->distance) {
+				break;
+			}
+			for (const auto& tileItem : tile.items) {
+				if (tileItem == item) {
+					if (!bestTile.has_value() || std::abs(tile.localX) < std::abs(bestTile->localX)) {
+						bestTile = tile;
+					}
+					break;
+				}
 			}
 		}
-		return std::nullopt;
+		return bestTile;
 	}
 
 	int playersOnCurrentTile() const {
