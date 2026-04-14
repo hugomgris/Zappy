@@ -418,12 +418,12 @@ private:
     }
 
     int _listener_fd = -1;
-    std::thread _thread;
     mutable std::mutex _mutex;
     std::condition_variable _cv;
     bool _ready = false;
     bool _done = false;
     ServerState _state;
+    std::thread _thread;
 };
 
 bool waitForClientConnected(WebsocketClient& client, int64_t& now_ms) {
