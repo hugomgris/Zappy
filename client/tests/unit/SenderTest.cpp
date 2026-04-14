@@ -8,8 +8,8 @@ using json = nlohmann::json;
 using namespace testing;
 
 class MockWebsocketClient : public WebsocketClient {
-public:
-    MOCK_METHOD(IoResult, sendText, (const std::string& text), (override));
+    public:
+        MOCK_METHOD(IoResult, sendText, (const std::string& text), (override));
 };
 
 TEST(SenderTest, SendVoirSendsCorrectJson) {

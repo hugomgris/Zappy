@@ -76,7 +76,7 @@ No network, no AI, no state. Test with hardcoded strings.
   - For all other statuses: find by `cmd`, fire callback, remove from pending
   - For `prend`/`pose`: match key as `"prend " + arg` / `"pose " + arg` so different resources don't collide
 - [x] `checkTimeouts()`: iterate pending, fire error callback (status="timeout") for entries older than `timeoutMs`, remove them
-- [ ] **Test:** in isolation, verify that:
+- [x] **Test:** in isolation, verify that:
   - Sending `sendVoir()` then calling `processResponse()` with a matching voir response fires the callback
   - Incantation `in_progress` does not remove the pending entry
   - A timed-out entry fires an error callback
@@ -91,32 +91,32 @@ No network, no AI, no state. Test with hardcoded strings.
 
 #### `agent/State.hpp` — create from scratch
 
-- [ ] Define `struct PlayerState { int x; int y; Orientation orientation; int level; Inventory inventory; int remainingSlots; }`
-- [ ] Define `struct WorldState { PlayerState player; std::vector<VisionTile> vision; int mapWidth; int mapHeight; }`
-- [ ] Add `WorldState::nearestTileWithItem(name)` — returns first tile in `vision` that has the item (distance 0 first)
-- [ ] Add `WorldState::playersOnCurrentTile()` — returns `vision[0].playerCount` if vision is non-empty
-- [ ] Add `WorldState::countItemOnCurrentTile(name)` — counts item in `vision[0]`
-- [ ] Add read-only food helper: `int PlayerState::food() const { return inventory.nourriture; }`
+- [x] Define `struct PlayerState { int x; int y; Orientation orientation; int level; Inventory inventory; int remainingSlots; }`
+- [x] Define `struct WorldState { PlayerState player; std::vector<VisionTile> vision; int mapWidth; int mapHeight; }`
+- [x] Add `WorldState::nearestTileWithItem(name)` — returns first tile in `vision` that has the item (distance 0 first)
+- [x] Add `WorldState::playersOnCurrentTile()` — returns `vision[0].playerCount` if vision is non-empty
+- [x] Add `WorldState::countItemOnCurrentTile(name)` — counts item in `vision[0]`
+- [x] Add read-only food helper: `int PlayerState::food() const { return inventory.nourriture; }`
 
 #### `agent/Behavior.hpp` — create from scratch (survival only)
 
-- [ ] Define `enum class AIState { Idle, CollectFood }`
-- [ ] Declare `void tick(int64_t nowMs)` — the main entry point called every loop
-- [ ] Declare `bool commandInFlight` flag
-- [ ] Declare `void onResponse(const ServerMessage& msg)` — for any response the behavior needs to react to
+- [x] Define `enum class AIState { Idle, CollectFood }`
+- [x] Declare `void tick(int64_t nowMs)` — the main entry point called every loop
+- [x] Declare `bool commandInFlight` flag
+- [x] Declare `void onResponse(const ServerMessage& msg)` — for any response the behavior needs to react to
 
 #### `agent/Behavior.cpp` — create from scratch (survival only)
 
-- [ ] Implement `tick()`:
+- [x] Implement `tick()`:
   - If command in flight → return immediately
   - If vision is stale (never requested, or flagged stale after move) → `sendVoir()`, set in-flight, on callback clear in-flight and mark vision fresh
   - If inventory is stale → `sendInventaire()`, same pattern
   - If food on current tile (`vision[0]` has `"nourriture"`) → `sendPrend("nourriture")`
   - Else if nearest food tile found → build one nav step toward it (just one turn or one forward)
   - Else → turn right (exploration)
-- [ ] Each send call goes through `Sender`, each registers a callback that clears `commandInFlight`
-- [ ] After `avance`/`droite`/`gauche` response → mark vision stale
-- [ ] After `prend nourriture` response → update `State.player.inventory.nourriture++`
+- [x] Each send call goes through `Sender`, each registers a callback that clears `commandInFlight`
+- [x] After `avance`/`droite`/`gauche` response → mark vision stale
+- [x] After `prend nourriture` response → update `State.player.inventory.nourriture++`
 
 #### `agent/Agent.hpp` + `agent/Agent.cpp` — create from scratch (minimal)
 

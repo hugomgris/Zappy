@@ -38,9 +38,10 @@ GMOCK_LIB       := $(GTEST_DIR)/build/lib/libgmock.a
 
 MAIN_SRC        := main.cpp
 PROT_SRC		:= protocol/MessageParser.cpp protocol/Sender.cpp
+AGENT_SRC		:= agent/Behavior.cpp
 HELPER_SRC		:= helpers/Parser.cpp helpers/Logger.cpp
 NET_SRC			:= net/FrameCodec.cpp net/SecureSocket.cpp net/TcpSocket.cpp net/TlsContext.cpp net/WebsocketClient.cpp
-ALL_SRC         := $(MAIN_SRC) $(PROT_SRC) $(HELPER_SRC) $(NET_SRC)
+ALL_SRC         := $(MAIN_SRC) $(PROT_SRC) $(AGENT_SRC) $(HELPER_SRC) $(NET_SRC)
 
 SRCS            := $(addprefix $(SRCDIR)/, $(ALL_SRC))
 OBJS            := $(addprefix $(OBJDIR)/, $(ALL_SRC:.cpp=.o))

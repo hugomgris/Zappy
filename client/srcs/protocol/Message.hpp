@@ -14,6 +14,7 @@ struct VisionTile {
 	int							distance;	// 0 = player's own tile
 	int							localX;		// negative = left, 0 = center, positive = right
 	int							localY;		// always a distance value (amount of rows fwd)
+	int							playerCount;
 	std::vector<std::string>	items;
 
 	bool hasItem(const std::string& item) const {

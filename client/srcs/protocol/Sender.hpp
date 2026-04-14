@@ -29,15 +29,15 @@ class Sender {
 		// cmd handlers
 		Result sendLogin(const std::string& teamName, const std::string& key);
 
-		Result sendVoir();
-		Result sendInventaire();
+		virtual Result sendVoir();
+		virtual Result sendInventaire();
 		
 
-		Result sendAvance();
-		Result sendDroite();
-		Result sendGauche();
+		virtual Result sendAvance();
+		virtual Result sendDroite();
+		virtual Result sendGauche();
 
-		Result sendPrend(const std::string& resource);
+		virtual Result sendPrend(const std::string& resource);
 		Result sendPose(const std::string& resource);
 
 		Result sendBroadcast(const std::string& msg);
@@ -47,7 +47,7 @@ class Sender {
 		Result sendConnectNbr();
 
 		// response tracking
-		void expect(const std::string& cmd, std::function<void(const ServerMessage&)> callback);
+		virtual void expect(const std::string& cmd, std::function<void(const ServerMessage&)> callback);
 		void processResponse(const ServerMessage& msg);
 		void checkTimeouts(int timeoutMs);
 
