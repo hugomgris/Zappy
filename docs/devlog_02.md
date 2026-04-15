@@ -4,7 +4,13 @@
 1. [Charles the Bot the Third (a.k.a. Carlitos III)](#11---there-and-back-again-in-a-network-sense)
 2. [Little Dudes and Their Little Food](#22-little-dudes-and-their-little-food)
     - [You've Got Mail (Read in Elwood Edward's Voice, AOL Style)](#221-youve-got-mail-read-in-elwood-edwards-voice-aol-style)
-3. [Commands, Fall In!](#232-commands-fall-in)
+	- [Like Duolingo but for Net Communications](#222-like-duolingo-but-for-net-communications)
+	- [Commands, Fall In!](#223-commands-fall-in)
+	- [State of the Union](#224-state-of-the-union)
+	- [On Our Best Behavior](#225-on-our-best-behavior)
+	- [Sir, this is a Wendys](#226-sir-this-is-a-wendys)
+	- [Agent Little Dude](#227-agent-little-dude)
+	- [Is It Alive?](#228-is-it-alive)
 
 
 <br>
@@ -200,7 +206,7 @@ It's not even a long or complex function, just one that has to manage divergent 
 
 That simple. The only thing that calls for special attention is the fact that most of the data attributes in the `ServerMessage` struct are `std::optional`, so transfering data needs to go through a `.value()` access, which needs a safety pre-check of `.has_value()`. Always go through the check, is my advice, as even if you can be 100% sure about the contents of a message because you have acces (or even control) of the server codebase, it is good practice. And I don't think that out there, in R E A L  L I F E this all-knowing case will be the case, or even something manageable.
 
-### 2.3.2 Commands, Fall In!
+### 2.2.3 Commands, Fall In!
 With our message handling in place, what we'll need next is a `Sender` that queues commands, allowing one in-flight command at a time (one of the past lessons, here's to you dead bots), with confirmed callbacks. In other words, we need a class that:
 - Sends JSON-formed commands through the websocket in the server's direction (with specific cases for each command in *Zappy*)
 - Has a way of storing answer-expecting commands and their callback functions (i.e., when the server responds, what needs to happen)
@@ -307,5 +313,252 @@ At this point, things can (NEED TO) be tested. We have a message managing pipeli
 
 In my case, all these pass (YAY!!), so this marks the first pass to the `protocol` side of things as DONE AND TESTED. WHich means that we can move on to the `agent` front and build a first, single-agent survival focused approach so we reach a first compiling and non-dying client that works in unison with the server.
 
-### 2.3.4 State of the Union
-*Nothing else came to mind for a title with "union", it's 2 pm, I'm hungry, I've been writing for quite some time, sorry*. 
+### 2.2.4 State of the Union
+*Nothing else came to mind for a title with "state", it's 2 pm, I'm hungry, I've been writing for quite some time, sorry*. Moving on to the `agent` side of things, and now that we can actually talk with the server both in the net and in the protocol layers, we need to start tackling the game logic handling and the decision making landscape. And what does the agent need to know, before anything else, to start *behaving* and *deciding* and *AIing*? Some `state` structs, correct. In specific, we need 2 different data containers to hold information related to two main aspects: player and world. Think about it, the AI needs to know were it is, what it has stored in its inventory, the direction in which its looking, its level... All while crossing that information with the data in its vision (*what* is *where*), the overall dimensions of the arena, and have some tools to query the surroundings (i.e., asking the world if this or that resource is in this or that known tile, if there are players around, etc.). It might sound convoluted, but it's quite straightforward really, take a look:
+```cpp
+struct PlayerState {
+	int			x = 0;
+	int			y = 0;
+	Orientation	orientation = Orientation::N;
+	int			level = 1;
+	Inventory	inventory;
+	int			remainingSlots = 0;
+
+	int food() const { return inventory.nourriture; }
+};
+```
+```cpp
+struct WorldState {
+	PlayerState				player;
+	std::vector<VisionTile>	vision;
+	int						mapWidth = 0;
+	int						mapHeight = 0;
+
+	// NOTE: server does not send orientation in welcome; player starts at N by default.
+	// If the server ever adds this field, the optional handles it correctly.
+	void onWelcome(const ServerMessage& msg) {
+		std::cout << msg.raw << std::endl;
+		if (msg.playerOrientation.has_value())
+			player.orientation = msg.playerOrientation.value();
+		
+		if (msg.remainingSlots.has_value())
+			player.remainingSlots = msg.remainingSlots.value();
+
+		if (msg.mapWidth.has_value())
+			mapWidth = msg.mapWidth.value();
+		
+		if (msg.mapHeight.has_value())
+			mapHeight = msg.mapHeight.value();
+	}
+
+	// helper queries
+	bool visionHasItem(const std::string& item) const {}
+
+	std::optional<VisionTile> nearestTileWithItem(const std::string& item) const {}
+
+	int playersOnCurrentTile() const {}
+
+	int countItemOnCurrentTile(const std::string& item) const {}
+};
+```
+> *`WorldState` helpers are actually defined in the header file, I just didn't want to clutter this too much. Check the [file](../client/srcs/agent/State.hpp) if you want to check the implementations out*
+
+That's really just it, at least for now (I keep writing this because I live with the fear of what's to come, I've been here, before, a few times (@TomDelongue)). What this gives is the grounds to tackle the next important class, `Behavior`, which will be slightly more difficult, but nothing we can't handle.
+
+### 2.2.5 On Our Best Behavior
+This, defined above as the client's **state machine**, is were all our headaches are going to gather around and dance to the music of their ancestors. We'll start with basic stuff, after all our current first milestone just needs to have a basic (but strong and refined and PERFECT) routine of exploring and gathering food, but I know that not much time will pass before tears come back (I feel it in the water, I feel it in the earth, I smell it in the air, Much that once w... *ehem*). What we'll do is a two step movement: **we'll first build the scaffolding of `Behavior`, then write the basis of `Navigator`, then go back to wire behaving with navigating. Sounds fun, right? Knew so.
+
+So, yeah, behaving ourselves. Let's, again, think about what we're trying to do here from a general perspective, approach it conceptually first, code-wise then. I've been saying that this is functionally the client's state machine, so this immediately takes us to what every state machine needs: a state collection. In other words, your run of the mill `enum class` that stores every state in which the AI can operate (for now, as said, just `Idle` and `CollectFood`; the latter being self-explanatory, the former needing a definition, which for us will be the base, exploratory, take-a-walk-and-look-around state). With that, building a state machine is just a matter of *what* gets done in each state, with specific *hows*, all wrapped around logic rules on how states relate to each other and what transitions are set up.
+
+This is not one of those things that are obvious on approach, or at least not to me, so let's go bit by bit and keep ourselves in the conceptual level for a little while longer. `Behavior` needs to be understood, in our context, as basically a loop (or, as we'll see, something *inserted* in a loop) that reads the state of the world and issues commands depending on the current objetive of the AI. For example, if the AI is in `CollectFood` state and `WorldState`'s `vision` contains, let's say, data about some food being placed in the tile currently placed one step forward and one step to the right of the client's position, `Behavior` needs to interpret said situation and plan a route to go to that position and pick up some food. Takin it into our *Zappy* logic rules, this would mean that the AI should compose a chain of commands that looks something like: *Avance→Gauche→Avance→Prend+Nourriture*. Later on this will need to be extended with more states and more possible strategical needs, like gathering specific resources, rally for incantations, fork, etc., but it wouldn't make sense for us to dive head first into those without being ABSOLUTLEY sure that the most basic tiers of our `Behavior` work without issue, which itself means that we need to be TOTALLY certain that the AI knows how to read the `WorldState`, fix an objective, find its bearings with regards of that goal and trace navigation strategies.
+
+Now again, all of the above has to be tackled with consideration to the concept of **staleness**, which for us is something that applies to information regarding `vision` (in the world state) and `inventory` (in the player state). I've talked about this before in this log, but just in case, what I mean by this is that `Behavior` also requires tools to identify if what it *thinks* it know about the world and about itself is accurate, still true, useful to make decisions. Just go back to some past laid out possibilities, back a couple of sections in this document, and imagine a client that has planned its journey to some piece of whatever weirdly called rock and halfway there said stone disappears. Keep on keeping on could mean death, and would definately mean a waste of time and resources. Trust me, I learn this the hardes of ways, so it's better if we're absolutely clear on this before going forward. Later on, this restrain will be need to be closely paired with some self-imposed rules, like there only being once ommand in flight at a time at max, a food emergency overriding all states except `Incantating`, and who knows what more (whatever makes this work tbh).
+
+How are we going to handle this staleness bussiness, then? Well, there might be more refined, millimetrically adjusted ways to do so than the one that I'm going to propose (I don't really know, shall I say nor care right now, as doing it like this is difficult enough for me in this moment of my life), but we'll just follow a very simple protocol: **moving makes the current vision stale, and picking or placing things up makes the current inventory and vision stale**. In simpler terms, when writing the command executing pipeline, when a moving or object related object is laid out, stale flags need to be risen. If you think about it, it makes total sense: when a client moves, for example, it means that both the server and the whole array of connected clients have gone through a `tick()`, changing the state of the world, so if a client staid true to a non-reliable state, disaster would ensue. To me, as in *to my code*, this means that once a client has built a **navigation plan** and executed the first command in it (which will in most cases be a movement or object related one), staleness insues by default and the navigation plan needs to be rebuilt on the spot. As I said, there might be better ways to do this, but this is what I can now execute with regards of having a lot of little dudes running around my *Zappy* with millisecond-to-millisecond reactiveness.
+
+Anyways... We can't keep delaying the code confrontation, so let's get into it. Our `Behavior` needs to know about both the `WorldState` and the `Sender`, as it is kind of in between those, but because we're deep in OOP and we've already advanced that we'll have an `Agent` orchestrator, we'll create those in that and store references in this. We'll also need some flags to know if inventory and/or vision are stale and if there is an in-flight command, some storage for navigatin commands (which is really something related to the second of our two step movement, needed after writing `Navigation`, but no use in hiding it), a track for the navigation target and another one for the amount of exploration steps the client has executed, for the sake of injecting some variations here and there depending on the count, as some pattern-breaking maneuvers are always welcomed to avoid clients going into loops. Alongside this, some query functions and setters, an all-purpose navigation command executor and a main entry point to behavior, the `tick()`. And alltogether, we get this cute little class declaration:
+```cpp
+#pragma once
+
+#include "../protocol/Message.hpp"
+#include "State.hpp"
+#include "../protocol/Sender.hpp"
+#include "Navigator.hpp"
+
+#include <cstdint>
+#include <deque>
+
+enum class AIState {
+	Idle,
+	CollectFood
+};
+
+class Behavior {
+	private:
+		Sender&				_sender;
+		WorldState&			_state;
+		bool				_commandInFlight = false;
+		bool				_staleVision = true;
+		bool				_staleInventory = true;
+		std::deque<NavCmd>	_navPlan;
+		std::string			_navTarget;
+		int					_explorationStep = 0;
+
+		static constexpr int FOOD_SAFE					= 12;
+		static constexpr int FOOD_CRITICAL				= 4;
+
+		void executeNavCmd(NavCmd cmd);
+
+	public:
+		Behavior(Sender& sender, WorldState& state);
+		~Behavior() = default;
+	
+		void tick(int64_t nowMs);
+		void onResponse(const ServerMessage& msg);
+
+		bool hasCommandInFlight() const { return _commandInFlight; }
+		bool isVisionStale()      const { return _staleVision; }
+		bool isInventoryStale()   const { return _staleInventory; }
+
+		// Mark vision stale — does NOT clear the nav plan.
+		// The nav plan is cleared in the voir callback only if the target is gone,
+		// or explicitly via clearNavPlan() when the situation changes.
+		void setVisionStale()    { _staleVision = true; }
+		void setInventoryStale() { _staleInventory = true; }
+		void clearNavPlan()      { _navPlan.clear(); _navTarget.clear(); }
+};
+```
+
+Implementation wise, for now there's not much to highlight. The coded behavior in `tick()` is one that makes the clients go around the game gathering food in the most basic of ways: is there food in the current tile? Pick it up. Is there not? Make a navigation plan towards the closes tile in `vision` that contains `nourriture`. Rinse and repeat. The `tick()` flow, then, goes like this:
+- If there's an in-flight command, do nothing, i.e. wait for it to resolve
+- If vision or inventory are stale, refresh them
+- If current tile contains food, call `_sender.sendPrend("nourriture")`
+- Else navigate for closest food in vision
+- Else fallback to the `Navigator` function dedicated to create a base exploration step (which is the one that has `_explorationStep` count-dependent movement injection, more on that in the next section1)
+
+At the bottom of `tick()` there should at least be one navigation command set up for firing, so it gets popped from the plan, executed, and we're done ticking. "Executed" here means, of course, sent to `executeNavCmd`, which works on `NavCommands`, which I'm going to explain in the next section, but this is not a complicated function, nor one that needs too much attention beyond making sure that things work *correctly*. If `NavCmd` is go forward, well, move forward depending on the current orientation, and same goes for turning left or right. The real sauce is in the `Navigation`, so let's jump into that.
+
+### 2.2.6 Sir, this is a Wendys
+We're still bound to our milestone, so we'll aim to a simple first `Navigator` scheme. We already have a `Behavior` that can trigger a navigation request, but we now need the other side of the equation, the part that builds said navigation, i.e. the navigation command chain. In practicallity, and considering an example context like wanting to go to a located food position, `Behavior` will tell `Navigator` something like *"Hey, I want to go to this X-Y position, so give me a path there considering my current orientation!"* and paths will be found and objectives will be met and we will be happy. Easier said than done, but 0 units of panic, because, you see, we have a *system* now, we now how to tackle stuff and think about stuff and decide about stuff and ultimately code about stuff. We're that good. And all that `Navigator` needs to be for now, really, is a handfull of collected functions inside a namespace. We just need ways to:
+- Translate local coordinates to world deltas
+- Turn to face a target
+- Plan path
+- Inject exploration steps
+
+That's all. We're fine. The specific code in these? Ah, yes, well, let's see... The first two are just a couple of functions that take some data and return relative information. `turnToFace()` is pretty simple, just a couple of cases to know if going from a current `Orientation` to a target one means turning right, left, or a 180 degrees turn (i.e., two left or right turns). `localToWorldDelta()` is simple too, but needs some mind wrap around, or at least I needed it, so, just in case, let's talk about it.
+
+First, why do we need this? Easy answer: **we're working with two coordinate systems**. When `voir` is casted, the server returns a vision grid relative to the current position and facing direction. Well, not really a *grid* but a *cone*, but that's irrelevant to the point, which is that server delivers this information:
+```
+You are facing NORTH (↑):
+    Row 2:  [ -2,2 ] [ -1,2 ] [ 0,2 ] [ 1,2 ] [ 2,2 ]
+    Row 1:           [ -1,1 ] [ 0,1 ] [ 1,1 ]
+    Row 0:                    [ 0,0 ]
+                     ← LEFT     YOU    RIGHT →
+```
+
+> *We've gone through it, but just in case: (0,0) is the current tile, a negative localX value means to the left, a positive localX means to the right, the value of localY is how far in front*
+
+> *This means that, when facing north, a local tile (-1,1) is one tile ahead and to the left, and one local tile (2,2) is two tiles ahea an to the right*
+
+All fine and dandy, but **the server has a fixed map (wrapping around the edges, but still), and treats world coordinates as absolute positions on this map**. So, while a little dude is working in its little world of local coordinates, going to a little tile that's (2, -3) from him, out there, in the game world, this might mean that said little dude is really trying to go from tile (5,8) to (7, 5) (can you guess which direction our little dude is facing???). So we need a translator. But that's tricky, because **the same local coordinates mean different world movements depending on the way our little dude is facing**. Take a look at this table realted to a simple example of our guy trying to move to the local (1,0) tile:
+
+| Current Facing | (1,0) Meaning     | World Delta |
+| -------------- | ----------------- | ----------- |
+|     NORTH      | Tile to the right |    (+1,0)   |
+|     EAST       | Tile to the right |    (0,+1)   |
+|     SOUTH      | Tile to the right |    (-1,0)   |
+|     WEST       | Tile to the right |    (0,-1)   |
+
+> *If you find this table somewhat confusing, just try to cross-reference a general consideration of the world as absolute X-Y values, with imagining yourself in a tile, facing some direction, and what "tile to the right" would mean by watching yourself from the general pov. For example, youre facing EAST and want to go to the tile to your right. What does that look in general POV? Moving one tile down, i.e. incrementing the Y value of the X-Y coordinates by 1. Hope this helps*
+
+If this clicks, then the rest is just laying out a conversion switch case. The values of the movements are irrelevant, the conversions are just `Orientation` based. A little dude moving NORTH will always get a `worldX` equal to its `localX`, and a `worldY` equal to the negative conversion of its `localY`. Bare in mind that our little dudes only get `voir` information (the cone from above) relative to what's *in front* of them, so conversion is thankfully constricted to that limitation. Therefore, a small, finite table of conversions can be written just like this:
+```cpp
+std::pair<int, int> Navigator::localToWorldDelta(Orientation facing, int localX, int localY) {
+    int worldX, worldY;
+
+    switch (facing) {
+        case Orientation::N:  // Facing NORTH
+            worldX = localX;           // Your right is world +X
+            worldY = -localY;          // Your forward is world -Y
+            break;
+
+        case Orientation::E:  // Facing EAST
+            worldX = localY;           // Your forward is world +X
+            worldY = localX;           // Your right is world +Y
+            break;
+
+        case Orientation::S:  // Facing SOUTH
+            worldX = -localX;          // Your right is world -X
+            worldY = localY;           // Your forward is world +Y
+            break;
+
+        case Orientation::W:  // Facing WEST
+            worldX = -localY;          // Your forward is world -X
+            worldY = -localX;          // Your right is world -Y
+            break;
+    }
+
+    return {worldX, worldY};
+}
+```
+Told you, easy to say, not so easy to write. You just need to spend some time spatially thinking about what you're trying to translate, some experimentation, maybe even some doodling, and you're set. You can now translate the client's navigation coordinates into server absolute coordinates. And with both the functions to face to a specific orientation and to translate coordinates, we're ready to go into path planning. And we'll do so with a specific strategy: **first move laterally (X), then forward (Y)**. Why? Because we have to do it some way, and this works. And this, taken to `planPath()`, means:
+- If `localX` is not 0, little needs to move laterally, so we'll `localToWorldDelta()` the coordinates, check how it needs to turn via `turnToFace()`, then go `Forward` the needed amount of times.
+	- *Basically, we need to plan an "L" movement.*
+- Once `localX` is 0, the little dude needs to turn back to face the target `localY` direction relative to its `Orientation`
+- Then, walk Y amount of times `Forward`
+
+All of this is made into an `std::vector` of `NavCmd`s, which are stored in `enum class NavCmd { Forward, TurnLeft, TurnRight };`. And we're done!! Nothing else needs to be done at this point, in our current milestone, besides a very basic `explorationStep()` function that just injects left and right turns when `_explorationSteps` are divisible by 13 or 7. Why, again? Because this works: enough, but not too much variation every 100 steps. But you do you, of course!
+
+> *Down the line, if the decision is made, pathfinding could be reformulated to follow an `A*` algorithm, but we'll see. I've already implemented this in [another project of mine](https://github.com/hugomgris/rosario-engine/blob/main/srcs/AI/Pathfinder.cpp), so I don't really feel the irk, but* Dios lo ve *so who knows, who can tell..*
+
+After hooking things up in `Behavior` so that it works with `NavCmds`, we're ready to write `main`, but first there's a lot of testing to be done. Once more, you can check out the suite's code in their respective files, [BehaviorTest](../client/tests/unit/BehaviorTest.cpp) and [NavigatorTest](../client/tests/unit/NavigatorTest.cpp), so we'll just list here what needs to be tested:
+- Behavior
+	- Stale vision and inventory reactions
+	- In-flight command blocks tick
+	- Vision and Inventory updates are data-correct
+	- Target relative positions trigger correct command chain (i.e., target food to the left queues a gauche, and so on)
+	- Moving makes vision stale
+	- No target sends a droite for exploration (i.e., the little dude turns to get a different cone of vision)
+- Navigator
+	- Coordinate translation correctness
+	- Planned path is correctly sequenced (for the target "L" shaped movement)
+	- Exploration step correctly injects the intended variations.
+
+And off we are to the realm of `Main`... Wait, no, we're still in need of the whole wrapper of the client. Change of plans: off we are to write `Agent`!
+
+### 2.2.7 Agent Little Dude
+As this is the general wrapping class, we're going to place in it all the functions related to general stuff, like those related to the connection process (`connect()`, `waitForBienvenue()` and `performLogin()`), a couple of start and stop functions and the core of it all: `networkLoop()` + `procesIncomingMessage()`. The first tier, the network related stuff, is uninteresting, just a close-following of the needed protocol, imposed by the server. `run()` sends the client off to its own thread and sets `_running` as true, and `stop()` sets it as false, just before attempting to join the client thread and calling `Sender`'s `cancelAll()`.
+
+The `networkLoop()`, our bot's beating heart (GO YOU, CHARLES THE BOT THE THIRD!!) is uncomplicated:
+- Update the value of `nowMs`
+- `tick()` the `WebsocketClient`
+- Call the incoming message processor
+- Manage the reconnection attempts in case of a disconnect
+- Call `Sender`'s timeout managing function
+- `tick()` the `Behavior`
+- Sleep for some miliseconds
+- REPEAT
+
+As the logic of everything listed above is delegated to the respective classes and namespaces and these have already been logged, no need to go into further detail, right? Well, I guess we should talk about `processIncomingMessages()`, but this is really a function that reads the received `WebSocketFrame`, checks the `ServerMessage` contents and derives the flow to the necessary path of the codebase. Just go to its [implementation](../client/srcs/agent/Agent.cpp) if you need more details, as we're now moving on to our last step before having one full milestone in our back!
+
+> *I'll test Agent thoroughly down the line, don't fret*
+
+
+### 2.2.8 Is It Alive?
+For our first `main.cpp`, we need the following:
+- Parse the CLI arguments (via an already tested and solid `Parser`)
+- Set up signal handlers
+- Create the `Agent`, call it's `connect()` function, then `run()` it and embrace the loop
+
+We're basically set up for testing, which in my case means:
+- Firing up the server
+- Resuming its time API (this is just a way to syncronize server, clients and observer via a SIGUSR1 signal)
+- Connect the client
+
+> *I've set up a [script](../run_test.sh) to quick-fire the probe test, because doing this manually is grinding me*
+
+If everything is done properly, our first little dude should thrive, survive, live a long, infinite level-1 life of plentifulness and amass `nourriture` like there was no tomorrow. 
+
+And... That's the case for me!! So If you excuse me, I'll spend the rest of my day (evening) basking in this tiny success and do something, whatever, not related to being sitting in front of a computer.
+
+Next time, adding complexity to our little dude! See you in the 3rd devlog!

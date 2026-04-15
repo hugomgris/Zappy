@@ -40,9 +40,6 @@ class Behavior {
 		bool isVisionStale()      const { return _staleVision; }
 		bool isInventoryStale()   const { return _staleInventory; }
 
-		// Mark vision stale — does NOT clear the nav plan.
-		// The nav plan is cleared in the voir callback only if the target is gone,
-		// or explicitly via clearNavPlan() when the situation changes.
 		void setVisionStale()    { _staleVision = true; }
 		void setInventoryStale() { _staleInventory = true; }
 		void clearNavPlan()      { _navPlan.clear(); _navTarget.clear(); }

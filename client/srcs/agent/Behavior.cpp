@@ -3,12 +3,6 @@
 
 Behavior::Behavior(Sender& sender, WorldState& state) : _sender(sender), _state(state) {}
 
-// Executes a single NavCmd by sending the appropriate command and registering
-// a callback that clears commandInFlight and marks vision stale on success.
-// NOTE: vision is marked stale after every move/turn so we get a fresh view,
-// but the nav plan is NOT cleared here — it survives across moves.
-// The plan is cleared only in the voir callback if the target disappears,
-// or via clearNavPlan() when the behavior logic decides to replan.
 void Behavior::executeNavCmd(NavCmd cmd) {
 	_commandInFlight = true;
 
