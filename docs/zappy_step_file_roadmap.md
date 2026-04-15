@@ -184,10 +184,10 @@ No network, no AI, no state. Test with hardcoded strings.
 
 ---
 
-DONE UNTIL HERE !!
-
 ## Interlude 1 - Documentation of the basic behaving client build
-- [ ] WRITE
+- [x] WRITE
+
+DONE UNTIL HERE !!
 
 ## Step 5 — Stone Collection and Level 1→2 Incantation
 
@@ -197,10 +197,10 @@ DONE UNTIL HERE !!
 
 #### `agent/Behavior.hpp`
 
-- [ ] Add `enum class AIState` values: `CollectStones`, `Incantating`
-- [ ] Add `std::vector<std::string> _stonesNeeded`
-- [ ] Add `bool _incantationSent` flag
-- [ ] Add `bool _stonesPlaced` flag
+- [x] Add `enum class AIState` values: `CollectStones`, `Incantating`
+- [x] Add `std::vector<std::string> _stonesNeeded`
+- [x] Add `bool _incantationSent` flag
+- [x] Add `bool _stonesPlaced` flag
 
 #### `agent/Behavior.cpp`
 

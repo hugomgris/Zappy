@@ -10,7 +10,14 @@
 
 enum class AIState {
 	Idle,
-	CollectFood
+	CollectFood,
+	CollectStones,
+	Incantating
+};
+
+struct LevelReq {
+	int			players;
+	Inventory	stones;
 };
 
 class Behavior {
@@ -23,6 +30,10 @@ class Behavior {
 		std::deque<NavCmd>	_navPlan;
 		std::string			_navTarget;
 		int					_explorationStep = 0;
+
+		std::vector<std::string>	_stonesNeeded;
+		bool						_incantationSet;
+		bool						_stonesPlaced;
 
 		static constexpr int FOOD_SAFE					= 12;
 		static constexpr int FOOD_CRITICAL				= 4;
