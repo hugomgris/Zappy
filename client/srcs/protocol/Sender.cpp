@@ -198,8 +198,22 @@ void Sender::checkTimeouts(int timeoutMs) {
 	}
 }
 
-// right now, this clears without firing callbacks.
-// if behavior holds references expecting those callbacks to eventually fire, CAREFULL: they'll hang
+// Cancels all pending commands, firing error callbacks so callers
+// (e.g. Behavior) can reset their _commandInFlight flag and not deadlock.
 void Sender::cancelAll() {
+	std::vector<std::pair<std::string, std::function<void(const ServerMessage&)>>> cancelled;
+
+	for (auto& p : _pending)
+		cancelled.emplace_back(p.cmd, p.callback);
 	_pending.clear();
+
+	for (const auto& [cmd, cb] : cancelled) {
+		if (cb) {
+			ServerMessage t;
+			t.type = MsgType::Error;
+			t.cmd = cmd;
+			t.status = "cancelled";
+			cb(t);
+		}
+	}
 }

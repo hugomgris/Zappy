@@ -21,7 +21,11 @@ class Behavior {
 		bool				_staleVision = true;
 		bool				_staleInventory = true;
 		std::deque<NavCmd>	_navPlan;
+		std::string			_navTarget;
 		int					_explorationStep = 0;
+
+		static constexpr int FOOD_SAFE					= 12;
+		static constexpr int FOOD_CRITICAL				= 4;
 
 		void executeNavCmd(NavCmd cmd);
 
@@ -33,8 +37,13 @@ class Behavior {
 		void onResponse(const ServerMessage& msg);
 
 		bool hasCommandInFlight() const { return _commandInFlight; }
-		bool isVisionStale() const { return _staleVision; }
-		bool isInventoryStale() const { return _staleInventory; }
-		void setVisionStale() { _staleVision = true; _navPlan.clear(); }
+		bool isVisionStale()      const { return _staleVision; }
+		bool isInventoryStale()   const { return _staleInventory; }
+
+		// Mark vision stale — does NOT clear the nav plan.
+		// The nav plan is cleared in the voir callback only if the target is gone,
+		// or explicitly via clearNavPlan() when the situation changes.
+		void setVisionStale()    { _staleVision = true; }
 		void setInventoryStale() { _staleInventory = true; }
+		void clearNavPlan()      { _navPlan.clear(); _navTarget.clear(); }
 };

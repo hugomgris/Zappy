@@ -176,11 +176,13 @@ DONE UNTIL HERE!!
 
 #### `agent/Behavior.cpp`
 
-- [ ] Replace the one-step-toward-food hack with `Navigator::planPath()` call
-- [ ] Store the resulting `std::deque<NavCmd>` as `_navPlan`
-- [ ] Each tick: if `_navPlan` is non-empty and no command in flight → execute front of plan
-- [ ] Clear `_navPlan` when vision becomes stale (after any move or turn)
-- [ ] Clear `_navPlan` when the target item is no longer visible after a fresh `voir`
+- [x] Replace the one-step-toward-food hack with `Navigator::planPath()` call
+- [x] Store the resulting `std::deque<NavCmd>` as `_navPlan`
+- [x] Each tick: if `_navPlan` is non-empty and no command in flight → execute front of plan
+- [x] Clear `_navPlan` when vision becomes stale (after any move or turn)
+- [x] Clear `_navPlan` when the target item is no longer visible after a fresh `voir`
+
+DONE UNTIL HERE 2 !!
 
 **Test:** Place a resource on a specific tile and verify the agent reaches it from various starting orientations. Test all 4 facing directions.
 

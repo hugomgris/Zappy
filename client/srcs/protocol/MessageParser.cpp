@@ -11,7 +11,6 @@ ServerMessage MessageParser::parse(const std::string& raw) {
 	ServerMessage msg;
 	msg.raw = raw;
 
-	
 	// parse the raw string received through the socket
 	json root;
 	try {
@@ -86,12 +85,13 @@ ServerMessage MessageParser::parse(const std::string& raw) {
 					tile.localY = currentLevel;
 
 					for (const auto& item : tileArr) {
-						if (item.is_string())
-							if (item.is_string()) {
+						if (item.is_string()) {
 							std::string s = item.get<std::string>();
-							if (s == "player")
+							if (s == "player") {
 								tile.playerCount++;
-							tile.items.push_back(s);
+							} else {
+								tile.items.push_back(s);
+							}
 						}
 					}
 					tiles.push_back(tile);
@@ -128,7 +128,7 @@ ServerMessage MessageParser::parse(const std::string& raw) {
 			try {
 				msg.broadcastDirection = std::stoi(msg.status);
 			} catch (...) {
-				Logger::warn("Failed to parse message directin: " + msg.status);
+				Logger::warn("Failed to parse message direction: " + msg.status);
 			}
 	}
 	

@@ -5,6 +5,10 @@ Behavior::Behavior(Sender& sender, WorldState& state) : _sender(sender), _state(
 
 // Executes a single NavCmd by sending the appropriate command and registering
 // a callback that clears commandInFlight and marks vision stale on success.
+// NOTE: vision is marked stale after every move/turn so we get a fresh view,
+// but the nav plan is NOT cleared here — it survives across moves.
+// The plan is cleared only in the voir callback if the target disappears,
+// or via clearNavPlan() when the behavior logic decides to replan.
 void Behavior::executeNavCmd(NavCmd cmd) {
 	_commandInFlight = true;
 
@@ -23,7 +27,7 @@ void Behavior::executeNavCmd(NavCmd cmd) {
 					}
 					setVisionStale();
 				} else {
-					_navPlan.clear();
+					clearNavPlan();
 					setVisionStale();
 				}
 			});
@@ -43,7 +47,7 @@ void Behavior::executeNavCmd(NavCmd cmd) {
 					}
 					setVisionStale();
 				} else {
-					_navPlan.clear();
+					clearNavPlan();
 					setVisionStale();
 				}
 			});
@@ -63,7 +67,7 @@ void Behavior::executeNavCmd(NavCmd cmd) {
 					}
 					setVisionStale();
 				} else {
-					_navPlan.clear();
+					clearNavPlan();
 					setVisionStale();
 				}
 			});
@@ -76,7 +80,7 @@ void Behavior::tick(int64_t nowMs) {
 
 	if (hasCommandInFlight()) return;
 
-	// --- Refresh vision ---
+	// refresh vision
 	if (isVisionStale()) {
 		_commandInFlight = true;
 		_sender.sendVoir();
@@ -86,11 +90,12 @@ void Behavior::tick(int64_t nowMs) {
 				_state.vision = msg.vision.value();
 				_staleVision = false;
 
-				// If we have an active nav plan, verify the target is still visible.
-				// If not, scrap the plan and replan next tick.
-				if (!_navPlan.empty() && !_state.visionHasItem("nourriture")) {
-					Logger::debug("Behavior: target no longer visible, clearing nav plan");
-					_navPlan.clear();
+				// if target is gone, sreplan
+				if (!_navPlan.empty() && !_navTarget.empty() &&
+					!_state.visionHasItem(_navTarget)) {
+					Logger::debug("Behavior: target '" + _navTarget +
+						"' no longer visible, clearing nav plan");
+					clearNavPlan();
 				}
 			} else if (msg.isKo()) {
 				Logger::warn("Voir failed");
@@ -99,7 +104,7 @@ void Behavior::tick(int64_t nowMs) {
 		return;
 	}
 
-	// --- Refresh inventory ---
+	// refresh inventory
 	if (isInventoryStale()) {
 		_commandInFlight = true;
 		_sender.sendInventaire();
@@ -116,9 +121,9 @@ void Behavior::tick(int64_t nowMs) {
 		return;
 	}
 
-	// --- Pick up food if standing on it ---
+	// if food in tile, pick up
 	if (_state.countItemOnCurrentTile("nourriture")) {
-		_navPlan.clear(); // already here, no need to navigate
+		clearNavPlan();
 		_commandInFlight = true;
 		_sender.sendPrend("nourriture");
 		_sender.expect("prend nourriture", [this](const ServerMessage& msg) {
@@ -132,13 +137,12 @@ void Behavior::tick(int64_t nowMs) {
 		return;
 	}
 
-	// --- Navigate toward food ---
+	// navigate for food
 	if (_state.visionHasItem("nourriture")) {
-		// Build a plan if we don't have one
-		if (_navPlan.empty()) {
+		if (_navPlan.empty() || _navTarget != "nourriture") {
+			clearNavPlan();
 			auto tile = _state.nearestTileWithItem("nourriture");
 			if (!tile.has_value()) {
-				// Shouldn't happen (visionHasItem is true), but guard it
 				Logger::warn("Behavior: visionHasItem true but nearestTileWithItem returned nullopt");
 				setVisionStale();
 				return;
@@ -153,9 +157,10 @@ void Behavior::tick(int64_t nowMs) {
 				std::to_string(t.localY) + ")");
 
 			_navPlan.assign(plan.begin(), plan.end());
+			_navTarget = "nourriture";
 		}
 
-		// Execute the next step
+		// next step
 		if (!_navPlan.empty()) {
 			NavCmd next = _navPlan.front();
 			_navPlan.pop_front();
@@ -164,11 +169,12 @@ void Behavior::tick(int64_t nowMs) {
 		return;
 	}
 
-	// --- Explore ---
-	// No food visible: run an exploration step
+	// exploration protocol
+	// No food  = run an exploration step
 	if (_navPlan.empty()) {
 		std::vector<NavCmd> plan = Navigator::explorationStep(_explorationStep);
 		_navPlan.assign(plan.begin(), plan.end());
+		_navTarget.clear();
 	}
 
 	if (!_navPlan.empty()) {
@@ -180,5 +186,6 @@ void Behavior::tick(int64_t nowMs) {
 
 void Behavior::onResponse(const ServerMessage& msg) {
 	// TODO: handle broadcast responses in later steps
+	// TODO: rename to onBroadcast?
 	(void)msg;
 }

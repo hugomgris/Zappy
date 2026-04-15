@@ -4,6 +4,7 @@
 #include <string>
 #include <optional>
 
+// Orientation is always 0-indexed matching the server enum. N=0,E=1,S=2,W=3. Never convert this.
 enum class Orientation {
 	N = 0, E = 1, S = 2, W = 3
 };
@@ -15,7 +16,7 @@ struct VisionTile {
 	int							localX;		// negative = left, 0 = center, positive = right
 	int							localY;		// always a distance value (amount of rows fwd)
 	int							playerCount;
-	std::vector<std::string>	items;
+	std::vector<std::string>	items;		// collectible resources only — "player" entries are NOT included here
 
 	bool hasItem(const std::string& item) const {
 		for (auto tileItem : items) {
@@ -72,9 +73,9 @@ struct ServerMessage {
 	std::optional<std::string> messageText;
 	std::optional<int> broadcastDirection; // 0 - same tile, 1-8 = octants (server told)
 
-	bool isOk() const { return status == "ok"; }
-	bool isKo() const { return status == "ko"; }
-	bool isInProgress() const { return status == "in_progres"; }
-	bool isDeath() const { return status == "died"; }
-	bool isLevelUp() const { return status == "level_up"; }
+	bool isOk()         const { return status == "ok"; }
+	bool isKo()         const { return status == "ko"; }
+	bool isInProgress() const { return status == "in_progress"; }
+	bool isDeath()      const { return status == "died"; }
+	bool isLevelUp()    const { return status == "level_up"; }
 };
