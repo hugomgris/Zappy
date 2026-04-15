@@ -26,13 +26,11 @@ class Sender {
 		explicit Sender(WebsocketClient& ws);
 		~Sender() = default;
 
-		// cmd handlers
 		Result sendLogin(const std::string& teamName, const std::string& key="SOME_KEY");
 
 		virtual Result sendVoir();
 		virtual Result sendInventaire();
 		
-
 		virtual Result sendAvance();
 		virtual Result sendDroite();
 		virtual Result sendGauche();
@@ -46,7 +44,6 @@ class Sender {
 		Result sendFork();
 		Result sendConnectNbr();
 
-		// response tracking
 		virtual void expect(const std::string& cmd, std::function<void(const ServerMessage&)> callback);
 		void processResponse(const ServerMessage& msg);
 		void checkTimeouts(int timeoutMs = 10000);

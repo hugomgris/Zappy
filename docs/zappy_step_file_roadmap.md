@@ -142,8 +142,6 @@ No network, no AI, no state. Test with hardcoded strings.
 
 ---
 
-DONE UNTIL HERE!!
-
 ## Step 4 — Navigation Primitive
 
 **Goal:** The agent can reliably walk to any visible tile.
@@ -182,11 +180,14 @@ DONE UNTIL HERE!!
 - [x] Clear `_navPlan` when vision becomes stale (after any move or turn)
 - [x] Clear `_navPlan` when the target item is no longer visible after a fresh `voir`
 
-DONE UNTIL HERE 2 !!
-
 **Test:** Place a resource on a specific tile and verify the agent reaches it from various starting orientations. Test all 4 facing directions.
 
 ---
+
+DONE UNTIL HERE !!
+
+## Interlude 1 - Documentation of the basic behaving client build
+- [ ] WRITE
 
 ## Step 5 — Stone Collection and Level 1→2 Incantation
 
