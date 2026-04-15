@@ -131,6 +131,11 @@ Result Sender::sendConnectNbr() {
 // res tracking
 void Sender::expect(const std::string& cmd,
 		std::function<void(const ServerMessage&)> callback) {
+	if (!callback) {
+		Logger::warn("Sender::expect: null callback provided for command: " + cmd);
+		return;
+	}
+	
 	PendingCommand command;
 	command.cmd = cmd;
 	command.callback = callback;
@@ -150,12 +155,12 @@ void Sender::processResponse(const ServerMessage& msg) {
 		lookupKey += " " + msg.arg;
 
 	if (msg.status == "in_progress" && msg.cmd == "incantation") {
-		Logger::debug("Sender: incantatation in_progress, forwarding but keeping pending");		
+		Logger::debug("Sender: incantation in_progress, forwarding but keeping pending");		
 		auto it = std::find_if(_pending.begin(), _pending.end(),
 			[](const PendingCommand& p) { return p.cmd == "incantation";});
-		if (it != _pending.end())
+		if (it != _pending.end() && it->callback) {
 			it->callback(msg);
-
+		}
 		return;
 	}
 
@@ -163,8 +168,10 @@ void Sender::processResponse(const ServerMessage& msg) {
 		[&](const PendingCommand& p) { return p.cmd == lookupKey; });
 
 	if (it != _pending.end()) {
-		it->callback(msg);
-		_pending.erase(it); // If down the line the callback doesn't modify _pending, this is ok. If not, CAREFUL
+		if (it->callback) {
+			it->callback(msg);
+		}
+		_pending.erase(it);
 		Logger::debug("Sender: matched pending '" + lookupKey + "'");
 	} else {
 		Logger::warn("Sender: no pending command for key='" + lookupKey + "' (msg.cmd='" + msg.cmd + "')");
@@ -198,8 +205,22 @@ void Sender::checkTimeouts(int timeoutMs) {
 	}
 }
 
-// right now, this clears without firing callbacks.
-// if behavior holds references expecting those callbacks to eventually fire, CAREFULL: they'll hang
+// Cancels all pending commands, firing error callbacks so callers
+// (e.g. Behavior) can reset their _commandInFlight flag and not deadlock.
 void Sender::cancelAll() {
+	std::vector<std::pair<std::string, std::function<void(const ServerMessage&)>>> cancelled;
+
+	for (auto& p : _pending)
+		cancelled.emplace_back(p.cmd, p.callback);
 	_pending.clear();
+
+	for (const auto& [cmd, cb] : cancelled) {
+		if (cb) {
+			ServerMessage t;
+			t.type = MsgType::Error;
+			t.cmd = cmd;
+			t.status = "cancelled";
+			cb(t);
+		}
+	}
 }

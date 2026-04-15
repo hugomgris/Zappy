@@ -153,6 +153,7 @@ void Agent::networkLoop() {
 							std::to_string(reconnectAttempts));
 			std::this_thread::sleep_for(std::chrono::seconds(2));
 
+			_sender.cancelAll();
 			Result res = connect(CONNECT_TIMEOUT_MS);
 			if (!res.ok()) {
 				Logger::error("Reconnection failed: " + res.message);

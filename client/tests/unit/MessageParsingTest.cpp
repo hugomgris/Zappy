@@ -17,7 +17,7 @@ TEST(MessageParserTest, WelcomeResponse) {
 
 TEST(MessageParserTest, VoirOneTile) {
 	const std::string raw =
-		R"({"type":"response","cmd":"voir","vision":[["player","nourriture"]]})";
+		R"({"type":"response","cmd":"voir","vision":[["player","nourriture", "phiras", "sibur"]]})";
 
 	ServerMessage msg = MessageParser::parse(raw);
 
@@ -32,7 +32,9 @@ TEST(MessageParserTest, VoirOneTile) {
 	EXPECT_EQ(tiles[0].distance, 0);
 	EXPECT_EQ(tiles[0].localX,   0);
 	EXPECT_EQ(tiles[0].localY,   0);
-	EXPECT_TRUE(tiles[0].hasItem("player"));
+	EXPECT_EQ(tiles[0].playerCount, 1);
+	EXPECT_TRUE(tiles[0].hasItem("phiras"));
+	EXPECT_TRUE(tiles[0].hasItem("sibur"));
 	EXPECT_TRUE(tiles[0].hasItem("nourriture"));
 }
 

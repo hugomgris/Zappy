@@ -3,12 +3,78 @@
 
 Behavior::Behavior(Sender& sender, WorldState& state) : _sender(sender), _state(state) {}
 
+void Behavior::executeNavCmd(NavCmd cmd) {
+	_commandInFlight = true;
+
+	switch (cmd) {
+		case NavCmd::Forward:
+			_sender.sendAvance();
+			_sender.expect("avance", [this](const ServerMessage& msg) {
+				_commandInFlight = false;
+				if (msg.isOk()) {
+					switch (_state.player.orientation) {
+						case Orientation::N: _state.player.y--; break;
+						case Orientation::E: _state.player.x++; break;
+						case Orientation::S: _state.player.y++; break;
+						case Orientation::W: _state.player.x--; break;
+						default: break;
+					}
+					setVisionStale();
+				} else {
+					clearNavPlan();
+					setVisionStale();
+				}
+			});
+			break;
+
+		case NavCmd::TurnLeft:
+			_sender.sendGauche();
+			_sender.expect("gauche", [this](const ServerMessage& msg) {
+				_commandInFlight = false;
+				if (msg.isOk()) {
+					switch (_state.player.orientation) {
+						case Orientation::N: _state.player.orientation = Orientation::W; break;
+						case Orientation::E: _state.player.orientation = Orientation::N; break;
+						case Orientation::S: _state.player.orientation = Orientation::E; break;
+						case Orientation::W: _state.player.orientation = Orientation::S; break;
+						default: break;
+					}
+					setVisionStale();
+				} else {
+					clearNavPlan();
+					setVisionStale();
+				}
+			});
+			break;
+
+		case NavCmd::TurnRight:
+			_sender.sendDroite();
+			_sender.expect("droite", [this](const ServerMessage& msg) {
+				_commandInFlight = false;
+				if (msg.isOk()) {
+					switch (_state.player.orientation) {
+						case Orientation::N: _state.player.orientation = Orientation::E; break;
+						case Orientation::E: _state.player.orientation = Orientation::S; break;
+						case Orientation::S: _state.player.orientation = Orientation::W; break;
+						case Orientation::W: _state.player.orientation = Orientation::N; break;
+						default: break;
+					}
+					setVisionStale();
+				} else {
+					clearNavPlan();
+					setVisionStale();
+				}
+			});
+			break;
+	}
+}
+
 void Behavior::tick(int64_t nowMs) {
-	// TODO: remove this when using nowms
 	(void)nowMs;
 
 	if (hasCommandInFlight()) return;
 
+	// refresh vision
 	if (isVisionStale()) {
 		_commandInFlight = true;
 		_sender.sendVoir();
@@ -17,6 +83,14 @@ void Behavior::tick(int64_t nowMs) {
 			if (msg.vision.has_value()) {
 				_state.vision = msg.vision.value();
 				_staleVision = false;
+
+				// if target is gone, sreplan
+				if (!_navPlan.empty() && !_navTarget.empty() &&
+					!_state.visionHasItem(_navTarget)) {
+					Logger::debug("Behavior: target '" + _navTarget +
+						"' no longer visible, clearing nav plan");
+					clearNavPlan();
+				}
 			} else if (msg.isKo()) {
 				Logger::warn("Voir failed");
 			}
@@ -24,13 +98,14 @@ void Behavior::tick(int64_t nowMs) {
 		return;
 	}
 
+	// refresh inventory
 	if (isInventoryStale()) {
 		_commandInFlight = true;
 		_sender.sendInventaire();
 		_sender.expect("inventaire", [this](const ServerMessage& msg) {
 			_commandInFlight = false;
 			if (msg.inventory.has_value()) {
-				Logger::info("Refreshed inventory from msg raw: " + msg.raw);
+				Logger::info("Refreshed inventory: " + msg.raw);
 				_state.player.inventory = msg.inventory.value();
 				_staleInventory = false;
 			} else if (msg.isKo()) {
@@ -40,7 +115,9 @@ void Behavior::tick(int64_t nowMs) {
 		return;
 	}
 
+	// if food in tile, pick up
 	if (_state.countItemOnCurrentTile("nourriture")) {
+		clearNavPlan();
 		_commandInFlight = true;
 		_sender.sendPrend("nourriture");
 		_sender.expect("prend nourriture", [this](const ServerMessage& msg) {
@@ -51,94 +128,58 @@ void Behavior::tick(int64_t nowMs) {
 			}
 			setVisionStale();
 		});
-	} else if (_state.visionHasItem("nourriture")) {
-		_commandInFlight = true;
-		auto tile = _state.nearestTileWithItem("nourriture");
-		if (!tile.has_value()) {
-			Logger::warn("Behavior: visionHasItem true but nearestTileWithItem returned nullopt");
-			_commandInFlight = false;
-			return;
+		return;
+	}
+
+	// navigate for food
+	if (_state.visionHasItem("nourriture")) {
+		if (_navPlan.empty() || _navTarget != "nourriture") {
+			clearNavPlan();
+			auto tile = _state.nearestTileWithItem("nourriture");
+			if (!tile.has_value()) {
+				Logger::warn("Behavior: visionHasItem true but nearestTileWithItem returned nullopt");
+				setVisionStale();
+				return;
+			}
+
+			auto& t = tile.value();
+			std::vector<NavCmd> plan = Navigator::planPath(
+				_state.player.orientation, t.localX, t.localY);
+
+			Logger::debug("Behavior: planned " + std::to_string(plan.size()) +
+				" steps to food at (" + std::to_string(t.localX) + "," +
+				std::to_string(t.localY) + ")");
+
+			_navPlan.assign(plan.begin(), plan.end());
+			_navTarget = "nourriture";
 		}
 
-		auto value = tile.value();
-		if (value.localX < 0) {
-			_sender.sendGauche();
-			_sender.expect("gauche", [this](const ServerMessage& msg) {
-				_commandInFlight = false;
-				if (msg.isOk()) {
-					switch (_state.player.orientation) {
-						case Orientation::N: _state.player.orientation = Orientation::W; break;
-						case Orientation::E: _state.player.orientation = Orientation::N; break;
-						case Orientation::S: _state.player.orientation = Orientation::E; break;
-						case Orientation::W: _state.player.orientation = Orientation::S; break;
-						default: _state.player.orientation = Orientation::W; break;
-					}
-					setVisionStale();
-				}
-			});
-		} else if (value.localX > 0) {
-			_sender.sendDroite();
-			_sender.expect("droite", [this](const ServerMessage& msg) {
-				_commandInFlight = false;
-				if (msg.isOk()) {
-					switch (_state.player.orientation) {
-						case Orientation::N: _state.player.orientation = Orientation::E; break;
-						case Orientation::E: _state.player.orientation = Orientation::S; break;
-						case Orientation::S: _state.player.orientation = Orientation::W; break;
-						case Orientation::W: _state.player.orientation = Orientation::N; break;
-						default: _state.player.orientation = Orientation::E; break;
-					}
-					setVisionStale();
-				}
-			});
-		} else {
-			_sender.sendAvance();
-			_sender.expect("avance", [this](const ServerMessage& msg) {
-				_commandInFlight = false;
-				if (msg.isOk()) {
-					switch (_state.player.orientation) {
-						// space loop handled by navigator
-						case Orientation::N:
-							_state.player.y--;
-							break;
-						case Orientation::E:
-							_state.player.x++;
-							break;
-						case Orientation::S:
-							_state.player.y++;
-							break;
-						case Orientation::W: 
-							_state.player.x--;
-							break;
-						default:
-							_state.player.y--;
-							break;
-					}
-					setVisionStale();
-				}
-			});
+		// next step
+		if (!_navPlan.empty()) {
+			NavCmd next = _navPlan.front();
+			_navPlan.pop_front();
+			executeNavCmd(next);
 		}
-	} else {
-		// placeholded until Navigator is set up
-		_commandInFlight = true;
-		_sender.sendDroite();
-		_sender.expect("droite", [this](const ServerMessage& msg) {
-			_commandInFlight = false;
-			if (msg.isOk()) {
-				switch (_state.player.orientation) {
-					case Orientation::N: _state.player.orientation = Orientation::E; break;
-					case Orientation::E: _state.player.orientation = Orientation::S; break;
-					case Orientation::S: _state.player.orientation = Orientation::W; break;
-					case Orientation::W: _state.player.orientation = Orientation::N; break;
-					default: _state.player.orientation = Orientation::E; break;
-				}
-				setVisionStale();
-			}
-		});
+		return;
+	}
+
+	// exploration protocol
+	// No food  = run an exploration step
+	if (_navPlan.empty()) {
+		std::vector<NavCmd> plan = Navigator::explorationStep(_explorationStep);
+		_navPlan.assign(plan.begin(), plan.end());
+		_navTarget.clear();
+	}
+
+	if (!_navPlan.empty()) {
+		NavCmd next = _navPlan.front();
+		_navPlan.pop_front();
+		executeNavCmd(next);
 	}
 }
 
 void Behavior::onResponse(const ServerMessage& msg) {
-    // TODO: handle broadcast responses in later steps
-    (void)msg;
+	// TODO: handle broadcast responses in later steps
+	// TODO: rename to onBroadcast?
+	(void)msg;
 }

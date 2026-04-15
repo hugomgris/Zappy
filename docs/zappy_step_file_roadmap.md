@@ -150,39 +150,44 @@ No network, no AI, no state. Test with hardcoded strings.
 
 #### `agent/Navigator.hpp` — create from scratch
 
-- [ ] Declare `enum class NavCmd { Forward, TurnLeft, TurnRight }`
-- [ ] Declare `std::pair<int,int> localToWorldDelta(Orientation facing, int localX, int localY)`
-- [ ] Declare `std::vector<NavCmd> turnToFace(Orientation current, Orientation target)`
-- [ ] Declare `std::vector<NavCmd> planPath(Orientation facing, int localX, int localY)`
-- [ ] Declare `std::vector<NavCmd> explorationStep(int& stepCount)` — stepCount is incremented internally for variation
+- [x] Declare `enum class NavCmd { Forward, TurnLeft, TurnRight }`
+- [x] Declare `std::pair<int,int> localToWorldDelta(Orientation facing, int localX, int localY)`
+- [x] Declare `std::vector<NavCmd> turnToFace(Orientation current, Orientation target)`
+- [x] Declare `std::vector<NavCmd> planPath(Orientation facing, int localX, int localY)`
+- [x] Declare `std::vector<NavCmd> explorationStep(int& stepCount)` — stepCount is incremented internally for variation
 
 #### `agent/Navigator.cpp` — create from scratch
 
-- [ ] Implement `localToWorldDelta()` with the **exact** formulas:
+- [x] Implement `localToWorldDelta()` with the **exact** formulas:
   ```
   N(0): worldDX =  localX,  worldDY = -localY
   E(1): worldDX =  localY,  worldDY =  localX
   S(2): worldDX = -localX,  worldDY =  localY
   W(3): worldDX = -localY,  worldDY = -localX
   ```
-- [ ] Implement `turnToFace()`: compute `diff = (target - current + 4) % 4`, emit TurnRight if diff==1, TurnLeft if diff==3, two TurnRights if diff==2
-- [ ] Implement `planPath()`: call `localToWorldDelta`, then emit turns+forwards for X axis first, then Y axis
-- [ ] Implement `explorationStep()`: every 7th step turn right, every 13th turn left, always add one Forward
-- [ ] **Unit test** `localToWorldDelta` for all 4 orientations × several (localX, localY) values before connecting to anything
+- [x] Implement `turnToFace()`: compute `diff = (target - current + 4) % 4`, emit TurnRight if diff==1, TurnLeft if diff==3, two TurnRights if diff==2
+- [x] Implement `planPath()`: call `localToWorldDelta`, then emit turns+forwards for X axis first, then Y axis
+- [x] Implement `explorationStep()`: every 7th step turn right, every 13th turn left, always add one Forward
+- [x] **Unit test** `localToWorldDelta` for all 4 orientations × several (localX, localY) values before connecting to anything
 
 ### Files modified this step
 
 #### `agent/Behavior.cpp`
 
-- [ ] Replace the one-step-toward-food hack with `Navigator::planPath()` call
-- [ ] Store the resulting `std::deque<NavCmd>` as `_navPlan`
-- [ ] Each tick: if `_navPlan` is non-empty and no command in flight → execute front of plan
-- [ ] Clear `_navPlan` when vision becomes stale (after any move or turn)
-- [ ] Clear `_navPlan` when the target item is no longer visible after a fresh `voir`
+- [x] Replace the one-step-toward-food hack with `Navigator::planPath()` call
+- [x] Store the resulting `std::deque<NavCmd>` as `_navPlan`
+- [x] Each tick: if `_navPlan` is non-empty and no command in flight → execute front of plan
+- [x] Clear `_navPlan` when vision becomes stale (after any move or turn)
+- [x] Clear `_navPlan` when the target item is no longer visible after a fresh `voir`
 
 **Test:** Place a resource on a specific tile and verify the agent reaches it from various starting orientations. Test all 4 facing directions.
 
 ---
+
+DONE UNTIL HERE !!
+
+## Interlude 1 - Documentation of the basic behaving client build
+- [ ] WRITE
 
 ## Step 5 — Stone Collection and Level 1→2 Incantation
 

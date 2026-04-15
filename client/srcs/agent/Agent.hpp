@@ -29,8 +29,6 @@ class Agent {
 		std::unique_ptr<std::thread>	_networkThread;
 
 		static constexpr int MAX_RECONNECT				= 5;
-		static constexpr int FOOD_SAFE					= 12;
-		static constexpr int FOOD_CRITICAL				= 4;
 		static constexpr int COMMAND_FLIGHT_TIMEOUT_MS	= 3000;
 
 
