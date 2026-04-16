@@ -21,6 +21,10 @@ static const LevelReq& levelReq(int level) {
 	return table[level - 1];
 }
 
+static const std::vector<std::string> STONE_PRIORITY = {
+    "thystame", "phiras", "mendiane", "sibur", "deraumere", "linemate"
+};
+
 Behavior::Behavior(Sender& sender, WorldState& state) : _sender(sender), _state(state) {}
 
 void Behavior::executeNavCmd(NavCmd cmd) {
@@ -97,9 +101,10 @@ void Behavior::tick(int64_t nowMs) {
 	// TODO: not sure if needed
 	static int64_t lastInventoryRefresh = 0;
 	if (nowMs - lastInventoryRefresh > 5000) {  // Every 3 seconds
+		lastInventoryRefresh = nowMs;
 		if (!isInventoryStale() && !hasCommandInFlight()) {
 			refreshInventory();
-			lastInventoryRefresh = nowMs;
+
 		}
 	}
 
@@ -252,16 +257,32 @@ void Behavior::tickCollectStones() {
 		}
 	}
 
-	// navigate towards nearest needed resource
-	clearNavPlan();
+	// Opportunistic food grab: don't interrupt a collection run, but take free food if it's right here
+	if (_state.player.food() < FOOD_SAFE &&
+		_state.countItemOnCurrentTile("nourriture")) {
+		_commandInFlight = true;
+		_sender.sendPrend("nourriture");
+		_sender.expect("prend nourriture", [this](const ServerMessage& msg) {
+			_commandInFlight = false;
+			if (msg.isOk()) {
+				_state.player.inventory.nourriture++;
+				setInventoryStale();
+			}
+			setVisionStale();
+		});
+		return;
+	}
+
+	std::string previousTarget = _navTarget;
 	auto tile = getNearestTileWithNeededResource();
 
 	if (tile.localX == std::numeric_limits<int>::max()) {
-		// nothing visible yet->explore
-		std::vector<NavCmd> plan = Navigator::explorationStep(_explorationStep);
-		_navPlan.assign(plan.begin(), plan.end());
-		_navTarget.clear();
-	} else {
+		if (_navPlan.empty()) {
+			std::vector<NavCmd> plan = Navigator::explorationStep(_explorationStep);
+			_navPlan.assign(plan.begin(), plan.end());
+			_navTarget.clear();
+		}
+	} else if (_navPlan.empty() || _navTarget != previousTarget) {
 		std::vector<NavCmd> plan = Navigator::planPath(
 			_state.player.orientation, tile.localX, tile.localY);
 		Logger::debug("Behavior: CollectStones: planned " + std::to_string(plan.size()) +
@@ -396,28 +417,26 @@ void Behavior::onResponse(const ServerMessage& msg) {
 
 void Behavior::computeMissingStones() {
 	if (_state.vision.empty()) return;
-	
-	int currentLevel = _state.player.level;
-	Inventory& inv = _state.player.inventory;
-	
+
 	_stonesNeeded.clear();
-	
-	// easy mode -> 1 lineamte is enough
+
 	if (_easyMode) {
-		if (inv.linemate < 1) {
+		if (_state.player.inventory.linemate < 1)
 			_stonesNeeded.push_back("linemate");
-		}
 		return;
 	}
-	
-	// normal mode
-	const LevelReq& requirements = levelReq(currentLevel);
-	if (requirements.stones.linemate  > inv.linemate)  _stonesNeeded.push_back("linemate");
-	if (requirements.stones.deraumere > inv.deraumere) _stonesNeeded.push_back("deraumere");
-	if (requirements.stones.sibur     > inv.sibur)     _stonesNeeded.push_back("sibur");
-	if (requirements.stones.mendiane  > inv.mendiane)  _stonesNeeded.push_back("mendiane");
-	if (requirements.stones.phiras    > inv.phiras)    _stonesNeeded.push_back("phiras");
-	if (requirements.stones.thystame  > inv.thystame)  _stonesNeeded.push_back("thystame");
+
+	const LevelReq& req = levelReq(_state.player.level);
+	Inventory& inv = _state.player.inventory;
+
+	for (const auto& stone : STONE_PRIORITY) {
+		if      (stone == "linemate"  && req.stones.linemate  > inv.linemate)  _stonesNeeded.push_back(stone);
+		else if (stone == "deraumere" && req.stones.deraumere > inv.deraumere) _stonesNeeded.push_back(stone);
+		else if (stone == "sibur"     && req.stones.sibur     > inv.sibur)     _stonesNeeded.push_back(stone);
+		else if (stone == "mendiane"  && req.stones.mendiane  > inv.mendiane)  _stonesNeeded.push_back(stone);
+		else if (stone == "phiras"    && req.stones.phiras    > inv.phiras)    _stonesNeeded.push_back(stone);
+		else if (stone == "thystame"  && req.stones.thystame  > inv.thystame)  _stonesNeeded.push_back(stone);
+	}
 }
 
 VisionTile Behavior::getNearestTileWithNeededResource() {
@@ -425,13 +444,12 @@ VisionTile Behavior::getNearestTileWithNeededResource() {
 	nearest.localX = std::numeric_limits<int>::max();
 	nearest.localY = std::numeric_limits<int>::max();
 
-	for (size_t i = 0; i < _stonesNeeded.size(); ++i) {
-		auto tile = _state.nearestTileWithItem(_stonesNeeded[i]);
+	for (const auto& stone : _stonesNeeded) {
+		auto tile = _state.nearestTileWithItem(stone);
 		if (tile.has_value()) {
-			if ((tile.value().localY + std::abs(tile.value().localX)) < (nearest.localY + nearest.localX)) {
-				nearest = tile.value();
-				_navTarget = _stonesNeeded[i];
-			}
+			nearest = tile.value();
+			_navTarget = stone;
+			return nearest;
 		}
 	}
 

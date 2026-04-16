@@ -290,3 +290,88 @@ And now, assuming that everything is correctly coded, what we should expect when
 # 3.2 We Don't Walk Alone
 Our next milestone is to extend the stone gathering behavior so that **every level requirements are correctly gathered** in a non-easy context. We'll have to be careful to not break the 1→2 trasition (which little dudes can do by themselves), but we'll have to test level after level if the clients target the rocks the are supposed to. We'll do so while also injecting some resource type priorities (rarest > most common) and some opportunistic sub-behavior, like picking up food while moving if it exist in the passing tiles. We'll also add the first `fork()` related logic along our way, tied to `Idle` state. A bunch of things, but all bounded to `Behavior`, so we'll be fine. I'm sure.
 
+Inserting priority and opportunity criteria in our Behavior is a matter of fine tunning stuff, which is to say know what to change with extreme specificity and try to do so without ending up with a broken state of things. Which is what happened to me a couple of times after editing the code. 
+
+You see, encoding the priority order is not that complicated. We just need a `STONE_PRIORITY` constant to chec against and change how `computeMissingStones()` and `getNearestTileWithNeededResources()` work with the new priority in mind. Transitioning a priority-ordered loop in the first one makes it so the order in the class vector `_stonesNeeded` follows the fixed importance order. Then, instead of going through all the list and commit the target tile to the pure nearest, we switch to the **nearest with the resource with most priority**. This leaves us in a very specic logic state:
+- There's room to add more complexity to this decision routine so that it is *wieghted*, wich means that it based on a ponderation of priority and closeness, so that the client doesn't target whatever it saw with a high priority when it is too far away in relation to some other thing that's considerable close but has a lowest priority. There's really no need for this, but it would be cool to do, so we'll toss it in the *maybe* box of our to-do list.
+- The new priority focus navigation planification gives room for the opportunity layer, as now the little dudes might walk further, but we can take advantage of whatever resource is present in the passing tiles. That is: if there's food, just pick it, but also *if theres some non-targetted stone that turns out to be needed*, well, why not pick it up?
+
+All of this has extended the `tickCollectStones()` function, which now looks like this:
+```cpp
+void Behavior::tickCollectStones() {
+	if (_state.player.food() < FOOD_CRITICAL) {
+		_aiState = AIState::CollectFood;
+		clearNavPlan();
+		return;
+	}
+
+	computeMissingStones();
+
+	if (_stonesNeeded.empty()) {
+		_aiState = AIState::Incantating;
+		_incantationReady = false;
+		clearNavPlan();
+		return;
+	}
+
+	// pick up needed stone if already standing on one
+	for (const auto& stone : _stonesNeeded) {
+		if (_state.countItemOnCurrentTile(stone)) {
+			clearNavPlan();
+			_commandInFlight = true;
+			_sender.sendPrend(stone);
+			_sender.expect("prend " + stone, [this](const ServerMessage& msg) {
+				_commandInFlight = false;
+				if (msg.isOk())
+					setInventoryStale();
+				setVisionStale();
+			});
+			return;
+		}
+	}
+
+	// Opportunistic food grab: don't interrupt a collection run, but take free food if it's right here
+	if (_state.player.food() < FOOD_SAFE &&
+		_state.countItemOnCurrentTile("nourriture")) {
+		_commandInFlight = true;
+		_sender.sendPrend("nourriture");
+		_sender.expect("prend nourriture", [this](const ServerMessage& msg) {
+			_commandInFlight = false;
+			if (msg.isOk()) {
+				_state.player.inventory.nourriture++;
+				setInventoryStale();
+			}
+			setVisionStale();
+		});
+		return;
+	}
+
+	std::string previousTarget = _navTarget;
+	auto tile = getNearestTileWithNeededResource();
+
+	if (tile.localX == std::numeric_limits<int>::max()) {
+		if (_navPlan.empty()) {
+			std::vector<NavCmd> plan = Navigator::explorationStep(_explorationStep);
+			_navPlan.assign(plan.begin(), plan.end());
+			_navTarget.clear();
+		}
+	} else if (_navPlan.empty() || _navTarget != previousTarget) {
+		std::vector<NavCmd> plan = Navigator::planPath(
+			_state.player.orientation, tile.localX, tile.localY);
+		Logger::debug("Behavior: CollectStones: planned " + std::to_string(plan.size()) +
+			" steps to " + _navTarget + " at (" +
+			std::to_string(tile.localX) + "," + std::to_string(tile.localY) + ")");
+		_navPlan.assign(plan.begin(), plan.end());
+	}
+
+	if (!_navPlan.empty()) {
+		NavCmd next = _navPlan.front();
+		_navPlan.pop_front();
+		executeNavCmd(next);
+	}
+}
+```
+
+One immediate consequence of this extension is that the single little dude probe is now winning the game considerably faster. From a general perspective, this is happenning because the current logic, after the above logged edits, is less "chopped", less compartimentalized around food and stones, flowing better in its navigation and picking stuff up along the carried out paths. A good sign, if you ask me.
+
+Let's now focus on the initial fork logic injection.

@@ -248,9 +248,9 @@ DONE UNTIL HERE !!
 
 #### `agent/Behavior.cpp`
 
-- [ ] Confirm `computeMissingStones()` correctly handles all 7 levels from the requirement table
-- [ ] Add priority ordering to stone collection: collect the rarest stone first (thystame → phiras → mendiane → sibur → deraumere → linemate → nourriture)
-- [ ] Add opportunistic food grab: if food is visible on a tile the agent passes through while collecting stones, pick it up
+- [x] Confirm `computeMissingStones()` correctly handles all 7 levels from the requirement table
+- [x] Add priority ordering to stone collection: collect the rarest stone first (thystame → phiras → mendiane → sibur → deraumere → linemate → nourriture)
+- [x] Add opportunistic food grab: if food is visible on a tile the agent passes through while collecting stones, pick it up
 - [ ] Add fork decision to `Idle` state:
   - Only if food > 20
   - Only if level >= 2 (no point forking at level 1 before you know the AI works)
