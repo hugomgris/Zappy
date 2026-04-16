@@ -171,13 +171,11 @@ void Agent::networkLoop() {
 
 		if (nowMs - lastStatusTime > 5000) {
 			Logger::info("Status: level=" + std::to_string(_state.player.level) +
+						" behavior=" + std::to_string(static_cast<int>(_behavior.getState())) + 
 						" food=" + std::to_string(_state.player.inventory.nourriture) +
 						" forks=NOT TRACKED");
 			lastStatusTime = nowMs;
 		}
-
-		/* if (_state.getLevel() >= 8)
-			Logger::info("VICTORY! Reached level 8!"); */
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(50));
 	}
@@ -211,8 +209,19 @@ void Agent::processIncomingMessages(int64_t nowMs) {
 					break;
 
 				case MsgType::Event:
+					if (msg.status == "level_up") {
+						_behavior.setPendingLevelUp(true);
+					}
+					break;
+
 				case MsgType::Broadcast:
 					// TODO
+					break;
+
+				case MsgType::GameEnd:
+					Logger::info("Game ended! Team " + msg.winnerTeam + " won!");
+					_victory = true;
+					_running = false;
 					break;
 
 				case MsgType::Error:

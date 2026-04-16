@@ -47,7 +47,7 @@ $(OBJ_DIR)/%.o: %.c
 	${CC} -MMD $(CFLAGS) -Isrcs/parse_arg -Isrcs/server -c $< -o $@
 
 
-all: .gitignore create_cert
+all: .gitignore create_cert check_openssl
 
 	$(MAKE) $(NAME)
 
@@ -98,7 +98,7 @@ re: fclean
 		echo ".gitignore already exists."; \
 	fi
 
-.PHONY: all clean fclean re release .gitignore compile_ssl create_cert
+.PHONY: all clean fclean re release .gitignore compile_ssl create_cert check_openssl
 
 create_cert:
 	@if [ ! -f certs/cert.pem ]; then \
@@ -123,6 +123,22 @@ compile_ssl:
 	cp $(OPENSSL_INSTALL_DIR)/lib*/libcrypto.a $(OPENSSL_BUILD_DIR)/lib
 	cp -r $(OPENSSL_INSTALL_DIR)/include/. $(OPENSSL_BUILD_DIR)/include
 	@echo "OPENSSL DONE  "
+
+check_openssl:
+	@echo "Checking OpenSSL dependencies..."
+	@if [ ! -f "$(OPENSSL_BUILD_DIR)/lib/libssl.a" ] || [ ! -f "$(OPENSSL_BUILD_DIR)/lib/libcrypto.a" ]; then \
+		echo "⚠️  OpenSSL libraries incomplete or missing. Rebuilding..."; \
+		$(MAKE) compile_ssl; \
+	else \
+		LIBSSL_SIZE=$$(stat -f%z "$(OPENSSL_BUILD_DIR)/lib/libssl.a" 2>/dev/null || stat -c%s "$(OPENSSL_BUILD_DIR)/lib/libssl.a" 2>/dev/null || echo 0); \
+		LIBCRYPTO_SIZE=$$(stat -f%z "$(OPENSSL_BUILD_DIR)/lib/libcrypto.a" 2>/dev/null || stat -c%s "$(OPENSSL_BUILD_DIR)/lib/libcrypto.a" 2>/dev/null || echo 0); \
+		if [ "$$LIBSSL_SIZE" -lt 100000 ] || [ "$$LIBCRYPTO_SIZE" -lt 100000 ]; then \
+			echo "⚠️  OpenSSL libraries appear corrupted or too small. Rebuilding..."; \
+			$(MAKE) compile_ssl; \
+		else \
+			echo "✓ OpenSSL dependencies OK"; \
+		fi; \
+	fi
 
 
 -include $(DEP)

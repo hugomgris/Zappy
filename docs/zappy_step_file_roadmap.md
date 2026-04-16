@@ -184,10 +184,8 @@ No network, no AI, no state. Test with hardcoded strings.
 
 ---
 
-DONE UNTIL HERE !!
-
 ## Interlude 1 - Documentation of the basic behaving client build
-- [ ] WRITE
+- [x] WRITE
 
 ## Step 5 — Stone Collection and Level 1→2 Incantation
 
@@ -197,21 +195,21 @@ DONE UNTIL HERE !!
 
 #### `agent/Behavior.hpp`
 
-- [ ] Add `enum class AIState` values: `CollectStones`, `Incantating`
-- [ ] Add `std::vector<std::string> _stonesNeeded`
-- [ ] Add `bool _incantationSent` flag
-- [ ] Add `bool _stonesPlaced` flag
+- [x] Add `enum class AIState` values: `CollectStones`, `Incantating`
+- [x] Add `std::vector<std::string> _stonesNeeded`
+- [x] Add `bool _incantationSent` flag
+- [x] Add `bool _stonesPlaced` flag
 
 #### `agent/Behavior.cpp`
 
-- [ ] Implement `computeMissingStones()`: compare `levelReq(level).stones` against current inventory + items already on current tile from fresh vision
-- [ ] Add `CollectStones` state:
+- [x] Implement `computeMissingStones()`: compare `levelReq(level).stones` against current inventory + items already on current tile from fresh vision
+- [x] Add `CollectStones` state:
   - Compute missing stones
   - If empty → transition to `Incantating`
   - Find nearest tile with needed stone → navigate to it → `prend`
   - If food drops low → transition to `CollectFood`, return to `CollectStones` after
-- [ ] Add stone placement before incantation: for each required stone, if it's in inventory and not yet on the tile, `pose` it (one per tick, check callback before next pose)
-- [ ] Add `Incantating` state:
+- [x] Add stone placement before incantation: for each required stone, if it's in inventory and not yet on the tile, `pose` it (one per tick, check callback before next pose)
+- [x] Add `Incantating` state:
   - Send fresh `voir`
   - Verify required stones are on current tile from fresh vision
   - Send `incantation`
@@ -236,6 +234,11 @@ level 7→8: { players=6, linemate=2, deraumere=2, sibur=2, mendiane=2, phiras=2
 **Test:** Run with `ZAPPY_EASY_ASCENSION=1`. One client should reach level 8 automatically (easy mode bypasses player-count requirement). If it reaches 8, your stone logic and incantation flow are confirmed correct.
 
 ---
+
+## Interlude 1 - Documentation of the basic behaving client build
+- [x] WRITE
+
+DONE UNTIL HERE !!
 
 ## Step 6 — Multi-Level Stone Logic (Normal Mode, Single Agent)
 

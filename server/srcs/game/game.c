@@ -1290,7 +1290,7 @@ static int m_game_get_winner_team_id(void)
     client* c;
 
     memset(team_counts, 0, sizeof(team_counts));
-    players_to_win = 6;
+    players_to_win = m_easy_ascension_mode == 0 ? 6 : 1;
 
     if (m_server.team_count > (int)(sizeof(team_counts) / sizeof(team_counts[0])))
         return -1;
@@ -1315,9 +1315,14 @@ static int m_game_get_winner_team_id(void)
     return -1;
 }
 
+// Hugo estuvo aqui <3
 static void m_game_update_winner_state(void)
 {
     int winner_team;
+    cJSON *end_notification;
+    char *json_msg;
+    int i;
+    client *c;
 
     if (m_winner_team_id >= 0)
         return;
@@ -1329,8 +1334,42 @@ static void m_game_update_winner_state(void)
     m_winner_team_id = winner_team;
     log_msg(LOG_LEVEL_INFO, "Winner condition reached: team '%s' (team_id=%d) has at least 6 players at level %d\n",
         m_server.teams[winner_team].name, winner_team, LEVEL_MAX + 1);
-}
 
+    // Broadcast game end to all clients
+    end_notification = cJSON_CreateObject();
+    cJSON_AddStringToObject(end_notification, "type", "game_end");
+    cJSON_AddStringToObject(end_notification, "winner_team", m_server.teams[winner_team].name);
+    cJSON_AddNumberToObject(end_notification, "winner_team_id", winner_team);
+    
+    json_msg = cJSON_PrintUnformatted(end_notification);
+    
+    // Send to all players
+    for (i = 0; i < m_server.client_count; i++)
+    {
+        c = m_server.clients[i];
+        if (c && c->socket_fd >= 0)
+        {
+            server_send(c->socket_fd, json_msg);
+        }
+    }
+    
+    // Send to all observers
+    if (m_server.observers)
+    {
+        for (i = 0; m_server.observers[i]; i++)
+        {
+            if (m_server.observers[i]->socket_fd >= 0)
+                server_send(m_server.observers[i]->socket_fd, json_msg);
+        }
+    }
+    
+    free(json_msg);
+    cJSON_Delete(end_notification);
+    
+    // Pause the game so there is no more time progression
+    time_api_pause(NULL);
+    log_msg(LOG_LEVEL_INFO, "Game paused due to victory condition\n");
+}
 static int m_command_droite(void* _p, void* _arg)
 {
     player* p;

@@ -10,7 +10,14 @@
 
 enum class AIState {
 	Idle,
-	CollectFood
+	CollectFood,
+	CollectStones,
+	Incantating
+};
+
+struct LevelReq {
+	int			players;
+	Inventory	stones;
 };
 
 class Behavior {
@@ -24,6 +31,14 @@ class Behavior {
 		std::string			_navTarget;
 		int					_explorationStep = 0;
 
+		AIState	_aiState = AIState::CollectFood;
+		bool	_easyMode = false;
+		bool	_pendingLevelUp = false;
+
+		std::vector<std::string>	_stonesNeeded;
+		bool						_incantationReady;
+		bool						_stonesPlaced;
+
 		static constexpr int FOOD_SAFE					= 12;
 		static constexpr int FOOD_CRITICAL				= 4;
 
@@ -34,13 +49,29 @@ class Behavior {
 		~Behavior() = default;
 	
 		void tick(int64_t nowMs);
+		void tickCollectFood();
+		void tickCollectStones();
+		void tickIncantating();
+
+		void refreshVision();
+		void refreshInventory();
+
 		void onResponse(const ServerMessage& msg);
+
+		AIState getState() const { return _aiState; } // for loop status periodic print
 
 		bool hasCommandInFlight() const { return _commandInFlight; }
 		bool isVisionStale()      const { return _staleVision; }
 		bool isInventoryStale()   const { return _staleInventory; }
 
+		std::vector<std::string>& getStonesNeeded() { return _stonesNeeded; }
+
 		void setVisionStale()    { _staleVision = true; }
 		void setInventoryStale() { _staleInventory = true; }
 		void clearNavPlan()      { _navPlan.clear(); _navTarget.clear(); }
+
+		void computeMissingStones();
+		VisionTile getNearestTileWithNeededResource();
+		void setPendingLevelUp(bool val) { _pendingLevelUp = val; }
+		void setEasyMode(bool enabled) { _easyMode = enabled; }
 };
