@@ -29,6 +29,7 @@ ServerMessage MessageParser::parse(const std::string& raw) {
 		else if	(typeStr == "error")		msg.type = MsgType::Error;
 		else if	(typeStr == "event")		msg.type = MsgType::Event;
 		else if	(typeStr == "message")		msg.type = MsgType::Broadcast;
+		else if (typeStr == "game_end")		msg.type = MsgType::GameEnd;
 	}
 
 	// get common fields
@@ -130,6 +131,13 @@ ServerMessage MessageParser::parse(const std::string& raw) {
 			} catch (...) {
 				Logger::warn("Failed to parse message direction: " + msg.status);
 			}
+	}
+
+	if (msg.type == MsgType::GameEnd) {
+		if (root.contains("winner_team") && root["winner_team"].is_string())
+			msg.winnerTeam = root["winner_team"].get<std::string>();
+		if (root.contains("winner_team_id") && root["winner_team_id"].is_number())
+			msg.winnerTeamId = root["winner_team_id"].get<int>();
 	}
 	
 	return msg;

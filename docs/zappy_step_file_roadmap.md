@@ -205,13 +205,13 @@ DONE UNTIL HERE !!
 #### `agent/Behavior.cpp`
 
 - [x] Implement `computeMissingStones()`: compare `levelReq(level).stones` against current inventory + items already on current tile from fresh vision
-- [ ] Add `CollectStones` state:
+- [x] Add `CollectStones` state:
   - Compute missing stones
   - If empty → transition to `Incantating`
   - Find nearest tile with needed stone → navigate to it → `prend`
   - If food drops low → transition to `CollectFood`, return to `CollectStones` after
-- [ ] Add stone placement before incantation: for each required stone, if it's in inventory and not yet on the tile, `pose` it (one per tick, check callback before next pose)
-- [ ] Add `Incantating` state:
+- [x] Add stone placement before incantation: for each required stone, if it's in inventory and not yet on the tile, `pose` it (one per tick, check callback before next pose)
+- [x] Add `Incantating` state:
   - Send fresh `voir`
   - Verify required stones are on current tile from fresh vision
   - Send `incantation`

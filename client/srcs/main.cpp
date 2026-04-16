@@ -74,8 +74,16 @@ int main(int argc, char **argv) {
 
 	Agent agent(host, port, teamName, serverKey);
 	g_agent = &agent;
-
 	agent.setForkEnabled(forkEnabled);
+
+	// EASY MODE CHECK
+	const char* easyModeEnv = std::getenv("ZAPPY_EASY_ASCENSION");
+	bool easyMode = (easyModeEnv && std::string(easyModeEnv) == "1");
+	agent.setEasyMode(easyMode);
+	if (easyMode) {
+		Logger::info("Easy ascension mode enabled (ZAPPY_EASY_ASCENSION=1)");
+	} else
+		Logger::info("Normal mode enabled");
 
 	Result res = agent.connect(Agent::CONNECT_TIMEOUT_MS);
 	if (!res.ok()) {

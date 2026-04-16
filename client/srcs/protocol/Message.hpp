@@ -45,12 +45,15 @@ struct Inventory {
 };
 
 enum class MsgType {
-	Unknown, Bienvenue, Welcome, Response, Event, Broadcast, Error
+	Unknown, Bienvenue, Welcome, Response, Event, Broadcast, GameEnd, Error
 };
 
 struct ServerMessage {
 	MsgType		type = MsgType::Unknown;
 	std::string	raw;
+
+	std::string winnerTeam;
+    int			winnerTeamId = -1;
 
 	// for response
 	std::string cmd;

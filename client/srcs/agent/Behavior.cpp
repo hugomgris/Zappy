@@ -3,6 +3,24 @@
 
 #include <limits>
 
+static const LevelReq& levelReq(int level) {
+	// recipe: index 0 = level 1->2, index 6 = level 7->8
+	// order: players -> nourriture, linemate, deraumere, sibur, mendiane, phiras, thystame
+	static const LevelReq table[7] = {
+		{ 1, { 0, 1, 0, 0, 0, 0, 0 } }, // 1→2
+        { 2, { 0, 1, 1, 1, 0, 0, 0 } }, // 2→3
+        { 2, { 0, 2, 0, 1, 0, 2, 0 } }, // 3→4
+        { 4, { 0, 1, 1, 2, 0, 1, 0 } }, // 4→5
+        { 4, { 0, 1, 2, 1, 3, 0, 0 } }, // 5→6
+        { 6, { 0, 1, 2, 3, 0, 1, 0 } }, // 6→7
+        { 6, { 0, 2, 2, 2, 2, 2, 1 } }, // 7→8
+	};
+
+	if (level < 1 || level > 7)
+		return table[0]; // never going to happen, but its a safe fallback
+	return table[level - 1];
+}
+
 Behavior::Behavior(Sender& sender, WorldState& state) : _sender(sender), _state(state) {}
 
 void Behavior::executeNavCmd(NavCmd cmd) {
@@ -75,6 +93,16 @@ void Behavior::tick(int64_t nowMs) {
 	(void)nowMs;
 
 	if (hasCommandInFlight())	return;
+
+	// TODO: not sure if needed
+	static int64_t lastInventoryRefresh = 0;
+	if (nowMs - lastInventoryRefresh > 5000) {  // Every 3 seconds
+		if (!isInventoryStale() && !hasCommandInFlight()) {
+			refreshInventory();
+			lastInventoryRefresh = nowMs;
+		}
+	}
+
 	if (isVisionStale())		{ refreshVision(); return; }
 	if (isInventoryStale())		{ refreshInventory(); return; }
 
@@ -117,6 +145,7 @@ _commandInFlight = true;
 			Logger::info("Refreshed inventory: " + msg.raw);
 			_state.player.inventory = msg.inventory.value();
 			_staleInventory = false;
+			_stonesPlaced = false;
 		} else if (msg.isKo()) {
 			Logger::warn("Inventaire failed");
 		}
@@ -202,6 +231,7 @@ void Behavior::tickCollectStones() {
 
     if (_stonesNeeded.empty()) {
         _aiState = AIState::Incantating;
+		_incantationReady = false;
         clearNavPlan();
         return;
     }
@@ -248,7 +278,114 @@ void Behavior::tickCollectStones() {
 }
 
 void Behavior::tickIncantating() {
+	// Step 1: Get a fresh vision first
+	if (!_incantationReady) {
+		setVisionStale();
+		_incantationReady = true;
+		return;
+	}
 
+	// Step 2: Place required stones (one per tick)
+	if (!_stonesPlaced) {
+		if (_easyMode) {
+			// Easy mode: only need to place 1 linemate
+			auto& tile = _state.vision[0];
+			if (tile.countItem("linemate") < 1) {
+				_commandInFlight = true;
+				_sender.sendPose("linemate");
+				_sender.expect("pose linemate", [this](const ServerMessage& msg) {
+					_commandInFlight = false;
+					if (msg.isOk()) {
+						_state.player.inventory.linemate--;
+						setInventoryStale();
+					}
+					setVisionStale();
+				});
+				return;
+			}
+		} else {
+			// Normal mode: place all required stones
+			auto requirements = levelReq(_state.player.level);
+			auto& tile = _state.vision[0];
+
+			#define TRY_POSE(stone_name) \
+				if (requirements.stones.stone_name > 0 && \
+					tile.countItem(#stone_name) < requirements.stones.stone_name) { \
+					_commandInFlight = true; \
+					_sender.sendPose(#stone_name); \
+					_sender.expect("pose " #stone_name, [this](const ServerMessage& msg) { \
+						_commandInFlight = false; \
+						if (msg.isOk()) { \
+							_state.player.inventory.stone_name--; \
+							setInventoryStale(); \
+						} \
+						setVisionStale(); \
+					}); \
+					return; \
+				}
+
+			TRY_POSE(linemate)
+			TRY_POSE(deraumere)
+			TRY_POSE(sibur)
+			TRY_POSE(mendiane)
+			TRY_POSE(phiras)
+			TRY_POSE(thystame)
+			#undef TRY_POSE
+		}
+
+		_stonesPlaced = true;
+		setVisionStale();
+		return;
+	}
+
+	// Step 3: Verify stones - simplified for easy mode
+	if (_staleVision) return;
+	
+	auto& tile = _state.vision[0];
+	
+	bool stonesOk;
+	if (_easyMode) {
+		stonesOk = tile.countItem("linemate") >= 1;
+	} else {
+		auto requirements = levelReq(_state.player.level);
+		stonesOk = tile.countItem("linemate")  >= requirements.stones.linemate  &&
+				tile.countItem("deraumere") >= requirements.stones.deraumere &&
+				tile.countItem("sibur")     >= requirements.stones.sibur     &&
+				tile.countItem("mendiane")  >= requirements.stones.mendiane  &&
+				tile.countItem("phiras")    >= requirements.stones.phiras    &&
+				tile.countItem("thystame")  >= requirements.stones.thystame;
+	}
+
+	if (!stonesOk) {
+		Logger::warn("Behavior: stones missing on tile after placement, back to CollectStones");
+		_stonesPlaced = false;
+		_incantationReady = false;
+		_aiState = AIState::CollectStones;
+		return;
+	}
+
+	// Step 4: Send incantation
+	_commandInFlight = true;
+	_sender.sendIncantation();
+	_sender.expect("incantation", [this](const ServerMessage& msg) {
+		if (msg.isInProgress()) {
+			return;
+		}
+
+		_commandInFlight = false;
+		_stonesPlaced = false;
+		_incantationReady = false;
+
+		if (_pendingLevelUp) {
+			_state.player.level++;
+			Logger::info("Level up! Now level " + std::to_string(_state.player.level));
+			_pendingLevelUp = false;
+			_aiState = (_state.player.level >= 8) ? AIState::Idle : AIState::CollectStones;
+		} else {
+			Logger::warn("Incantation failed (ko or timeout), restarting stone collection");
+			_aiState = AIState::CollectStones;
+		}
+	});
 }
 
 void Behavior::onResponse(const ServerMessage& msg) {
@@ -257,53 +394,30 @@ void Behavior::onResponse(const ServerMessage& msg) {
 	(void)msg;
 }
 
-static const LevelReq& levelReq(int level) {
-	// recipe: index 0 = level 1->2, index 6 = level 7->8
-	// order: players -> nourriture, linemate, deraumere, sibur, mendiane, phiras, thystame
-	static const LevelReq table[7] = {
-		{ 1, { 0, 1, 0, 0, 0, 0, 0 } }, // 1→2
-        { 2, { 0, 1, 1, 1, 0, 0, 0 } }, // 2→3
-        { 2, { 0, 2, 0, 1, 0, 2, 0 } }, // 3→4
-        { 4, { 0, 1, 1, 2, 0, 1, 0 } }, // 4→5
-        { 4, { 0, 1, 2, 1, 3, 0, 0 } }, // 5→6
-        { 6, { 0, 1, 2, 3, 0, 1, 0 } }, // 6→7
-        { 6, { 0, 2, 2, 2, 2, 2, 1 } }, // 7→8
-	};
-
-	if (level < 1 || level > 7)
-		return table[0]; // never going to happen, but its a safe fallback
-	return table[level - 1];
-}
-
 void Behavior::computeMissingStones() {
 	if (_state.vision.empty()) return;
 	
 	int currentLevel = _state.player.level;
-	Inventory currentStones = _state.player.inventory;
-	VisionTile currentTile = _state.vision[0];
-
-	const LevelReq& requirements = levelReq(currentLevel);
+	Inventory& inv = _state.player.inventory;
+	
 	_stonesNeeded.clear();
 	
-	// TODO: manage the _stonesNeeded attribute as an Inventory type?
-	if (requirements.stones.linemate > currentStones.linemate + currentTile.countItem("linemate")) {
-		_stonesNeeded.push_back("linemate");
+	// easy mode -> 1 lineamte is enough
+	if (_easyMode) {
+		if (inv.linemate < 1) {
+			_stonesNeeded.push_back("linemate");
+		}
+		return;
 	}
-	if (requirements.stones.deraumere > currentStones.deraumere + currentTile.countItem("deraumere")) {
-		_stonesNeeded.push_back("deraumere");
-	}
-	if (requirements.stones.sibur > currentStones.sibur + currentTile.countItem("sibur")) {
-		_stonesNeeded.push_back("sibur");
-	}
-	if (requirements.stones.mendiane > currentStones.mendiane + currentTile.countItem("mendiane")) {
-		_stonesNeeded.push_back("mendiane");
-	}
-	if (requirements.stones.phiras > currentStones.phiras + currentTile.countItem("phiras")) {
-		_stonesNeeded.push_back("phiras");
-	}
-	if (requirements.stones.thystame > currentStones.thystame + currentTile.countItem("thystame")) {
-		_stonesNeeded.push_back("thystame");
-	}
+	
+	// normal mode
+	const LevelReq& requirements = levelReq(currentLevel);
+	if (requirements.stones.linemate  > inv.linemate)  _stonesNeeded.push_back("linemate");
+	if (requirements.stones.deraumere > inv.deraumere) _stonesNeeded.push_back("deraumere");
+	if (requirements.stones.sibur     > inv.sibur)     _stonesNeeded.push_back("sibur");
+	if (requirements.stones.mendiane  > inv.mendiane)  _stonesNeeded.push_back("mendiane");
+	if (requirements.stones.phiras    > inv.phiras)    _stonesNeeded.push_back("phiras");
+	if (requirements.stones.thystame  > inv.thystame)  _stonesNeeded.push_back("thystame");
 }
 
 VisionTile Behavior::getNearestTileWithNeededResource() {

@@ -31,10 +31,12 @@ class Behavior {
 		std::string			_navTarget;
 		int					_explorationStep = 0;
 
-		AIState						_aiState = AIState::CollectFood;
+		AIState	_aiState = AIState::CollectFood;
+		bool	_easyMode = false;
+		bool	_pendingLevelUp = false;
 
 		std::vector<std::string>	_stonesNeeded;
-		bool						_incantationSet;
+		bool						_incantationReady;
 		bool						_stonesPlaced;
 
 		static constexpr int FOOD_SAFE					= 12;
@@ -56,6 +58,8 @@ class Behavior {
 
 		void onResponse(const ServerMessage& msg);
 
+		AIState getState() const { return _aiState; } // for loop status periodic print
+
 		bool hasCommandInFlight() const { return _commandInFlight; }
 		bool isVisionStale()      const { return _staleVision; }
 		bool isInventoryStale()   const { return _staleInventory; }
@@ -68,4 +72,6 @@ class Behavior {
 
 		void computeMissingStones();
 		VisionTile getNearestTileWithNeededResource();
+		void setPendingLevelUp(bool val) { _pendingLevelUp = val; }
+		void setEasyMode(bool enabled) { _easyMode = enabled; }
 };

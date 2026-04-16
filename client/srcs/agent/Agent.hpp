@@ -28,6 +28,8 @@ class Agent {
 		std::atomic<bool>				_running{false};
 		std::unique_ptr<std::thread>	_networkThread;
 
+		bool _victory = false;
+
 		static constexpr int MAX_RECONNECT				= 5;
 		static constexpr int COMMAND_FLIGHT_TIMEOUT_MS	= 3000;
 
@@ -42,6 +44,8 @@ class Agent {
 
 		Agent(const std::string& host, const int port, const std::string& teamName, const std::string& key);
 		~Agent();
+
+		void setEasyMode(bool enabled) { _behavior.setEasyMode(enabled); }
 
 		bool isRunning() const { return _running; }
 		const WorldState& getState() const { return _state; }
