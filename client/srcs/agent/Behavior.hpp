@@ -31,6 +31,8 @@ class Behavior {
 		std::string			_navTarget;
 		int					_explorationStep = 0;
 
+		AIState						_aiState = AIState::CollectFood;
+
 		std::vector<std::string>	_stonesNeeded;
 		bool						_incantationSet;
 		bool						_stonesPlaced;
@@ -45,13 +47,25 @@ class Behavior {
 		~Behavior() = default;
 	
 		void tick(int64_t nowMs);
+		void tickCollectFood();
+		void tickCollectStones();
+		void tickIncantating();
+
+		void refreshVision();
+		void refreshInventory();
+
 		void onResponse(const ServerMessage& msg);
 
 		bool hasCommandInFlight() const { return _commandInFlight; }
 		bool isVisionStale()      const { return _staleVision; }
 		bool isInventoryStale()   const { return _staleInventory; }
 
+		std::vector<std::string>& getStonesNeeded() { return _stonesNeeded; }
+
 		void setVisionStale()    { _staleVision = true; }
 		void setInventoryStale() { _staleInventory = true; }
 		void clearNavPlan()      { _navPlan.clear(); _navTarget.clear(); }
+
+		void computeMissingStones();
+		VisionTile getNearestTileWithNeededResource();
 };

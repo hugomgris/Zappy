@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <string>
+#include <vector>
 
 #include "../srcs/agent/Behavior.hpp"
 
@@ -101,6 +103,12 @@ class BehaviorTest : public ::testing::Test {
 
             sender.fireCallback(makeInventaireResponse(inv));
         }
+
+        void levelUpPlayer() {
+			if (state.player.level < 8) state.player.level++;
+
+			return;
+		};
 };
 
 TEST_F(BehaviorTest, StaleVisionSendsVoir) {
@@ -223,4 +231,61 @@ TEST_F(BehaviorTest, MovementCallbackSetsVisionStale) {
 
     sender.fireCallback(makeOkResponse("droite"));
     EXPECT_TRUE(behavior.isVisionStale());
+}
+
+TEST_F(BehaviorTest, ComputeMissingStonesReturnsCorrectState) {
+    std::vector<VisionTile> tiles = { makeTile(0, 0, {}) };
+    giveFreshVision(tiles);
+    behavior.computeMissingStones();
+
+    ASSERT_EQ(behavior.getStonesNeeded().size(), 1u);
+    EXPECT_EQ(behavior.getStonesNeeded()[0], "linemate");
+
+    levelUpPlayer();
+    behavior.computeMissingStones();
+    ASSERT_EQ(behavior.getStonesNeeded().size(), 3u);
+    EXPECT_EQ(behavior.getStonesNeeded()[0], "linemate");
+    EXPECT_EQ(behavior.getStonesNeeded()[1], "deraumere");
+    EXPECT_EQ(behavior.getStonesNeeded()[2], "sibur");
+
+    levelUpPlayer();
+    behavior.computeMissingStones();
+    ASSERT_EQ(behavior.getStonesNeeded().size(), 3u);
+    EXPECT_EQ(behavior.getStonesNeeded()[0], "linemate");
+    EXPECT_EQ(behavior.getStonesNeeded()[1], "sibur");
+    EXPECT_EQ(behavior.getStonesNeeded()[2], "phiras");
+
+    levelUpPlayer();
+    behavior.computeMissingStones();
+    ASSERT_EQ(behavior.getStonesNeeded().size(), 4u);
+    EXPECT_EQ(behavior.getStonesNeeded()[0], "linemate");
+    EXPECT_EQ(behavior.getStonesNeeded()[1], "deraumere");
+    EXPECT_EQ(behavior.getStonesNeeded()[2], "sibur");
+    EXPECT_EQ(behavior.getStonesNeeded()[3], "phiras");
+
+    levelUpPlayer();
+    behavior.computeMissingStones();
+    ASSERT_EQ(behavior.getStonesNeeded().size(), 4u);
+    EXPECT_EQ(behavior.getStonesNeeded()[0], "linemate");
+    EXPECT_EQ(behavior.getStonesNeeded()[1], "deraumere");
+    EXPECT_EQ(behavior.getStonesNeeded()[2], "sibur");
+    EXPECT_EQ(behavior.getStonesNeeded()[3], "mendiane");
+
+    levelUpPlayer();
+    behavior.computeMissingStones();
+    ASSERT_EQ(behavior.getStonesNeeded().size(), 4u);
+    EXPECT_EQ(behavior.getStonesNeeded()[0], "linemate");
+    EXPECT_EQ(behavior.getStonesNeeded()[1], "deraumere");
+    EXPECT_EQ(behavior.getStonesNeeded()[2], "sibur");
+    EXPECT_EQ(behavior.getStonesNeeded()[3], "phiras");
+    
+    levelUpPlayer();
+    behavior.computeMissingStones();
+    ASSERT_EQ(behavior.getStonesNeeded().size(), 6u);
+    EXPECT_EQ(behavior.getStonesNeeded()[0], "linemate");
+    EXPECT_EQ(behavior.getStonesNeeded()[1], "deraumere");
+    EXPECT_EQ(behavior.getStonesNeeded()[2], "sibur");
+    EXPECT_EQ(behavior.getStonesNeeded()[3], "mendiane");
+    EXPECT_EQ(behavior.getStonesNeeded()[4], "phiras");
+    EXPECT_EQ(behavior.getStonesNeeded()[5], "thystame");
 }

@@ -1,6 +1,8 @@
 #include "Behavior.hpp"
 #include "../helpers/Logger.hpp"
 
+#include <limits>
+
 Behavior::Behavior(Sender& sender, WorldState& state) : _sender(sender), _state(state) {}
 
 void Behavior::executeNavCmd(NavCmd cmd) {
@@ -72,50 +74,62 @@ void Behavior::executeNavCmd(NavCmd cmd) {
 void Behavior::tick(int64_t nowMs) {
 	(void)nowMs;
 
-	if (hasCommandInFlight()) return;
+	if (hasCommandInFlight())	return;
+	if (isVisionStale())		{ refreshVision(); return; }
+	if (isInventoryStale())		{ refreshInventory(); return; }
 
-	// refresh vision
-	if (isVisionStale()) {
-		_commandInFlight = true;
-		_sender.sendVoir();
-		_sender.expect("voir", [this](const ServerMessage& msg) {
-			_commandInFlight = false;
-			if (msg.vision.has_value()) {
-				_state.vision = msg.vision.value();
-				_staleVision = false;
+	switch (_aiState) {
+		case AIState::CollectFood:      tickCollectFood(); break;
+		case AIState::CollectStones:    tickCollectStones(); break;
+		case AIState::Incantating:      tickIncantating(); break;
+		case AIState::Idle:             break;
+	}
+}
 
-				// if target is gone, sreplan
-				if (!_navPlan.empty() && !_navTarget.empty() &&
-					!_state.visionHasItem(_navTarget)) {
-					Logger::debug("Behavior: target '" + _navTarget +
-						"' no longer visible, clearing nav plan");
-					clearNavPlan();
-				}
-			} else if (msg.isKo()) {
-				Logger::warn("Voir failed");
+void Behavior::refreshVision() {
+	_commandInFlight = true;
+	_sender.sendVoir();
+	_sender.expect("voir", [this](const ServerMessage& msg) {
+		_commandInFlight = false;
+		if (msg.vision.has_value()) {
+			_state.vision = msg.vision.value();
+			_staleVision = false;
+
+			// if target is gone, sreplan
+			if (!_navPlan.empty() && !_navTarget.empty() &&
+				!_state.visionHasItem(_navTarget)) {
+				Logger::debug("Behavior: target '" + _navTarget +
+					"' no longer visible, clearing nav plan");
+				clearNavPlan();
 			}
-		});
+		} else if (msg.isKo()) {
+			Logger::warn("Voir failed");
+		}
+	});
+}
+
+void Behavior::refreshInventory() {
+_commandInFlight = true;
+	_sender.sendInventaire();
+	_sender.expect("inventaire", [this](const ServerMessage& msg) {
+		_commandInFlight = false;
+		if (msg.inventory.has_value()) {
+			Logger::info("Refreshed inventory: " + msg.raw);
+			_state.player.inventory = msg.inventory.value();
+			_staleInventory = false;
+		} else if (msg.isKo()) {
+			Logger::warn("Inventaire failed");
+		}
+	});
+}
+
+void Behavior::tickCollectFood() {
+	if (_state.player.inventory.nourriture >= FOOD_SAFE) {
+		_aiState = AIState::CollectStones;
+		clearNavPlan();
 		return;
 	}
-
-	// refresh inventory
-	if (isInventoryStale()) {
-		_commandInFlight = true;
-		_sender.sendInventaire();
-		_sender.expect("inventaire", [this](const ServerMessage& msg) {
-			_commandInFlight = false;
-			if (msg.inventory.has_value()) {
-				Logger::info("Refreshed inventory: " + msg.raw);
-				_state.player.inventory = msg.inventory.value();
-				_staleInventory = false;
-			} else if (msg.isKo()) {
-				Logger::warn("Inventaire failed");
-			}
-		});
-		return;
-	}
-
-	// if food in tile, pick up
+	
 	if (_state.countItemOnCurrentTile("nourriture")) {
 		clearNavPlan();
 		_commandInFlight = true;
@@ -146,7 +160,7 @@ void Behavior::tick(int64_t nowMs) {
 			std::vector<NavCmd> plan = Navigator::planPath(
 				_state.player.orientation, t.localX, t.localY);
 
-			Logger::debug("Behavior: planned " + std::to_string(plan.size()) +
+			Logger::debug("Behavior: Collect Food: planned " + std::to_string(plan.size()) +
 				" steps to food at (" + std::to_string(t.localX) + "," +
 				std::to_string(t.localY) + ")");
 
@@ -154,17 +168,16 @@ void Behavior::tick(int64_t nowMs) {
 			_navTarget = "nourriture";
 		}
 
-		// next step
 		if (!_navPlan.empty()) {
 			NavCmd next = _navPlan.front();
 			_navPlan.pop_front();
 			executeNavCmd(next);
 		}
+
 		return;
 	}
 
-	// exploration protocol
-	// No food  = run an exploration step
+	// no food visible->explore
 	if (_navPlan.empty()) {
 		std::vector<NavCmd> plan = Navigator::explorationStep(_explorationStep);
 		_navPlan.assign(plan.begin(), plan.end());
@@ -176,6 +189,66 @@ void Behavior::tick(int64_t nowMs) {
 		_navPlan.pop_front();
 		executeNavCmd(next);
 	}
+}
+
+void Behavior::tickCollectStones() {
+    if (_state.player.food() < FOOD_CRITICAL) {
+        _aiState = AIState::CollectFood;
+        clearNavPlan();
+        return;
+    }
+
+    computeMissingStones();
+
+    if (_stonesNeeded.empty()) {
+        _aiState = AIState::Incantating;
+        clearNavPlan();
+        return;
+    }
+
+    // pick up needed stone if already standing on one
+    for (const auto& stone : _stonesNeeded) {
+        if (_state.countItemOnCurrentTile(stone)) {
+            clearNavPlan();
+            _commandInFlight = true;
+            _sender.sendPrend(stone);
+            _sender.expect("prend " + stone, [this](const ServerMessage& msg) {
+                _commandInFlight = false;
+                if (msg.isOk())
+                    setInventoryStale();
+                setVisionStale();
+            });
+            return;
+        }
+    }
+
+    // navigate towards nearest needed resource
+    clearNavPlan();
+    auto tile = getNearestTileWithNeededResource();
+
+    if (tile.localX == std::numeric_limits<int>::max()) {
+        // nothing visible yet->explore
+        std::vector<NavCmd> plan = Navigator::explorationStep(_explorationStep);
+        _navPlan.assign(plan.begin(), plan.end());
+        _navTarget.clear();
+    } else {
+        std::vector<NavCmd> plan = Navigator::planPath(
+            _state.player.orientation, tile.localX, tile.localY);
+        Logger::debug("Behavior: CollectStones: planned " + std::to_string(plan.size()) +
+            " steps to " + _navTarget + " at (" +
+            std::to_string(tile.localX) + "," + std::to_string(tile.localY) + ")");
+        _navPlan.assign(plan.begin(), plan.end());
+    }
+
+    if (!_navPlan.empty()) {
+        NavCmd next = _navPlan.front();
+        _navPlan.pop_front();
+        executeNavCmd(next);
+    }
+}
+
+void Behavior::tickIncantating() {
+
 }
 
 void Behavior::onResponse(const ServerMessage& msg) {
@@ -200,4 +273,53 @@ static const LevelReq& levelReq(int level) {
 	if (level < 1 || level > 7)
 		return table[0]; // never going to happen, but its a safe fallback
 	return table[level - 1];
+}
+
+void Behavior::computeMissingStones() {
+	if (_state.vision.empty()) return;
+	
+	int currentLevel = _state.player.level;
+	Inventory currentStones = _state.player.inventory;
+	VisionTile currentTile = _state.vision[0];
+
+	const LevelReq& requirements = levelReq(currentLevel);
+	_stonesNeeded.clear();
+	
+	// TODO: manage the _stonesNeeded attribute as an Inventory type?
+	if (requirements.stones.linemate > currentStones.linemate + currentTile.countItem("linemate")) {
+		_stonesNeeded.push_back("linemate");
+	}
+	if (requirements.stones.deraumere > currentStones.deraumere + currentTile.countItem("deraumere")) {
+		_stonesNeeded.push_back("deraumere");
+	}
+	if (requirements.stones.sibur > currentStones.sibur + currentTile.countItem("sibur")) {
+		_stonesNeeded.push_back("sibur");
+	}
+	if (requirements.stones.mendiane > currentStones.mendiane + currentTile.countItem("mendiane")) {
+		_stonesNeeded.push_back("mendiane");
+	}
+	if (requirements.stones.phiras > currentStones.phiras + currentTile.countItem("phiras")) {
+		_stonesNeeded.push_back("phiras");
+	}
+	if (requirements.stones.thystame > currentStones.thystame + currentTile.countItem("thystame")) {
+		_stonesNeeded.push_back("thystame");
+	}
+}
+
+VisionTile Behavior::getNearestTileWithNeededResource() {
+	VisionTile nearest;
+	nearest.localX = std::numeric_limits<int>::max();
+	nearest.localY = std::numeric_limits<int>::max();
+
+	for (size_t i = 0; i < _stonesNeeded.size(); ++i) {
+		auto tile = _state.nearestTileWithItem(_stonesNeeded[i]);
+		if (tile.has_value()) {
+			if ((tile.value().localY + std::abs(tile.value().localX)) < (nearest.localY + nearest.localX)) {
+				nearest = tile.value();
+				_navTarget = _stonesNeeded[i];
+			}
+		}
+	}
+
+	return nearest;
 }

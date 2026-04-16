@@ -204,7 +204,7 @@ DONE UNTIL HERE !!
 
 #### `agent/Behavior.cpp`
 
-- [ ] Implement `computeMissingStones()`: compare `levelReq(level).stones` against current inventory + items already on current tile from fresh vision
+- [x] Implement `computeMissingStones()`: compare `levelReq(level).stones` against current inventory + items already on current tile from fresh vision
 - [ ] Add `CollectStones` state:
   - Compute missing stones
   - If empty → transition to `Incantating`
