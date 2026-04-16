@@ -187,8 +187,6 @@ No network, no AI, no state. Test with hardcoded strings.
 ## Interlude 1 - Documentation of the basic behaving client build
 - [x] WRITE
 
-DONE UNTIL HERE !!
-
 ## Step 5 — Stone Collection and Level 1→2 Incantation
 
 **Goal:** One client can reach level 2 completely autonomously.
@@ -236,6 +234,11 @@ level 7→8: { players=6, linemate=2, deraumere=2, sibur=2, mendiane=2, phiras=2
 **Test:** Run with `ZAPPY_EASY_ASCENSION=1`. One client should reach level 8 automatically (easy mode bypasses player-count requirement). If it reaches 8, your stone logic and incantation flow are confirmed correct.
 
 ---
+
+## Interlude 1 - Documentation of the basic behaving client build
+- [x] WRITE
+
+DONE UNTIL HERE !!
 
 ## Step 6 — Multi-Level Stone Logic (Normal Mode, Single Agent)
 

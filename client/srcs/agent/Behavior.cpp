@@ -221,60 +221,60 @@ void Behavior::tickCollectFood() {
 }
 
 void Behavior::tickCollectStones() {
-    if (_state.player.food() < FOOD_CRITICAL) {
-        _aiState = AIState::CollectFood;
-        clearNavPlan();
-        return;
-    }
+	if (_state.player.food() < FOOD_CRITICAL) {
+		_aiState = AIState::CollectFood;
+		clearNavPlan();
+		return;
+	}
 
-    computeMissingStones();
+	computeMissingStones();
 
-    if (_stonesNeeded.empty()) {
-        _aiState = AIState::Incantating;
+	if (_stonesNeeded.empty()) {
+		_aiState = AIState::Incantating;
 		_incantationReady = false;
-        clearNavPlan();
-        return;
-    }
+		clearNavPlan();
+		return;
+	}
 
-    // pick up needed stone if already standing on one
-    for (const auto& stone : _stonesNeeded) {
-        if (_state.countItemOnCurrentTile(stone)) {
-            clearNavPlan();
-            _commandInFlight = true;
-            _sender.sendPrend(stone);
-            _sender.expect("prend " + stone, [this](const ServerMessage& msg) {
-                _commandInFlight = false;
-                if (msg.isOk())
-                    setInventoryStale();
-                setVisionStale();
-            });
-            return;
-        }
-    }
+	// pick up needed stone if already standing on one
+	for (const auto& stone : _stonesNeeded) {
+		if (_state.countItemOnCurrentTile(stone)) {
+			clearNavPlan();
+			_commandInFlight = true;
+			_sender.sendPrend(stone);
+			_sender.expect("prend " + stone, [this](const ServerMessage& msg) {
+				_commandInFlight = false;
+				if (msg.isOk())
+					setInventoryStale();
+				setVisionStale();
+			});
+			return;
+		}
+	}
 
-    // navigate towards nearest needed resource
-    clearNavPlan();
-    auto tile = getNearestTileWithNeededResource();
+	// navigate towards nearest needed resource
+	clearNavPlan();
+	auto tile = getNearestTileWithNeededResource();
 
-    if (tile.localX == std::numeric_limits<int>::max()) {
-        // nothing visible yet->explore
-        std::vector<NavCmd> plan = Navigator::explorationStep(_explorationStep);
-        _navPlan.assign(plan.begin(), plan.end());
-        _navTarget.clear();
-    } else {
-        std::vector<NavCmd> plan = Navigator::planPath(
-            _state.player.orientation, tile.localX, tile.localY);
-        Logger::debug("Behavior: CollectStones: planned " + std::to_string(plan.size()) +
-            " steps to " + _navTarget + " at (" +
-            std::to_string(tile.localX) + "," + std::to_string(tile.localY) + ")");
-        _navPlan.assign(plan.begin(), plan.end());
-    }
+	if (tile.localX == std::numeric_limits<int>::max()) {
+		// nothing visible yet->explore
+		std::vector<NavCmd> plan = Navigator::explorationStep(_explorationStep);
+		_navPlan.assign(plan.begin(), plan.end());
+		_navTarget.clear();
+	} else {
+		std::vector<NavCmd> plan = Navigator::planPath(
+			_state.player.orientation, tile.localX, tile.localY);
+		Logger::debug("Behavior: CollectStones: planned " + std::to_string(plan.size()) +
+			" steps to " + _navTarget + " at (" +
+			std::to_string(tile.localX) + "," + std::to_string(tile.localY) + ")");
+		_navPlan.assign(plan.begin(), plan.end());
+	}
 
-    if (!_navPlan.empty()) {
-        NavCmd next = _navPlan.front();
-        _navPlan.pop_front();
-        executeNavCmd(next);
-    }
+	if (!_navPlan.empty()) {
+		NavCmd next = _navPlan.front();
+		_navPlan.pop_front();
+		executeNavCmd(next);
+	}
 }
 
 void Behavior::tickIncantating() {
