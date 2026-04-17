@@ -234,6 +234,7 @@ void Behavior::tickCollectStones() {
 
 	// TODO: decide if clients should have limited fork capabilities/shots or just fork whenever food is high enough
 	if (_state.player.food() > FOOD_FORK && _state.player.level >=2 && _state.forkEnabled) {
+		Logger::info("Fork call triggered");
 		_aiState = AIState::Idle;
 		clearNavPlan();
 		_commandInFlight = true;

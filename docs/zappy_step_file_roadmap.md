@@ -238,8 +238,6 @@ level 7→8: { players=6, linemate=2, deraumere=2, sibur=2, mendiane=2, phiras=2
 ## Interlude 1 - Documentation of the basic behaving client build
 - [x] WRITE
 
-DONE UNTIL HERE !!
-
 ## Step 6 — Multi-Level Stone Logic (Normal Mode, Single Agent)
 
 **Goal:** Stone collection works correctly for all levels in non-easy mode. Confirm level 1→2 still works (only 1 player needed).
@@ -251,7 +249,7 @@ DONE UNTIL HERE !!
 - [x] Confirm `computeMissingStones()` correctly handles all 7 levels from the requirement table
 - [x] Add priority ordering to stone collection: collect the rarest stone first (thystame → phiras → mendiane → sibur → deraumere → linemate → nourriture)
 - [x] Add opportunistic food grab: if food is visible on a tile the agent passes through while collecting stones, pick it up
-- [ ] Add fork decision to `Idle` state:
+- [x] Add fork decision to `Idle` state:
   - Only if food > 20
   - Only if level >= 2 (no point forking at level 1 before you know the AI works)
   - Only if `_forkEnabled` flag is true (from command-line arg)
@@ -260,6 +258,8 @@ DONE UNTIL HERE !!
 **Test:** With `ZAPPY_EASY_ASCENSION=0`, a single client should complete level 1→2 (requires 1 player). For levels 2+, it will get stuck waiting for players — that's expected and correct. The test here is that it correctly identifies it has all stones and knows it needs more players before attempting incantation.
 
 ---
+
+DONE UNTIL HERE !!
 
 ## Step 7 — Broadcast Coordination and Multi-Agent Rallying
 

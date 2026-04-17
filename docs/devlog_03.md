@@ -3,6 +3,7 @@
 ## Table of Contents
 1. [The Hardest Choices Require The Strongests Wills](#31---the-hardest-choices-require-the-strongests-wills)
 2. [We Don't Walk Alone](#32-we-dont-walk-alone)
+3. [Rally-Ho!](#33-rally-ho)
 
 
 <br>
@@ -374,4 +375,38 @@ void Behavior::tickCollectStones() {
 
 One immediate consequence of this extension is that the single little dude probe is now winning the game considerably faster. From a general perspective, this is happenning because the current logic, after the above logged edits, is less "chopped", less compartimentalized around food and stones, flowing better in its navigation and picking stuff up along the carried out paths. A good sign, if you ask me.
 
-Let's now focus on the initial fork logic injection.
+Let's now focus on the initial fork logic injection. Nothing fancy, the only thing that needs some thought is *where* should fork be handled. Some design constraints around this (besides the decision around clients being able to fork multiple times or just one, irrelevant atm) are:
+- Given that clients need to fork when in conditions are safe enough, how would we mark those? Easy: set up a `FOOD_FORK` thredshold, higher than `FOOD_SAFE` and, of course, quite higher than `FOOD_CRITICAL`. I'll set it to `20`.
+- Given that the set value is higher than the safe condition, the only place in the current behavior structure were a fork could actually happen is in `CollectStones` state. And because `tickCollectStones()` makes a food safe check at the top, then goes into proper stone search, a good place to inject this forking bussiness is right in the middle of those. This will give us the following flow when in `CollectStones` state:
+	- Check if food levels are safe enough to continue in this state
+	- Check if food levels are high enough to attempt a fork, and if so do so
+	- Continue with the stone gathering logic towards achieving incantatation requirements
+- Given that it doesn't really make that much sense to have level-1 clients forking themselves, will set the bar to at least them being level 2
+
+Besides this, the fork call itself is nothing we haven't done quite a lot of times at this stage. We'll soon have to tweak some stuff regarding multi-client coordination, but for now this is more than enough:
+```cpp
+// TODO: decide if clients should have limited fork capabilities/shots or just fork whenever food is high enough
+	if (_state.player.food() > FOOD_FORK && _state.player.level >=2 && _state.forkEnabled) {
+		Logger::info("Fork call triggered");
+		_aiState = AIState::Idle;
+		clearNavPlan();
+		_commandInFlight = true;
+		_sender.sendFork();
+		_sender.expect("fork", [this](const ServerMessage& msg) {
+			(void)msg;
+			_aiState = AIState::CollectStones;
+			setVisionStale();
+			setInventoryStale();
+			_forkInProgress = false;
+			_commandInFlight = false;
+		});
+		_forkInProgress = true;
+		return;
+	}
+```
+> *At this moment, I'm using `Idle` state as a pretty much useless track state for forking status. I'll get rid of this in the next steps, repurposing `Idle` to work towards multi-client leveling up and rallying.*
+
+<br>
+<br>
+
+# 3.3 Rally-Ho!
