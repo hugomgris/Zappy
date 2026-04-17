@@ -114,8 +114,8 @@ void Behavior::tick(int64_t nowMs) {
 	switch (_aiState) {
 		case AIState::CollectFood:      tickCollectFood(); break;
 		case AIState::CollectStones:    tickCollectStones(); break;
+		case AIState::Idle:				tickIdle(); break;
 		case AIState::Incantating:      tickIncantating(); break;
-		case AIState::Idle:             break;
 	}
 }
 
@@ -232,6 +232,24 @@ void Behavior::tickCollectStones() {
 		return;
 	}
 
+	// TODO: decide if clients should have limited fork capabilities/shots or just fork whenever food is high enough
+	if (_state.player.food() > FOOD_FORK && _state.player.level >=2 && _state.forkEnabled) {
+		_aiState = AIState::Idle;
+		clearNavPlan();
+		_commandInFlight = true;
+		_sender.sendFork();
+		_sender.expect("fork", [this](const ServerMessage& msg) {
+			(void)msg;
+			_aiState = AIState::CollectStones;
+			setVisionStale();
+			setInventoryStale();
+			_forkInProgress = false;
+			_commandInFlight = false;
+		});
+		_forkInProgress = true;
+		return;
+	}
+
 	computeMissingStones();
 
 	if (_stonesNeeded.empty()) {
@@ -296,6 +314,13 @@ void Behavior::tickCollectStones() {
 		_navPlan.pop_front();
 		executeNavCmd(next);
 	}
+}
+
+// not doing anything really, just here for the sake of structural consistency
+void Behavior::tickIdle() {
+	if (_forkInProgress) return;
+	_aiState = AIState::CollectStones;
+	return;
 }
 
 void Behavior::tickIncantating() {

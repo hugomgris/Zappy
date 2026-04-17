@@ -244,48 +244,48 @@ TEST_F(BehaviorTest, ComputeMissingStonesReturnsCorrectState) {
     levelUpPlayer();
     behavior.computeMissingStones();
     ASSERT_EQ(behavior.getStonesNeeded().size(), 3u);
-    EXPECT_EQ(behavior.getStonesNeeded()[0], "linemate");
+    EXPECT_EQ(behavior.getStonesNeeded()[0], "sibur");
     EXPECT_EQ(behavior.getStonesNeeded()[1], "deraumere");
-    EXPECT_EQ(behavior.getStonesNeeded()[2], "sibur");
+    EXPECT_EQ(behavior.getStonesNeeded()[2], "linemate");
 
     levelUpPlayer();
     behavior.computeMissingStones();
     ASSERT_EQ(behavior.getStonesNeeded().size(), 3u);
-    EXPECT_EQ(behavior.getStonesNeeded()[0], "linemate");
+    EXPECT_EQ(behavior.getStonesNeeded()[0], "phiras");
     EXPECT_EQ(behavior.getStonesNeeded()[1], "sibur");
-    EXPECT_EQ(behavior.getStonesNeeded()[2], "phiras");
+    EXPECT_EQ(behavior.getStonesNeeded()[2], "linemate");
 
     levelUpPlayer();
     behavior.computeMissingStones();
     ASSERT_EQ(behavior.getStonesNeeded().size(), 4u);
-    EXPECT_EQ(behavior.getStonesNeeded()[0], "linemate");
-    EXPECT_EQ(behavior.getStonesNeeded()[1], "deraumere");
-    EXPECT_EQ(behavior.getStonesNeeded()[2], "sibur");
-    EXPECT_EQ(behavior.getStonesNeeded()[3], "phiras");
+    EXPECT_EQ(behavior.getStonesNeeded()[0], "phiras");
+    EXPECT_EQ(behavior.getStonesNeeded()[1], "sibur");
+    EXPECT_EQ(behavior.getStonesNeeded()[2], "deraumere");
+    EXPECT_EQ(behavior.getStonesNeeded()[3], "linemate");
 
     levelUpPlayer();
     behavior.computeMissingStones();
     ASSERT_EQ(behavior.getStonesNeeded().size(), 4u);
-    EXPECT_EQ(behavior.getStonesNeeded()[0], "linemate");
-    EXPECT_EQ(behavior.getStonesNeeded()[1], "deraumere");
-    EXPECT_EQ(behavior.getStonesNeeded()[2], "sibur");
-    EXPECT_EQ(behavior.getStonesNeeded()[3], "mendiane");
+    EXPECT_EQ(behavior.getStonesNeeded()[0], "mendiane");
+    EXPECT_EQ(behavior.getStonesNeeded()[1], "sibur");
+    EXPECT_EQ(behavior.getStonesNeeded()[2], "deraumere");
+    EXPECT_EQ(behavior.getStonesNeeded()[3], "linemate");
 
     levelUpPlayer();
     behavior.computeMissingStones();
     ASSERT_EQ(behavior.getStonesNeeded().size(), 4u);
-    EXPECT_EQ(behavior.getStonesNeeded()[0], "linemate");
-    EXPECT_EQ(behavior.getStonesNeeded()[1], "deraumere");
-    EXPECT_EQ(behavior.getStonesNeeded()[2], "sibur");
-    EXPECT_EQ(behavior.getStonesNeeded()[3], "phiras");
+    EXPECT_EQ(behavior.getStonesNeeded()[0], "phiras");
+    EXPECT_EQ(behavior.getStonesNeeded()[1], "sibur");
+    EXPECT_EQ(behavior.getStonesNeeded()[2], "deraumere");
+    EXPECT_EQ(behavior.getStonesNeeded()[3], "linemate");
     
     levelUpPlayer();
     behavior.computeMissingStones();
     ASSERT_EQ(behavior.getStonesNeeded().size(), 6u);
-    EXPECT_EQ(behavior.getStonesNeeded()[0], "linemate");
-    EXPECT_EQ(behavior.getStonesNeeded()[1], "deraumere");
-    EXPECT_EQ(behavior.getStonesNeeded()[2], "sibur");
-    EXPECT_EQ(behavior.getStonesNeeded()[3], "mendiane");
-    EXPECT_EQ(behavior.getStonesNeeded()[4], "phiras");
-    EXPECT_EQ(behavior.getStonesNeeded()[5], "thystame");
+    EXPECT_EQ(behavior.getStonesNeeded()[0], "thystame");
+    EXPECT_EQ(behavior.getStonesNeeded()[1], "phiras");
+    EXPECT_EQ(behavior.getStonesNeeded()[2], "mendiane");
+    EXPECT_EQ(behavior.getStonesNeeded()[3], "sibur");
+    EXPECT_EQ(behavior.getStonesNeeded()[4], "deraumere");
+    EXPECT_EQ(behavior.getStonesNeeded()[5], "linemate");
 }
