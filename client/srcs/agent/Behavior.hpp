@@ -12,7 +12,10 @@ enum class AIState {
 	Idle,
 	CollectFood,
 	CollectStones,
-	Incantating
+	Incantating,
+	Leading,
+	MovingToRally,
+	Rallying
 };
 
 struct LevelReq {
@@ -35,14 +38,25 @@ class Behavior {
 		bool	_easyMode = false;
 		bool	_pendingLevelUp = false;
 
+		bool	_isLeader = false;
+		bool	_isMovingToRally = false;
+		bool	_isRallying = false;
+		int		_rallyLevel = 0;
+		int		_broadcastDirection = 0;
+		int		_peerConfirmedCount = 0;
+		int64_t	_lastRallyBroadcastMs = 0;
+		int64_t _leadingTimeoutMs = 0;
+		int64_t _movingToRallyTimeoutMs = 0;
+		int64_t _rallyingTimeoutMs = 0;
+
 		bool _forkInProgress = false;
 
 		std::vector<std::string>	_stonesNeeded;
 		bool						_incantationReady;
 		bool						_stonesPlaced;
 
-		static constexpr int FOOD_FORK		= 20;
-		static constexpr int FOOD_SAFE		= 12;
+		static constexpr int FOOD_FORK		= 24;
+		static constexpr int FOOD_SAFE		= 16;
 		static constexpr int FOOD_CRITICAL	= 4;
 
 		void executeNavCmd(NavCmd cmd);
@@ -56,11 +70,14 @@ class Behavior {
 		void tickCollectStones();
 		void tickIdle();
 		void tickIncantating();
+		void tickLeading(int64_t nowMs);
+		void tickMovingToRally(int64_t nowMs);
+		void tickRallying(int64_t nowMs);
 
 		void refreshVision();
 		void refreshInventory();
 
-		void onResponse(const ServerMessage& msg);
+		void onBroadcast(const ServerMessage& msg);
 
 		AIState getState() const { return _aiState; } // for loop status periodic print
 

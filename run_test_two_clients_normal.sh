@@ -3,6 +3,8 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+export ZAPPY_EASY_ASCENSION=0
+
 # Cleanup function to kill the server when the script exits
 cleanup() {
     echo "Cleaning up..."
@@ -26,5 +28,7 @@ echo "=== Running server/run.sh ==="
 echo "=== Building Client ==="
 make -C client
 
-echo "=== Running Client ==="
+echo "=== Running Clients ==="
+./client/client localhost 8674 team1 &
+sleep 0.5
 ./client/client localhost 8674 team1

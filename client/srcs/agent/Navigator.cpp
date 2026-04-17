@@ -107,12 +107,63 @@ std::vector<NavCmd> Navigator::explorationStep(int& stepCount) {
 	return commands;
 }
 
+// Maps a broadcast direction (1-8, 0=same tile) to a sequence of turns + one Forward.
+//
+// The server encodes direction as a clock-face sector relative to the *listener's*
+// facing direction, where 1 = straight ahead and the numbers increase clockwise:
+//
+//        1  (forward)
+//      8   2
+//    7       3
+//      6   4
+//        5  (behind)
+//
+// We map these 8 sectors to 4 quadrants (offsets from current facing):
+//   offset 0  = forward    → turn 0
+//   offset 1  = right      → turn right once
+//   offset 2  = behind     → turn right twice
+//   offset 3  = left       → turn left once
+//
+// Mapping (from roadmap spec):
+//   dir 1      → offset 0  (dead ahead)
+//   dir 2, 8   → offset 0  (forward-ish, slight right/left — still go forward)
+//   dir 3, 4   → offset 1  (right)
+//   dir 5      → offset 2  (behind)
+//   dir 6, 7   → offset 3  (left)
+//
+// Returns turn commands followed by one NavCmd::Forward.
+// Returns just NavCmd::Forward if direction is 0 or out of range.
+std::vector<NavCmd> Navigator::planApproachDirection(int broadcastDirection, Orientation currentFacing) {
+	std::vector<NavCmd> commands;
+
+	// Determine how many quarter-turns right to make (0=forward, 1=right, 2=back, 3=left)
+	int offset = 0;
+	switch (broadcastDirection) {
+		case 0:             	offset = 0; break; // same tile — just step forward (shouldn't be called)
+		case 1: case 2: case 8: offset = 0; break; // forward / forward-ish
+		case 3: case 4:     	offset = 1; break; // right
+		case 5:					offset = 2; break; // behind
+		case 6: case 7:			offset = 3; break; // left
+		default:            	offset = 0; break; // unknown: go forward
+	}
+
+	Orientation target = static_cast<Orientation>(
+		(static_cast<int>(currentFacing) + offset) % 4);
+
+	auto turns = turnToFace(currentFacing, target);
+	commands.insert(commands.end(), turns.begin(), turns.end());
+
+	commands.push_back(NavCmd::Forward);
+
+	return commands;
+}
+
 /*
 In case of A*
 
 struct PathNode {
-    int x, y;
-    std::vector<NavCmd> path;
+	int x, y;
+	std::vector<NavCmd> path;
 };
 
 std::vector<NavCmd> findPathToTile(Orientation facing, int startLocalX, int startLocalY, int targetLocalX, int targetLocalY);

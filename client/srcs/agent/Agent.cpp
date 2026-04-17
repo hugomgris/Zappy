@@ -215,7 +215,7 @@ void Agent::processIncomingMessages(int64_t nowMs) {
 					break;
 
 				case MsgType::Broadcast:
-					// TODO
+					_behavior.onBroadcast(msg);
 					break;
 
 				case MsgType::GameEnd:

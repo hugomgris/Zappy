@@ -269,30 +269,30 @@ DONE UNTIL HERE !!
 
 #### `agent/Behavior.hpp`
 
-- [ ] Add `enum class AIState` values: `Leading`, `MovingToRally`, `Rallying`
-- [ ] Add `bool _isLeader` flag
-- [ ] Add `int _rallyLevel`
-- [ ] Add `int _broadcastDirection` (last received rally direction)
-- [ ] Add `int64_t _lastRallyBroadcastMs`
-- [ ] Declare `onBroadcast(const ServerMessage& msg)` — called by Agent when a message-type message arrives
+- [x] Add `enum class AIState` values: `Leading`, `MovingToRally`, `Rallying`
+- [x] Add `bool _isLeader` flag
+- [x] Add `int _rallyLevel`
+- [x] Add `int _broadcastDirection` (last received rally direction)
+- [x] Add `int64_t _lastRallyBroadcastMs`
+- [x] Declare `onBroadcast(const ServerMessage& msg)` — called by Agent when a message-type message arrives
 
 ### Files modified this step
 
 #### `agent/Behavior.cpp`
 
-- [ ] Implement `Leading` state:
+- [x] Implement `Leading` state:
   - Broadcast `"RALLY:<level>"` every 500ms
   - Wait for peer count on current tile (from fresh `voir`) to reach required player count
   - On enough players → transition to `Rallying`
   - On timeout (30s) → broadcast `"DONE:<level>"`, transition to `Idle`
 
-- [ ] Implement `MovingToRally` state:
+- [x] Implement `MovingToRally` state:
   - If `_broadcastDirection == 0` → already on leader's tile, transition to `Rallying`
   - Otherwise: use `Navigator::planApproachDirection(_broadcastDirection)` to get one nav step
   - Execute one step, then wait for fresh `voir`, update `_broadcastDirection` from new rally broadcasts
   - On timeout (30s) → transition to `Idle`
 
-- [ ] Implement `Rallying` state:
+- [x] Implement `Rallying` state:
   - Place stones (if leader or if instructed)
   - If leader + enough players + all stones on tile → send `incantation`
   - If follower + direction == 0 → broadcast `"HERE:<level>"`
