@@ -21,6 +21,7 @@ struct WorldState {
 	std::vector<VisionTile>	vision;
 	int						mapWidth = 0;
 	int						mapHeight = 0;
+	bool					forkEnabled = false;
 
 	// NOTE: server does not send orientation in welcome; player starts at N by default.
 	// If the server ever adds this field, the optional handles it correctly.
@@ -81,4 +82,6 @@ struct WorldState {
 		}
 		return 0;
 	}
+
+	void captureForkStatus(bool status) { forkEnabled = status; }
 };

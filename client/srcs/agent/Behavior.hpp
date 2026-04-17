@@ -35,12 +35,15 @@ class Behavior {
 		bool	_easyMode = false;
 		bool	_pendingLevelUp = false;
 
+		bool _forkInProgress = false;
+
 		std::vector<std::string>	_stonesNeeded;
 		bool						_incantationReady;
 		bool						_stonesPlaced;
 
-		static constexpr int FOOD_SAFE					= 12;
-		static constexpr int FOOD_CRITICAL				= 4;
+		static constexpr int FOOD_FORK		= 20;
+		static constexpr int FOOD_SAFE		= 12;
+		static constexpr int FOOD_CRITICAL	= 4;
 
 		void executeNavCmd(NavCmd cmd);
 
@@ -51,6 +54,7 @@ class Behavior {
 		void tick(int64_t nowMs);
 		void tickCollectFood();
 		void tickCollectStones();
+		void tickIdle();
 		void tickIncantating();
 
 		void refreshVision();

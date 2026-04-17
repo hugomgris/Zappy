@@ -49,7 +49,7 @@ class Agent {
 
 		bool isRunning() const { return _running; }
 		const WorldState& getState() const { return _state; }
-		void setForkEnabled(bool enabled) { _forkEnabled = enabled; } // TODO Step 6: wire to Behavior
+		void setForkEnabled(bool enabled) { _forkEnabled = enabled; _state.captureForkStatus(enabled); }
 
 		Result connect(int timeoutMs);
 		Result run();
