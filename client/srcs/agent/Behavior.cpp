@@ -30,14 +30,14 @@ Behavior::Behavior(Sender& sender, WorldState& state) : _sender(sender), _state(
 // helpers
 void Behavior::disbandRally(bool wasLeader) {
 	_stonesReady			= false;
-	_claimSent			 = false;
-	_isLeader			 = false;
-	_isMovingToRally	 = false;
-	_isRallying			 = false;
-	_peerConfirmedCount	 = 0;
-	_broadcastDirection	 = -1;
-	_rallyLevel			 = 0;
-	_rallyBroadcastCount = 0;
+	_claimSent				= false;
+	_isLeader				= false;
+	_isMovingToRally		= false;
+	_isRallying				= false;
+	_peerConfirmedCount		= 0;
+	_broadcastDirection		= -1;
+	_rallyLevel				= 0;
+	_rallyBroadcastCount	= 0;
 	clearNavPlan();
 
 	if (wasLeader) {
@@ -415,7 +415,7 @@ void Behavior::tickLeading(int64_t nowMs) {
 		return;
 	}
 
-	if (_state.player.food() < FOOD_SAFE) {
+	if (_state.player.food() < FOOD_CRITICAL) {
 		Logger::warn("Behavior: Leading — food critical, disbanding");
 		disbandRally(true);
 		_aiState = AIState::CollectFood;
@@ -735,36 +735,44 @@ void Behavior::onBroadcast(const ServerMessage& msg) {
 
 		if (level != _state.player.level) return;
 
-		// We are the leader echoing back to ourselves — ignore.
+		// If client is the leader echoing back to itself -> ignore
 		if (_isLeader) return;
 
-		// Always store the direction — even during ClaimingLeader,
+		// Always store the direction even during ClaimingLeader,
 		// so if our claim comes back KO we already know where to go.
 		_broadcastDirection = direction;
 
+		// if state is already moving to rally, trigger a path recompute
+		if (_aiState == AIState::MovingToRally) {
+			clearNavPlan();
+		}
+
 		// While still collecting or claiming, just cache the direction;
 		// don't interrupt those states.
-		if (_aiState == AIState::CollectStones ||
-			_aiState == AIState::Incantating) {
+		// TODO: return when collecting stones?
+		if (_aiState == AIState::Incantating) {
 			return;
 		}
 
-		if (_aiState == AIState::CollectFood) {
-			// Only ignore RALLY if food is genuinely too low to participate.
-			// If we have enough food, drop the food run and go rally.
+		if (_aiState == AIState::CollectFood || _aiState == AIState::CollectStones) {
 			if (_state.player.food() >= FOOD_SAFE) {
-				// We have enough food — respond to the leader
+				Logger::info("Responding to rally because enought food:" + std::to_string(_state.player.food()));
 				_stonesReady = false;
+				clearNavPlan();
 				if (direction == 0) {
+					Logger::info("Going to Rallying state");
 					_isMovingToRally = false;
 					_isRallying = false;
 					_aiState = AIState::Rallying;
 				} else {
+					Logger::info("Going to MovingToRally state");
 					_isMovingToRally = false;
 					_aiState = AIState::MovingToRally;
 				}
 			}
-			// else: food too low, keep eating, leader will disband and retry
+			Logger::info("Received rally call when in state [" +
+							std::to_string(static_cast<int>(_aiState)) +
+							"] buf NOT ENOUGH FOOD:" + std::to_string(_state.player.food()));
 			return;
 		}
 

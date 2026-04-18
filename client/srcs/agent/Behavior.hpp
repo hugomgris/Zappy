@@ -9,14 +9,14 @@
 #include <deque>
 
 enum class AIState {
-	Idle,
-	CollectFood,
-	CollectStones,
-	Incantating,
-	ClaimingLeader,
-	Leading,
-	MovingToRally,
-	Rallying
+	Idle,			// 0
+	CollectFood,	// 1
+	CollectStones,	// 2
+	Incantating,	// 3
+	ClaimingLeader,	// 4
+	Leading,		// 5
+	MovingToRally,	// 6
+	Rallying		// 7
 };
 
 struct LevelReq {
@@ -98,6 +98,8 @@ class Behavior {
 		std::vector<std::string>& getStonesNeeded() { return _stonesNeeded; }
 
 		void setVisionStale()    { _staleVision = true; }
+
+		void setAIState(AIState s) { _aiState = s; } // for TESTING
 		void setInventoryStale() { _staleInventory = true; }
 		void clearNavPlan()      { _navPlan.clear(); _navTarget.clear(); }
 
