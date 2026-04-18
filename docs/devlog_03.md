@@ -3,7 +3,13 @@
 ## Table of Contents
 1. [The Hardest Choices Require The Strongests Wills](#31---the-hardest-choices-require-the-strongests-wills)
 2. [We Don't Walk Alone](#32-we-dont-walk-alone)
-3. [Rally-Ho!](#33-rally-ho)
+3. [As the Crow Flies](#33-as-the-crow-flies)
+	- [I've Made Plans and I Know Exactly Where I'm Going](#331-ive-made-plans-and-i-know-exactly-where-im-going---planpath)
+	- [I Have No Target and I Must Move](#332-i-have-no-target-and-i-must-move---explorationstep)
+	- [Maybe It Was *Not* Just The Wind](#333-maybe-it-was-not-just-the-wind---planapproachdirection)
+	- [Execute Order <insert_number_here_I_refuse_writing_66>](#334-execute-order-insert_number_here_i_refuse_to_write_66)
+	- [I Love It When a Plan Comes Together, and I Must Learn To Love It When It Doesn't Too](#335-i-love-it-when-a-plan-comes-together-and-i-must-learn-to-love-it-when-it-doesnt-too)
+4. [Rally-Ho!](#34-rally-ho)
 
 
 <br>
@@ -376,7 +382,7 @@ void Behavior::tickCollectStones() {
 One immediate consequence of this extension is that the single little dude probe is now winning the game considerably faster. From a general perspective, this is happenning because the current logic, after the above logged edits, is less "chopped", less compartimentalized around food and stones, flowing better in its navigation and picking stuff up along the carried out paths. A good sign, if you ask me.
 
 Let's now focus on the initial fork logic injection. Nothing fancy, the only thing that needs some thought is *where* should fork be handled. Some design constraints around this (besides the decision around clients being able to fork multiple times or just one, irrelevant atm) are:
-- Given that clients need to fork when in conditions are safe enough, how would we mark those? Easy: set up a `FOOD_FORK` thredshold, higher than `FOOD_SAFE` and, of course, quite higher than `FOOD_CRITICAL`. I'll set it to `20`.
+- Given that clients need to fork when in conditions are safe enough, how would we mark those? Easy: set up a `FOOD_FORK` thredshold, higher than `FOOD_SAFE` and, of course, quite higher than `FOOD_CRITICAL`. I'll set it to `20` (*for now, I must say, you might find out that the production files have a different value, even a higher amount of more varied food related constants*).
 - Given that the set value is higher than the safe condition, the only place in the current behavior structure were a fork could actually happen is in `CollectStones` state. And because `tickCollectStones()` makes a food safe check at the top, then goes into proper stone search, a good place to inject this forking bussiness is right in the middle of those. This will give us the following flow when in `CollectStones` state:
 	- Check if food levels are safe enough to continue in this state
 	- Check if food levels are high enough to attempt a fork, and if so do so
@@ -409,4 +415,230 @@ Besides this, the fork call itself is nothing we haven't done quite a lot of tim
 <br>
 <br>
 
-# 3.3 Rally-Ho!
+# 3.3 As the Crow Flies
+Before moving on, I feel the need to take some time logging how pathfinding works in the current implementation (that is, without an A* algo, to which a transition might happen in the future). I write this from a near future, one that has once again found me in a failing loop of fixing-and-breaking things without achieving a two-client probe that reaches level 3 and has its players surive. Incredible stuff, I am so happy and fulfilled and I love life. Whatever, at least I now don't feel the need to rewrite everything from scracth, just the `Behavior`, which honestely is not going to be a *full* rewrite, but more like a *take-a-step-back-rethink-things-make-myself-recover-code-control-and-go-step-by-step-testing-things* kind of situation. And one very important thing in that backstepping is to take back navigation's reigns, as along the way I've been feeling progressively lost on my own implementation, which is twofold. And its twofold because the little dudes need two ways of navigating, related to two types of targets: *fixed, sure targets* like resources, *moving unsure targets* like rally leaders (more on those in the next point). Beyond this, the matter of the fact is that navigation in the context of this *Zappy* means taking care of, once again, two things: how to build the navigation logic, in the sense of how to make little dudes know where to go and how to get there, and how to make that navigation happen in the context of the server's ticking dyamic, which is to say how the navigation steps should be handled once they're built. To me, the first thing is easier, specially if this is not the first time you write pathfinding code (add to that the fact that pathfinding in a grid-locked system is not that complicated). The second one is a bit more intricate.
+
+Because `Navigator` needs to work in an enmeshed system an embedded in a client-server logic that only allow for **one in flight command at a time**, the first careful consideration arrises quite soon: **the navigation system can never be "fire and forget"**. In other ones, it can't send a combination of, say, `TurnRight, Forward, Forward, TurnLeft, Forward` in burst and wait for all the command chain to finish. Which in practicallity means that if a navigation context called for that chain (or any other one, that is), the flow should be to send `TurnRight`, wait for the server's `ok` confirmation, then sen `Forward`, wait again for `ok` and so on. This is the reason behind `_navPlan`, the attribute bridgiing `Navigator` and `Behavior` being an `std::deque<NavCmd>`, a queue of pending moves related to the last built navigation plan, popped **only once per tick** by `Behavior`. The plan is the *memory* that `Behavior` has regarding what it still needs to do to get to a fixed target. Remember: always one-step-at-a-time. This is extremely important, you'll see why in a second.
+
+`Navigator` has three static functions that build plans. There are no states, no side effects, nothing beyond these pure functions that just take some geometry and return a list of commands. Let's detail them
+
+## 3.3.1 I've Made Plans and I Know Exactly Where I'm Going -> `planPath()`
+When the client has spotted a specific tile in its vision and wants to walk there, it should call `planPath(facing, localX, localY)`. The X-Y values are the coordinates of the target tile in the **vision coordinate system**, which need to be translated into general, world-related coordinates based on their value and the `facing` direction of the client's little dude. The key thing here is that **this is a complete, pre-computed route from the current position to the target tile, computed at the moment of planning using the current orientation**. And even most importantly: **IT ASSUMES THE WORLD DOESN'T CHANGE DURING EXECUTION**. 
+
+## 3.3.2 I Have No Target and I Must Move -> `explorationStep()`
+Having the little dudes go stationary is not a good idea. They need food, they must effitiently gather resources, they constantly need to get new vision information of the state of the game and its landscape... Without movement, information quickly becomes stale, but clients won't always have a clear target or direction to make plans. Therefore, a fallback must be set in place, which our `Navigator` has in the form of `explorationStep(stepCount)`, a function that produces **ONE** (well, sometimes two) move: sometimes a turn, always a Forward. The turn pattern based on the 7-13 count criteria creates a loose spiral that covers the map without looping forver, and is taken as being *enough* because with a correctly configured server (that is, with rational density of resource production) clients shouldn't need too many ticks to find a purpose and, therefore, a target or direction. This function always returns a tiny plan, never a long route, because **exploratin is reactive**. Little dudes take a step, look again (refresh their vision), then make a new decision. There would be no point in planning further without knowing what's out there, beyond the level-restricted cone of vision of the little dudes.
+
+## 3.3.3 Maybe It Was *Not* Just The Wind -> `planApproachDirection()`
+The third navigation function is used to **move towards a sound**. Take this *sound* as something conceptual, understood as some little dude broadcasting something, i.e. *saying* something to the other memebrs of its team. This is only used in an specific state, `MovingToRally` (again, more on rallying in the next point), when, for example, a client with enough stones for a level-up ritual yells "HEY, FELLOW LITTLE DUDES, WE NEED TO GATHER IN THE SAME TILE TO ASCEND!!", to which the other clients need to respond and react. There's some mapping sub-processing here that is not very relevant (or it might be and maybe me thinking like this is one of the reasons of my continuous failure (in the project and in life)), needed because the server relies direction information in an 8-point basis which needs to be translated into a 4-point basis in the client (NSEW), but the important thing here is that **this function's target's position is never really known**. It only know **the direction in which the rallying call came**, and ever so roughly, as the emissor might move, disband, change ownership, who knows what else (I should know, I know, and I know, but I refuse to be sure about anything). Anyway, because this implied uncertainty, it only makes sense for `planApproachDirection()` to **return a one step plan** and wait for the next `RALLY` broadcast to update the bearing, then plan again. Something that, put like this, might sound like not a big deal, but when you get to the point of juggling states, resource counts, broadcasts, responses and timeouts, oh, lord, you're going to have some F U N. I guess that's the point of building this ai client, to learn how to manage onself in that context, but it bears the question of why would humanity see a lavish, flourishing world in front of it and decide that inventing 1)computers, 2)coding, 3)Zappy would be a good idea, something that makes cosmic sense, a weird way of finding meaning in this insignificant corner of an impossible to fully consider, ever-expanding, infinitely absolute universe. Maybe we're just a bunch of little dudes playing *Zappy* in God's twisted computer?
+
+### 3.3.4 Execute Order <insert_number_here_I_refuse_to_write_66>
+Let's get back to navigation management. One mayor understanding pitfall is the beforementioned fact that **the nav plan is not executed all at once**. Imagine a little dude plans a path to some tile and gets a 7 command chain back. The resulting `std::deque<NavCmd>` will have it's instructions processed one-at-a-time, per-tick based, in the following manner:
+```cpp
+_navPlan.assign(plan.begin(), plan.end());
+// STUFF
+NavCmd next = _navPlan.front();
+_navPlan.pop_front();
+executeNavCmd(next);
+```
+That is: adhere to a built plan, take out its next step, execute it. Impossible to think about a simpler procedure, but this calls for a careful consideration of the state a little dude finds itself after executing one navigation command, when the next tick of the server-client communication happens. So, at next tick, after the server responds to the sent navigation command, the little dude:
+- Will have a stale vision, which means that it needs to refresh it. This happens because the vision information is situational, bound to the tile from which a `voir` command was sent, and moving or turning carries with it the effect of the previously captured vision no longer relating to the changed situation of the client.
+- Will then tick its specific state
+- The state-specific handler will see that there's an active, non-empty `_navPlan` (there are still 6 commands left)
+- The next `NavCmd` will be popped and executed
+- Rinse and repeat
+
+Basically, there's **one server round-trip per command**, but **the plan persists across ticks**, shrinking by one command each time until its empty. Therefore, the loop can be destilled into: **"execute one step, get a response, execute the next step"**.
+
+The way that stale vision's refreshment happens is by injecting it to the navigation command send callback. Everytime `Behavior` sends a navigation command via `Sener`, the registered command via sender's `expect()` function should `setVisionStale()` in the captured lambda function required as argument. This is what triggers `refreshVision()` at the top of the general `_tick()` entry point in `Behavior`. And gathering all of this around, we can define the rythm for a 3-step path like this:
+```
+Tick 1:  execute Forward  → commandInFlight
+Tick 2:  response arrives → visionStale=true
+Tick 3:  refreshVision    → commandInFlight
+Tick 4:  response arrives → visionStale=false
+Tick 5:  execute Forward  → commandInFlight
+Tick 6:  response arrives → visionStale=true
+Tick 7:  refreshVision    → commandInFlight
+Tick 8:  response arrives → visionStale=false
+Tick 9:  execute Forward  → commandInFlight
+...
+```
+
+Ok, nothing to panic about up until this point, but there's one more caveat: **sometimes, plans need to be discardaded**. When, you ask? Well, let's talk about that.
+
+## 3.3.5 I Love It When a Plan Comes Together, and I Must Learn To Love It When It Doesn't Too
+Be can boil this into three distinct situations. The first one is the regular, all-good-chief one, in which we **keep the plan** because target is still valid and nothing has changed. This is usually the case when handling the `CollectStones` state, for example, as the target tile with the desired stone is not going to change. Well, the context *might* change in the sense that once the client arrives the stone might have been taking but some other client, but that's not relevant for the plan (and taking that into account is a refinement pass that is still a long way from us). The key condition here is that if we're at a state that's controlled/controllable as the stone gathering one and we have a `_navPlan` and the target of said plan has not changed, the plan is kept to avoid rebuilds on every tick for a multi-step journey. The implicit assumption here is that **the plan is still valid if the target type didn't change**. The plan was built from the tile's local coordinates at planning time, and those coordinates were correct for the orientation at that moment. Subsequent turns in the plan already account for re-orienting, so the remaining steps should still be correct.
+
+Besides this, **plans are rebuilt** when:
+- `_navPlan` is empty (exhausted or never started)
+- `_navTarget != previousTarget` (a different stone became closest, or food was spotted mid-stone-collection)
+- The target disappeared from vision (checked in `refreshVision's` callback):
+```cpp
+  if (!_navPlan.empty() && !_navTarget.empty() &&
+      !_state.visionHasItem(_navTarget)) {
+      clearNavPlan();   // target is gone, abandon the route
+  }
+  ```
+- The move command failed (server returned `ko`):
+  ```cpp
+  } else {
+      clearNavPlan();   // couldn't move, start fresh
+      setVisionStale();
+  }
+  ```
+
+And besides this, **plans should be immediately discarded when entering a new state or picking something up**. Whenever the behavior transitions to a new state, or picks up an item on the current tile (which removes the need to navigate to it), `clearNavPlan()` is called:
+```cpp
+// Entering CollectStones from CollectFood:
+_aiState = AIState::CollectStones;
+clearNavPlan();   // the food nav plan is irrelevant now
+
+// Food on current tile:
+if (_state.countItemOnCurrentTile("nourriture")) {
+    clearNavPlan();   // no need to navigate anywhere
+ 
+```
+
+The rule here is simple: **a plan is only valid for the state that created it**. 
+
+That being said, The current plan invalidation logic has a known limitation: **It only checks resource type presence, not tile-specific validity.** When moving toward a specific tile, the target resource might shift to a different tile in the vision (because client moved, changing the local coordinates of everything). The current logic will NOT clear the plan in this case, because `visionHasItem()` returns true (the resource type is still visible somewhere). This means:
+- The plan may continue toward the original tile even though a closer tile with the
+  same resource is now available.
+- The plan will still succeed (the resource will still be at the original tile, because
+  resources don't move), but it may take a longer path than necessary.
+
+In this regard, a **potential improvement** could be to store the target tile's local coordinates at planning time,
+and in `refreshVision`, verify that the specific tile still contains the target resource. If not, clear the plan and rebuild. And the easiest way to do so would be to expand `_navTarget` to a struct:
+```cpp
+struct NavTarget {
+    std::string resource;
+    int localX;
+    int localY;
+};
+```
+> *I might or might not do this. Check the code to find out. Relieve yourself from the mistery*
+
+## 3.3.6 A Handful of Extra Considerations
+I'll just bullet point my way through some specific knwoledge that I think needs to be logged:
+
+### 3.3.6.1 The Role of `_navTarget`
+This is just a string label (unless it has been changed into a struct) that records **what the current plan is navigating towards**. It seves two purposes: trigger change directions and vision-based invalidation.
+- Before rebuilding a plan, `CollectStones` saves the old target name, re-evaluates the nearest needed resource, and compares.
+	- If the nearest stone type changed, `_navTarget` will differ from `previousTarget` and the plan gets rebuilt
+
+`_navTarget` is cleared whenever:
+- A state transition happens and `ClearNavPlan()` is called
+- An exploration step is used (there's no specific target to invalidate)
+
+### 3.3.6.2 The Two Navigation Modes
+There are really two fundamentally different modes of navigation, and they use the plan in completely different ways:
+- **Mode A: Target-Directed Navigation**
+	- This mode is used in `CollectFood` and `CollectStones`
+	- The plan here can be multi-step, is computed once from the tile's local coordinates at te moment of planning, then trusted to be correct until it either finishes or gets invalidated
+- **Mode B: Direction-Directed Navigation**
+	- This mode is used in `MovingToRally` and exploration fallbacks.
+	- Key difference is that the plan here is intentionally short and always rebuilt from scratch, because:
+		- Exploration has no target, so there's nothing to preserve between steps
+		- Broadcast direction changes with every Rally message
+
+Really, in mode B the "plan" is really just a convenience wrapper to keep `executeNavCmd` the single dispatch point, taking a collection of commands.
+
+### 3.3.6.3 The Vision-Stale Loop and Navigation
+Here's the full loop written out explicitly, so the rythm is clear:
+```
+State handler wants to move → _navPlan is empty → call planXxx() → assign to _navPlan
+→ pop front command → executeNavCmd(cmd) → send to server → _commandInFlight=true
+
+[server responds]
+→ callback fires → _commandInFlight=false → setVisionStale()
+
+[next tick entry]
+→ hasCommandInFlight()? NO
+→ isVisionStale()? YES → refreshVision() → send "voir" → _commandInFlight=true
+
+[server responds with vision]
+→ callback fires → _commandInFlight=false → _staleVision=false
+→ (possibly: target gone? clearNavPlan())
+
+[next tick entry]
+→ hasCommandInFlight()? NO
+→ isVisionStale()? NO
+→ isInventoryStale()? check...
+→ dispatch to state handler
+→ _navPlan non-empty? → pop front → executeNavCmd → repeat loop
+```
+
+Every single move has a `voir` injected after it. This is the "one-voir-per-step" pattern, put in place to keep the world model fresh at the cost of making navigation slow. Feel free to suggest any possible improvements on the production codebase.
+
+### 3.3.6.4 The `MovingToRally` Special Case
+`MovingToRally` is the most confusing state because it uses Mode B navigation but it **looks* like it might want Mode A. BUT, here's why it can't use mode A:
+- `planPath` needs local `(x, y)` coordinates of the target tile, but the client doesn't know which tile the leader is on. They only know a compass quadrant.
+- The correct tile to go to changes with every Rally broadcast. The leader's direction from the client updates as both leader an follower move.
+- A client might need to cross the map's wrap-around boundary, which `planPath` doesn't handle.
+
+This means that the follower does this instead:
+```
+Receive RALLY:2 with direction=3 (right quadrant)
+→ planApproachDirection(3, currentFacing) → [TurnRight, Forward]
+→ _navPlan = [TurnRight, Forward]
+→ execute TurnRight → wait → vision refresh
+→ execute Forward → wait → vision refresh
+
+Receive next RALLY:2 with direction=1 (straight ahead now — we're closer)
+→ clearNavPlan()  ← MUST happen here (this is the bug from fix plan Step 1)
+→ planApproachDirection(1, currentFacing) → [Forward]
+→ execute Forward → wait → vision refresh
+
+Receive next RALLY:2 with direction=0 (we're on the same tile)
+→ transition to Rallying
+```
+
+**The `clearNavPlan()` on direction update is critical here**: without it, the `TurnRight` and `Forward` from the previous step might still be sitting in `_navPlan` from a plan built for a now-obsolete direction, making the client walk the wrong way.
+
+### 3.3.6.5 A Much Needed Summary
+ere's the condensed decision table:
+
+| Situation | Action |
+|---|---|
+| State transition to a new AIState | `clearNavPlan()` always |
+| Item found on current tile | `clearNavPlan()` — no need to navigate |
+| Target tile visible, no plan yet | Build full plan with `planPath` |
+| Target tile visible, same target, plan non-empty | Keep existing plan |
+| Target tile visible, target changed | Rebuild plan with `planPath` |
+| Target tile gone from vision | `clearNavPlan()` (done in `refreshVision` callback) |
+| No target visible | Use `explorationStep()` — 1-2 commands max, rebuild every step |
+| Following a broadcast direction | Use `planApproachDirection()` — 1-2 commands, rebuild every RALLY update |
+| Move command failed (`ko` from server) | `clearNavPlan()`, `setVisionStale()` |
+| New RALLY direction received while in MovingToRally | `clearNavPlan()` — direction is stale |
+
+**The master rule:** a nav plan is only valid for the state and target it was created
+for, at the orientation it was created with.  Any change to any of those three things
+is a signal to rebuild.
+
+### 3.3.6.6 What Correct Navigation Trace Looks Like (I Think)
+For a client facing North that needs to pick up a `linemate` at `localX=1, localY=2` (one right, two forward):
+
+```
+[tick]  visionStale=true   → refreshVision (voir)
+[tick]  vision arrives     → tile (1,2) has linemate → plan = [TurnRight, Forward, Forward, TurnLeft, Forward, Forward]
+[tick]  CollectStones      → pop TurnRight → sendDroite
+[tick]  droite ok          → facing=East, visionStale=true → refreshVision
+[tick]  vision arrives     → plan non-empty, target=linemate → pop Forward → sendAvance
+[tick]  avance ok          → x++ → visionStale=true → refreshVision
+[tick]  vision arrives     → plan non-empty → pop Forward → sendAvance
+[tick]  avance ok          → x++ → visionStale=true → refreshVision
+[tick]  vision arrives     → plan non-empty → pop TurnLeft → sendGauche
+[tick]  gauche ok          → facing=North → visionStale=true → refreshVision
+[tick]  vision arrives     → plan non-empty → pop Forward → sendAvance
+[tick]  avance ok          → y-- → visionStale=true → refreshVision
+[tick]  vision arrives     → plan non-empty → pop Forward → sendAvance
+[tick]  avance ok          → y-- → visionStale=true → refreshVision
+[tick]  vision arrives     → plan EMPTY → linemate on current tile → clearNavPlan → sendPrend
+[tick]  prend ok           → inventoryStale=true, visionStale=true
+```
+
+> Six commands, twelve server round-trips, one collection.
+
+<br>
+<br>
+
+# 3.4 Rally-Ho!

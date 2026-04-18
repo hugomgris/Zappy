@@ -44,6 +44,9 @@ class Sender {
 		Result sendFork();
 		Result sendConnectNbr();
 
+		Result sendClaimLeader();
+		Result sendDisbandLeader();
+
 		virtual void expect(const std::string& cmd, std::function<void(const ServerMessage&)> callback);
 		void processResponse(const ServerMessage& msg);
 		void checkTimeouts(int timeoutMs = 10000);

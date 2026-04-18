@@ -29,6 +29,6 @@ echo "=== Building Client ==="
 make -C client
 
 echo "=== Running Clients ==="
-./client/client localhost 8674 team1 2> logs/client_log_normal_probe_two_clients_1.txt &
+./client/client localhost 8674 team1 --no-fork 2> logs/client_log_normal_probe_two_clients_1.txt &
 sleep 0.5
-./client/client localhost 8674 team1 2> logs/client_log_normal_probe_two_clients_2.txt
+./client/client localhost 8674 team1 --no-fork 2> logs/client_log_normal_probe_two_clients_2.txt

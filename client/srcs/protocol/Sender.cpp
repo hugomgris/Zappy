@@ -128,6 +128,22 @@ Result Sender::sendConnectNbr() {
 	return sendObject(connect.dump());
 }
 
+Result Sender::sendClaimLeader() {
+	json j = {
+		{"type", "cmd"},
+		{"cmd", "claim_leader"}
+	};
+	return sendObject(j.dump());
+}
+
+Result Sender::sendDisbandLeader() {
+	json j = {
+		{"type", "cmd"},
+		{"cmd", "disband_leader"}
+	};
+	return sendObject(j.dump());
+}
+
 // res tracking
 void Sender::expect(const std::string& cmd,
 		std::function<void(const ServerMessage&)> callback) {

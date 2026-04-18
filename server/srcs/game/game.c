@@ -89,6 +89,8 @@ static int m_command_expulse(void* _p, void* _arg);
 static int m_command_broadcast(void* _p, void* _arg);
 static int m_command_incantation(void* _p, void* _arg);
 static int m_command_fork(void* _p, void* _arg);
+static int m_command_claim_leader(void* _p, void* _arg);
+static int m_command_disband_leader(void* _p, void* _arg);
 
 static server m_server = {0};
 spawn_ctx m_ctx;
@@ -114,7 +116,9 @@ const command_message command_messages[MAX_COMMANDS] =
     {BROADCAST, "broadcast"},
     {INCANTATION, "incantation"},
     {FORK, "fork"},
-    {CONNECT_NBR, "connect_nbr"}
+    {CONNECT_NBR, "connect_nbr"},
+    {CLAIM_LEADER,   "claim_leader"},
+    {DISBAND_LEADER, "disband_leader"}
 };
 
 command command_prototypes[MAX_COMMANDS] =
@@ -131,6 +135,8 @@ command command_prototypes[MAX_COMMANDS] =
     {m_command_incantation, 0}, /* This is foo, just for checking if it could happen. */
     {m_command_fork, 42},
     {m_command_connect_nbr, 0},
+    {m_command_claim_leader,   0},
+    {m_command_disband_leader, 0},
 };
 
 const inventory_strings inventory_names[] =
@@ -1034,6 +1040,91 @@ static int m_command_broadcast(void* _p, void* _arg)
     return server_create_response_to_command(emitter->id, "broadcast", NULL, "ok");
 }
 
+/* Clear the leader flag for `level` on the team identified by team_id.
+ * Safe to call even if the flag is already clear.                       */
+static void m_team_clear_leader_flag(int team_id, int level)
+{
+    if (team_id < 0 || team_id >= m_server.team_count)
+        return;
+    if (level < 1 || level > 8)
+        return;
+    m_server.teams[team_id].leader_flags &= (uint8_t)(~(1u << (level - 1)));
+}
+
+/*
+ * claim_leader  — sent by a client that wants to be rally-leader for its
+ *                 current level.
+ *
+ * Protocol:
+ *   Client → Server:  {"type":"cmd","cmd":"claim_leader"}
+ *   Server → Client:  {"type":"response","cmd":"claim_leader","status":"ok"}
+ *                  or {"type":"response","cmd":"claim_leader","status":"ko"}
+ *
+ * "ok"  → this client is the leader; flag is set in the team struct.
+ * "ko"  → another leader already exists for this level; client should
+ *          go into follower/MovingToRally mode immediately.
+ */
+static int m_command_claim_leader(void* _p, void* _arg)
+{
+    player *p;
+    team   *t;
+    uint8_t bit;
+
+    (void)_arg;
+
+    p = (player*)_p;
+
+    if (p->team_id < 0 || p->team_id >= m_server.team_count)
+        return server_create_response_to_command(p->id, "claim_leader", NULL, "ko");
+
+    t   = &m_server.teams[p->team_id];
+    bit = (uint8_t)(1u << (p->level - 1));
+
+    if (t->leader_flags & bit)
+    {
+        /* A leader already exists for this level on this team */
+        log_msg(LOG_LEVEL_INFO,
+            "claim_leader: player %d (team %s, level %d) — KO, leader already exists\n",
+            p->id, t->name, p->level);
+        return server_create_response_to_command(p->id, "claim_leader", NULL, "ko");
+    }
+
+    t->leader_flags |= bit;
+    log_msg(LOG_LEVEL_INFO,
+        "claim_leader: player %d (team %s, level %d) — OK, now leader\n",
+        p->id, t->name, p->level);
+
+    return server_create_response_to_command(p->id, "claim_leader", NULL, "ok");
+}
+
+/*
+ * disband_leader — sent by the leader when:
+ *   (a) it times out waiting for followers, or
+ *   (b) the incantation resolves (success or failure) and the rally is over.
+ *
+ * The server simply clears the flag so the next client that calls
+ * claim_leader for this level can succeed.
+ *
+ * Protocol:
+ *   Client → Server:  {"type":"cmd","cmd":"disband_leader"}
+ *   Server → Client:  {"type":"response","cmd":"disband_leader","status":"ok"}
+ */
+static int m_command_disband_leader(void* _p, void* _arg)
+{
+    player *p;
+
+    (void)_arg;
+
+    p = (player*)_p;
+    m_team_clear_leader_flag(p->team_id, p->level);
+
+    log_msg(LOG_LEVEL_INFO,
+        "disband_leader: player %d (team id %d, level %d) disbanded\n",
+        p->id, p->team_id, p->level);
+
+    return server_create_response_to_command(p->id, "disband_leader", NULL, "ok");
+}
+
 /* For incantation to happen, the tile where the player is must have
  * enough items to satisfy the level requirements.
  * Also, there must be enough players with required level to satisfy the
@@ -1104,10 +1195,16 @@ static int m_command_real_incantation(void* _p, void* _arg)
 
     /* Already leveled up!! */
     if (p->level != initial_level)
+    {
+        m_team_clear_leader_flag(p->team_id, initial_level);
         return server_create_response_to_command(p->id, "incantation", NULL, "ko");
+    }
 
     if (m_game_check_can_incantation(p, false) == ERROR)
+    {
+        m_team_clear_leader_flag(p->team_id, p->level);
         return server_create_response_to_command(p->id, "incantation", NULL, "ko");
+    }
 
     p2 = t->players;
     while (p2)
@@ -1120,6 +1217,8 @@ static int m_command_real_incantation(void* _p, void* _arg)
         }
         p2 = p2->next_on_tile;
     }
+
+    m_team_clear_leader_flag(p->team_id, initial_level);
 
     return server_create_response_to_command(p->id, "incantation", NULL, "ok");
 }

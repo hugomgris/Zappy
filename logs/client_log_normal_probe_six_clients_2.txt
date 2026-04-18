@@ -1,0 +1,217 @@
+[2026-04-17 22:09:31] [INFO] Zappy Client starting...
+[2026-04-17 22:09:31] [INFO] Team: team1
+[2026-04-17 22:09:31] [INFO] Fork enabled: yes
+[2026-04-17 22:09:31] [INFO] Normal mode enabled
+[2026-04-17 22:09:31] [INFO] Connecting to localhost:8674
+[2026-04-17 22:09:31] [WARN] TLS: Certificate verification disabled (insecure mode)
+[2026-04-17 22:09:31] [INFO] TLS context initialized successfully
+[2026-04-17 22:09:31] [INFO] WebSocket: Starting connection to localhost:8674
+[2026-04-17 22:09:31] [INFO] TLS handshake completed successfully
+[2026-04-17 22:09:31] [INFO] WebSocket: HTTP 101 Upgrade successful
+[2026-04-17 22:09:31] [INFO] WebSocket: Handshake complete, connection established
+[2026-04-17 22:09:31] [INFO] Websocket connected
+[2026-04-17 22:09:31] [INFO] Received bienvenue
+[2026-04-17 22:09:31] [INFO] Login successful
+[2026-04-17 22:09:31] [INFO] Logged in as team1
+[2026-04-17 22:09:31] [INFO] Connected! Starting main loop...
+[2026-04-17 22:09:31] [INFO] Status: level=1 behavior=1 food=0 forks=NOT TRACKED
+[2026-04-17 22:09:31] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:32] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":11,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:32] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:36] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:36] [INFO] Status: level=1 behavior=3 food=12 forks=NOT TRACKED
+[2026-04-17 22:09:36] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:38] [INFO] Level up! Now level 2
+[2026-04-17 22:09:41] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:41] [INFO] Status: level=2 behavior=2 food=12 forks=NOT TRACKED
+[2026-04-17 22:09:41] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:46] [INFO] Status: level=2 behavior=2 food=12 forks=NOT TRACKED
+[2026-04-17 22:09:46] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":9,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:47] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":11,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:47] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":11,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:47] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":11,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:48] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":13,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:48] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":13,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:48] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":13,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:51] [INFO] Status: level=2 behavior=2 food=13 forks=NOT TRACKED
+[2026-04-17 22:09:51] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:52] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":14,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:52] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":14,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:52] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":14,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:52] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":14,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:56] [INFO] Status: level=2 behavior=2 food=14 forks=NOT TRACKED
+[2026-04-17 22:09:57] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:57] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":15,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:57] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":15,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:57] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":15,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:57] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":15,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:58] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":15,"linemate":1,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:59] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":14,"linemate":1,"deraumere":0,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:59] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":14,"linemate":1,"deraumere":0,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:59] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":14,"linemate":1,"deraumere":0,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:59] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":14,"linemate":1,"deraumere":0,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:09:59] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":14,"linemate":1,"deraumere":0,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:01] [INFO] Status: level=2 behavior=2 food=14 forks=NOT TRACKED
+[2026-04-17 22:10:01] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:01] [INFO] Behavior: stones ready but food too low (12), collecting food before rally
+[2026-04-17 22:10:01] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:01] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:02] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":11,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:02] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":11,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:02] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":11,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:02] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":16,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:02] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":16,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:02] [INFO] Behavior: all stones ready for level 2 (needs 2 players) — claiming leadership
+[2026-04-17 22:10:02] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":16,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:02] [INFO] Behavior: sending claim_leader for level 2
+[2026-04-17 22:10:02] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":16,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:02] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":16,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:02] [INFO] Behavior: claim_leader OK — entering Leading
+[2026-04-17 22:10:02] [INFO] Behavior: Leading — level 2
+[2026-04-17 22:10:05] [INFO] Behavior: Leading — enough players (2/2), moving to Rallying
+[2026-04-17 22:10:06] [INFO] Status: level=2 behavior=7 food=16 forks=NOT TRACKED
+[2026-04-17 22:10:07] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:11] [INFO] Status: level=2 behavior=7 food=12 forks=NOT TRACKED
+[2026-04-17 22:10:12] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":8,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:12] [INFO] Behavior: Rallying — enough players (2/2), incantating
+[2026-04-17 22:10:12] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":8,"linemate":0,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:13] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":8,"linemate":0,"deraumere":0,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:13] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":7,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:13] [WARN] Incantation failed (ko/timeout), restarting stone collection
+[2026-04-17 22:10:14] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":7,"linemate":0,"deraumere":0,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:14] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":6,"linemate":0,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:14] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":6,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:14] [INFO] Behavior: stones ready but food too low (6), collecting food before rally
+[2026-04-17 22:10:15] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":6,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:16] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":7,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:16] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":8,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:16] [INFO] Status: level=2 behavior=1 food=9 forks=NOT TRACKED
+[2026-04-17 22:10:16] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":8,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:17] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":9,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:18] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:18] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:18] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":11,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:19] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:19] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:21] [INFO] Status: level=2 behavior=6 food=12 forks=NOT TRACKED
+[2026-04-17 22:10:22] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:26] [INFO] Status: level=2 behavior=6 food=10 forks=NOT TRACKED
+[2026-04-17 22:10:27] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":6,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:31] [INFO] Status: level=2 behavior=6 food=6 forks=NOT TRACKED
+[2026-04-17 22:10:32] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":2,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:32] [WARN] Behavior: MovingToRally — food critical, disbanding
+[2026-04-17 22:10:33] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":5,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:33] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":5,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:33] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":5,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:33] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":7,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:33] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":7,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:33] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":7,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:34] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:34] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:34] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:34] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:34] [INFO] Behavior: stones ready but food too low (12), collecting food before rally
+[2026-04-17 22:10:34] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:34] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:35] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":13,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:35] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":13,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:36] [INFO] Status: level=2 behavior=6 food=13 forks=NOT TRACKED
+[2026-04-17 22:10:37] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":11,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:41] [INFO] Status: level=2 behavior=6 food=11 forks=NOT TRACKED
+[2026-04-17 22:10:42] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":7,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:42] [INFO] Behavior: DONE received — disbanding, back to CollectStones
+[2026-04-17 22:10:43] [INFO] Behavior: stones ready but food too low (7), collecting food before rally
+[2026-04-17 22:10:43] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":8,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:43] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":8,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:43] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:43] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:44] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:44] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:44] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:44] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:45] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":14,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:45] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":14,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:45] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":16,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:45] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":16,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:45] [INFO] Behavior: all stones ready for level 2 (needs 2 players) — claiming leadership
+[2026-04-17 22:10:45] [INFO] Behavior: sending claim_leader for level 2
+[2026-04-17 22:10:46] [INFO] Behavior: claim_leader OK — entering Leading
+[2026-04-17 22:10:46] [INFO] Behavior: Leading — level 2
+[2026-04-17 22:10:47] [INFO] Status: level=2 behavior=5 food=16 forks=NOT TRACKED
+[2026-04-17 22:10:47] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":14,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:51] [INFO] Behavior: Leading — enough players (2/2), moving to Rallying
+[2026-04-17 22:10:52] [INFO] Status: level=2 behavior=7 food=14 forks=NOT TRACKED
+[2026-04-17 22:10:52] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:10:57] [INFO] Status: level=2 behavior=7 food=10 forks=NOT TRACKED
+[2026-04-17 22:10:57] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":6,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:00] [INFO] Behavior: Rallying — enough players (2/2), incantating
+[2026-04-17 22:11:01] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":4,"linemate":0,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:01] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":3,"linemate":0,"deraumere":0,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:01] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":3,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:02] [INFO] Status: level=2 behavior=3 food=3 forks=NOT TRACKED
+[2026-04-17 22:11:02] [WARN] Incantation failed (ko/timeout), restarting stone collection
+[2026-04-17 22:11:02] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":3,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:03] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":4,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:03] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":5,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:03] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":5,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:04] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":6,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:04] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":6,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:05] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":7,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:05] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":8,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:06] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":8,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:06] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":9,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:06] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:07] [INFO] Status: level=2 behavior=1 food=11 forks=NOT TRACKED
+[2026-04-17 22:11:07] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:07] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":11,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:08] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":11,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:08] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:08] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":0,"deraumere":0,"sibur":0,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:09] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":0,"deraumere":0,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:12] [INFO] Status: level=2 behavior=2 food=12 forks=NOT TRACKED
+[2026-04-17 22:11:12] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":9,"linemate":0,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:13] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":9,"linemate":0,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:13] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":11,"linemate":0,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:13] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":11,"linemate":0,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:13] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":0,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:13] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":0,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:17] [INFO] Status: level=2 behavior=2 food=12 forks=NOT TRACKED
+[2026-04-17 22:11:18] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":9,"linemate":0,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:18] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":11,"linemate":0,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:18] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":11,"linemate":0,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:18] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":11,"linemate":0,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:19] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:19] [INFO] Behavior: stones ready but food too low (10), collecting food before rally
+[2026-04-17 22:11:19] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:19] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:19] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:19] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:22] [INFO] Status: level=2 behavior=6 food=12 forks=NOT TRACKED
+[2026-04-17 22:11:23] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":9,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:27] [INFO] Status: level=2 behavior=6 food=9 forks=NOT TRACKED
+[2026-04-17 22:11:28] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":5,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:32] [INFO] Status: level=2 behavior=6 food=5 forks=NOT TRACKED
+[2026-04-17 22:11:33] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":1,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:33] [WARN] Behavior: MovingToRally — food critical, disbanding
+[2026-04-17 22:11:33] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":3,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:33] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":3,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:34] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":3,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:34] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":3,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:34] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":7,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:34] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":7,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:34] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":7,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:34] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":7,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:35] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:35] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:35] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:35] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":10,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:35] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":14,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:35] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":14,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:36] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":14,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:36] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":14,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:37] [INFO] Status: level=2 behavior=6 food=14 forks=NOT TRACKED
+[2026-04-17 22:11:38] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":12,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:42] [INFO] Status: level=2 behavior=6 food=12 forks=NOT TRACKED
+[2026-04-17 22:11:43] [INFO] Refreshed inventory: {"type":"response","cmd":"inventaire","inventaire":{"nourriture":8,"linemate":1,"deraumere":1,"sibur":1,"mendiane":0,"phiras":0,"thystame":0}}
+[2026-04-17 22:11:43] [INFO] Network loop ended
+[2026-04-17 22:11:43] [INFO] Client exited. Final level: 2

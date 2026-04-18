@@ -28,6 +28,8 @@ typedef enum
     INCANTATION,
     FORK,
     CONNECT_NBR,
+    CLAIM_LEADER,
+    DISBAND_LEADER,
     MAX_COMMANDS
 } command_type;
 
@@ -102,6 +104,14 @@ typedef struct
     int* p2c; /* index of the player_to_claim in 'server.clients' */
     int p2c_size; /* size of player_to_claim array */
     int* players; /* index of the player in 'server.clients' */
+
+    /*
+     * leader_flags: one bit per level (bit 0 = level 1, bit 7 = level 8).
+     * A set bit means a client from this team is currently the leader for
+     * that level's incantation rally.  The server sets it on claim_leader
+     * and clears it on disband_leader or when the incantation resolves.
+     */
+    uint8_t leader_flags; /* NEW */
 } team;
 
 typedef struct
